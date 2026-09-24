@@ -1,17 +1,28 @@
 # CrowdSight
 
-Recorded-video crowd monitoring and heat-map product starter. It is intended for site operations teams to review visible crowd distribution in named zones. Litter detection is out of scope.
+## Project overview
 
-## Start here
+CrowdSight is a recorded-video crowd-monitoring product concept for tourist sites, plazas, campuses, and event venues. The proposed MVP analyzes UAV or fixed-camera footage to estimate visible occupancy in named zones, generate heat maps and time trends, and present reviewable threshold alerts to site operations personnel.
 
-1. Read [Team handoff](docs/TEAM_HANDOFF.md) for scope, three-person ownership, interface contract, phased plan, and MVP acceptance checklist.
-2. Read [MVP brief](docs/product/mvp-brief.md) for the user need and product boundaries.
-3. Read [Codebase plan](docs/architecture/codebase-plan.md) for selective reuse from the two existing project folders.
+The system is intended to support operational decisions. Alerts require human review. Litter detection is outside the project scope.
 
-## Current status
+## Documentation
 
-This repository contains planning documents and a folder scaffold; it is not a runnable application yet. Existing prototypes remain in sibling folders `../heat_map/` and `../uav-crowd-monitoring/`. The team should inspect and selectively adapt relevant pieces only after confirming code/data/model provenance and dependencies.
+- [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, role assignments, data contract, delivery phases, acceptance criteria, and initial actions.
+- [MVP product brief](docs/product/mvp-brief.md): target users, workflow, inputs, outputs, and product boundaries.
+- [Codebase plan](docs/architecture/codebase-plan.md): repository structure and selective reuse guidance for the existing prototypes.
+- [Evaluation plan](docs/evaluation/plan.md): model, count, alert, throughput, and calibration evaluation requirements.
+- [Demo operations runbook](docs/operations/demo-runbook.md): preparation and handling guidance for local demonstrations.
 
-## Product boundaries
+## Repository status
 
-Counts represent visible people, not attendance. Image-space heat maps are not geographic maps. Geographic density requires valid calibration and measured area. Stale, partial, invalid, or unsupported observations must not be presented as zero or normal. No face recognition, identity inference, or persistent re-identification.
+This repository currently contains planning documents and a directory scaffold. It does not yet contain a runnable application. Existing prototype projects are located in the sibling directories `../heat_map/` and `../uav-crowd-monitoring/`. Any reused implementation requires review of technical dependencies, tests, licensing, model provenance, and data permissions before integration.
+
+## Product limitations and safeguards
+
+- Counts represent visible people in observed footage; they are not attendance totals and do not include hidden people.
+- Image-space heat maps describe concentration within a video frame and are not geographic maps.
+- Geographic density requires valid camera calibration and a measured usable area.
+- Stale, partial, invalid, and unsupported observations must be reported as unavailable rather than represented as zero or normal conditions.
+- Face recognition, identity inference, demographic inference, and persistent re-identification are excluded.
+- Site-approved thresholds and human review are required for operational alerts.

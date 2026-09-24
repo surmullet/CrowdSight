@@ -1,118 +1,129 @@
-# CrowdSight Team Handoff — Recorded-Video MVP
+# CrowdSight Project Handoff — Recorded-Video MVP
 
-## 1. Purpose
+## 1. Project purpose
 
-Build a usable first version of a crowd-monitoring product for tourist sites, plazas, campuses, or event venues. It accepts a recorded UAV or fixed-camera video, estimates visible people in named zones, shows a heat map and time trends, and gives operators reviewable threshold alerts.
+The project will deliver an initial crowd-monitoring product for tourist sites, plazas, campuses, and event venues. The MVP will accept recorded UAV or fixed-camera video, estimate visible occupancy in named zones, generate heat maps and time trends, and present configurable threshold alerts for operator review.
 
-This is decision support. A human operator verifies conditions and decides what action to take. Littering detection is excluded.
+The product is a decision-support tool. Operational action remains under human control. Litter detection is excluded.
 
-## 2. Product scope
+## 2. Scope and product requirements
 
-### MVP includes
+### 2.1 MVP capabilities
 
-- Upload or select a permitted recorded video.
-- Define named monitoring zones on a video frame.
-- Run the existing trained person detector and tracker through a stable adapter.
-- Calculate per-frame visible count per zone and time trends.
-- Show an image-space heat map, annotated replay, processing progress, and results.
-- Clearly represent invalid, uncertain, stale, or partially observed data.
-- Configure site-approved alert thresholds; show alert episodes for operator review.
-- Export counts and run summaries as CSV/JSON.
+- Accept a permitted recorded video through a local upload or selection workflow.
+- Define and edit named monitoring zones on a video frame.
+- Process footage using the selected trained person detector and tracker through a stable software interface.
+- Calculate visible-person counts per zone and time trends.
+- Present an image-space heat map, annotated replay, processing progress, and summary results.
+- Communicate uncertainty, partial coverage, invalid observations, and stale data clearly.
+- Support site-configured alert thresholds and reviewable alert episodes.
+- Export documented count and run-summary data in CSV and JSON formats.
 
-### Not in MVP
+### 2.2 Explicitly excluded capabilities
 
-- Litter detection; face recognition; identity or demographic inference; persistent re-identification; autonomous response; multi-drone fusion; public cloud deployment; live stream or drone control; universal safety thresholds.
-- Geographic density/people per square metre unless the site area is measured and mapping calibration is valid and documented.
+- Litter detection.
+- Face recognition, identity inference, demographic inference, and persistent re-identification.
+- Autonomous emergency or operational response.
+- Multi-UAV data fusion, public cloud deployment, live video streaming, and drone control.
+- Universal safety thresholds.
+- Geographic density or people-per-square-metre calculations in the absence of measured area and valid documented calibration.
 
-### Product truths the UI and reports must preserve
+### 2.3 Required interpretation of results
 
-- Counts represent visible people in observed frames, not attendance or hidden people.
-- Image-space heat maps are relative to the video frame; they are not maps of the real site.
-- Track IDs can fragment or switch and must not be summed into attendance.
-- An invalid/stale/partial observation is unknown/unavailable, never silently zero or normal.
-- Detector validation metrics or a selected demo clip do not prove performance at the pilot site.
+- Counts represent visible people in observed frames. They do not represent attendance or account for hidden people.
+- Image-space heat maps are relative to the video frame and must not be presented as real-world maps.
+- Track IDs may switch or fragment and must not be used as attendance totals.
+- Invalid, stale, partial, or unsupported observations must be represented as unknown or unavailable, not silently converted to zero or normal status.
+- Validation metrics and selected demonstration clips do not establish performance at a pilot site.
 
-## 3. Team and ownership (three people total)
+## 3. Team structure and role assignments
 
-### You — Product lead and AI/ML owner
+The project team consists of three members: the product lead/AI-ML owner and two teammates.
 
-Own `src/crowdsight/detection/`, `tracking/`, `analytics/`, `heatmap/`, `geospatial/`, `configs/models/`, `docs/evaluation/`, and model evaluation fixtures.
+### 3.1 Product lead and AI/ML owner
 
-Deliver:
-1. Inventory trained checkpoints and choose the MVP candidate based on evidence.
-2. Document architecture, class mapping, preprocessing, training-data provenance and license, runtime dependencies, checkpoint SHA-256, and limitations.
-3. Provide a model adapter that receives a decoded frame and emits the agreed detection schema; no API/UI dependency on model-specific libraries.
-4. Evaluate on a locked video-level/site-level split with manual labels; report precision, recall, count MAE/RMSE/signed bias, zone error, dense-scene failures, and throughput/hardware.
-5. Define what makes an observation uncertain or unsupported and how camera motion/partial coverage invalidates map outputs.
-6. Provide versioned model/tracker configuration and repeatable run instructions. Keep weight files in an approved artifact location, not Git.
+**Ownership areas:** `src/crowdsight/detection/`, `tracking/`, `analytics/`, `heatmap/`, `geospatial/`, `configs/models/`, `docs/evaluation/`, and model-evaluation fixtures.
 
-### Teammate 1 — Backend, video workflow, and integration
+**Responsibilities and deliverables:**
 
-Own `src/crowdsight/video/`, `api/`, `common/`, `configs/app/`, backend integration tests, and API/architecture documentation with the team.
+1. Inventory trained checkpoints and select an MVP candidate based on evaluation evidence.
+2. Document model architecture, class mapping, preprocessing, training-data provenance and license, runtime dependencies, checkpoint SHA-256, and known limitations.
+3. Implement a stable model adapter that accepts decoded frames and returns the agreed detection schema. API and user-interface components must remain independent of model-specific libraries.
+4. Evaluate the candidate on a locked video-level or site-level split with manual labels. Report precision, recall, count MAE/RMSE/signed bias, per-zone error, dense-scene failures, and throughput on named hardware.
+5. Define uncertainty and unsupported-observation criteria, including the conditions under which camera movement or partial coverage invalidates mapped results.
+6. Provide versioned model and tracker configuration, reproducible run instructions, and artifact provenance. Large checkpoint files must remain in approved artifact storage rather than Git.
 
-Deliver:
-1. Video input validation, metadata extraction, job lifecycle/status, cancellation/error reporting, and bounded local storage for the MVP.
-2. A validated API/service contract for sites, zones, job submission, progress, results, and exports.
-3. Pipeline orchestration that calls the model adapter and analytics without importing model-specific code into API routes.
-4. Persist only necessary aggregate/job data; keep video access local and intentional. Establish documented retention/deletion and maximum file/job limits for the demo.
-5. Health/error states and replay-vs-live timestamp semantics (MVP is replay; media time is not capture UTC).
+### 3.2 Teammate 1 — Backend, video workflow, and integration
 
-### Teammate 2 — Frontend and operator workflow
+**Ownership areas:** `src/crowdsight/video/`, `api/`, `common/`, `configs/app/`, backend integration tests, and API/architecture documentation in coordination with the team.
 
-Own `frontend/`, zone configuration UI/schema in `configs/zones/`, user-facing product/operations documentation, and frontend tests.
+**Responsibilities and deliverables:**
 
-Deliver:
-1. Video selection/upload and visible job progress/errors.
-2. Zone creation/editing with names and optional measured areas; visually distinguish image-relative zones from calibrated geographic zones.
-3. Result screen with annotated replay, per-zone counts, heat map, trends, alert state, quality/freshness indicators, and CSV/JSON export.
-4. Clear `UNKNOWN`, `STALE`, `PARTIAL`, and `VALID` presentations; never render missing results as zero.
-5. Operator instructions that explain limitations and state that alerts require human review.
+1. Implement video validation, metadata extraction, job lifecycle/status, cancellation and error reporting, and bounded local storage for the MVP.
+2. Define and implement validated service/API contracts for sites, zones, job submission, progress, results, and exports.
+3. Orchestrate the processing pipeline through the model adapter and analytics interfaces. API routes must not depend directly on model-specific libraries.
+4. Persist only necessary job and aggregate data. Document video-access controls, demo file limits, retention periods, and deletion behavior.
+5. Implement health and error states and preserve replay timestamp semantics. Recorded media time must not be represented as capture UTC.
 
-### Shared responsibilities
+### 3.3 Teammate 2 — Frontend and operator workflow
 
-All three agree product scope, contract, pilot data and permissions, target acceptance criteria, error handling, and demo flow. Each owner reviews the integration boundary of the adjacent owner. No one changes the shared schema without updating its documentation and fixtures.
+**Ownership areas:** `frontend/`, zone configuration UI/schema in `configs/zones/`, user-facing product and operations documentation, and frontend tests.
 
-## 4. Repository and file policy
+**Responsibilities and deliverables:**
+
+1. Implement video selection/upload and visible job progress and error states.
+2. Implement zone creation and editing, including zone names and optional measured areas. Distinguish image-relative zones from calibrated geographic zones.
+3. Present annotated replay, per-zone counts, heat map, trends, alert state, quality/freshness indicators, and CSV/JSON export.
+4. Represent `UNKNOWN`, `STALE`, `PARTIAL`, and `VALID` states distinctly. Missing results must not be displayed as zero.
+5. Provide operator guidance explaining product limitations and the requirement for human review of alerts.
+
+### 3.4 Shared responsibilities
+
+All three team members share responsibility for product scope, interface contracts, pilot-data permissions, acceptance criteria, error handling, and demonstration readiness. Each owner reviews changes at adjacent component boundaries. Changes to shared schemas require corresponding updates to documentation and fixtures.
+
+## 4. Repository structure and asset policy
 
 ```text
 crowdsight/
   README.md
-  pyproject.toml or requirements files (choose after import/dependency audit)
+  pyproject.toml or requirements files (selected after dependency audit)
   configs/
     models/                 # model profiles, thresholds, tracker pairing/checksum metadata
     zones/                  # versioned site zone examples; no private site data by default
-    app/                    # runtime limits, retention, app settings
+    app/                    # runtime limits, retention, and application settings
   src/crowdsight/
-    video/                  # file input, decoding, timestamps
-    detection/              # detector interface and trained model adapter
+    video/                  # file input, decoding, and timestamps
+    detection/              # detector interface and trained-model adapter
     tracking/               # anonymous run-local tracks
-    analytics/              # zone occupancy, trends, threshold episodes
+    analytics/              # zone occupancy, trends, and alert episodes
     heatmap/                # image-space heat maps; geographic rendering only when valid
-    geospatial/              # calibration, projection, CRS and validity rules
+    geospatial/              # calibration, projection, CRS, and validity rules
     api/                    # routes and request/response handling
-    common/                 # shared schemas, validation, error types, logging
+    common/                 # shared schemas, validation, errors, and logging
   frontend/
   tests/{unit,integration,fixtures}/
-  scripts/                  # run/demo/evaluation entry points
+  scripts/                  # run, demo, and evaluation entry points
   docs/{product,architecture,evaluation,operations}/
-  data/samples/             # only small, licensed/permitted examples
-  models/                   # instructions only; large checkpoint weights stay external
+  data/samples/             # small licensed/permitted examples only
+  models/                   # instructions only; large checkpoint weights remain external
   outputs/                  # generated data; ignored by Git
 ```
 
-### What to reuse from the two source projects
+### 4.1 Reuse of existing prototypes
 
-Treat `../heat_map/` and `../uav-crowd-monitoring/` as read-only references while selecting components. First inspect dependencies, license/provenance, data schemas, and tests. Port only code that supports the MVP and adapt it to one agreed schema. Keep both source folders intact.
+The existing projects in `../heat_map/` and `../uav-crowd-monitoring/` are reference sources. Both projects must remain intact during evaluation. Candidate components require review of dependencies, licensing and provenance, data schemas, and tests. Only implementation that supports the MVP should be adapted, and adapted code must follow the agreed product interfaces.
 
-Likely useful candidates include the detector/tracker/analytics/heat-map pipeline and config/model-profile ideas from `heat_map/`, plus video job/API/zone workflow concepts from `uav-crowd-monitoring/`. These are candidates, not a mandate to copy modules unchanged.
+Potentially relevant components include the detector/tracker/analytics/heat-map pipeline and model-profile configuration patterns from `heat_map/`, and video-job/API/zone-workflow concepts from `uav-crowd-monitoring/`. These are candidates for assessment; direct copying without review is not prescribed.
 
-Do not add `.venv/`, caches, raw/full datasets, raw flight footage, generated videos or result folders, Kaggle bundles/wheels, temporary archives, one-off download scripts, unrelated SAM/GPU experiments, secrets, or large weights to the product source repository. Keep provenance, small deterministic fixtures, selected tests, and reproducible evaluation scripts. Use approved artifact storage with checksum and access rules for weights/media.
+### 4.2 Excluded repository assets
 
-## 5. Shared interface contract (freeze before parallel coding)
+The shared product repository must not contain virtual environments, caches, raw or full datasets, unapproved flight footage, generated videos or result directories, Kaggle bundles or wheels, temporary archives, unrelated SAM/GPU experiments, secrets, or large model weights. Useful provenance records, small deterministic fixtures, selected tests, and reproducible evaluation scripts should be retained. Large approved weights and media require controlled artifact storage with checksums and access rules.
 
-Use JSON-compatible schemas and document units. Suggested first contract:
+## 5. Shared interface contract
 
-### Run request
+The following JSON-compatible contract is the initial proposal. All three owners must review and freeze field names, units, nullability, and error semantics before parallel implementation.
+
+### 5.1 Run request
 
 ```json
 {
@@ -126,7 +137,7 @@ Use JSON-compatible schemas and document units. Suggested first contract:
 
 The API must not accept arbitrary server filesystem paths from an untrusted client.
 
-### Per-frame observation from AI pipeline
+### 5.2 Per-frame AI observation
 
 ```json
 {
@@ -145,9 +156,9 @@ The API must not accept arbitrary server filesystem paths from an untrusted clie
 }
 ```
 
-`x`/`y` are normalized bottom-centre/ground-contact image coordinates in [0,1]. `track_id` is anonymous and local to this video run. A detector-only observation may have null `track_id`. `captured_at` stays null for recorded-video replay; do not fabricate UTC capture time.
+Coordinates `x` and `y` are normalized to `[0,1]` and represent the bottom-centre/ground-contact image point. `track_id` is anonymous and scoped to one video run. Detector-only observations may have a null track ID. For recorded-video replay, `captured_at` remains null; capture UTC must not be fabricated.
 
-### Result snapshot
+### 5.3 Result snapshot
 
 ```json
 {
@@ -168,78 +179,83 @@ The API must not accept arbitrary server filesystem paths from an untrusted clie
 }
 ```
 
-Required quality states: `VALID`, `PARTIAL`, `UNKNOWN`, `STALE`. Alert levels are configured by the pilot site and must be confirmed before operational use. Density is null unless measured area and valid calibration support it. Alerting logic should require configurable persistence/clear durations and report alert episodes, not repeatedly notify every frame.
+Required quality states are `VALID`, `PARTIAL`, `UNKNOWN`, and `STALE`. Alert thresholds require approval by the pilot-site owner. Density must be null unless measured area and valid calibration support the calculation. Alert processing should apply configurable persistence and clear durations and should report alert episodes rather than producing a notification for every frame.
 
-## 6. Delivery phases and checkpoints
+## 6. Delivery phases and exit criteria
 
-### Phase 0 — Align (all; do this first)
+### Phase 0 — Scope and contract alignment
 
-- Pick one pilot scenario and one permitted sample video.
-- Choose the MVP model candidate and confirm who can use/share its weights and data.
-- Finalize zone coordinate convention, JSON schemas above, user flow, and error/quality states.
-- Agree pilot acceptance thresholds with the site owner; record thresholds as proposed until approved.
+**Participants:** all three team members.
 
-**Exit:** brief and schemas reviewed by all three; everyone can work independently against fixtures.
+- Select a pilot scenario and a permitted sample video.
+- Select a candidate MVP model and confirm permitted use and sharing of its weights and data.
+- Finalize zone coordinates, JSON schemas, user workflow, and quality/error states.
+- Agree proposed pilot acceptance thresholds with the site owner and document approval status.
 
-### Phase 1 — Prove the measurement (AI/ML lead, backend supports fixtures)
+**Exit criteria:** the project brief and schemas are reviewed by all owners; fixture data supports parallel implementation.
 
-- Create a representative, manually checked evaluation subset with whole-video/site separation.
-- Run current candidate model and analyze misses, false detections, undercount, ID fragmentation, and dense-scene failures.
-- Record baseline and limits. Do not start expensive retraining until failure analysis identifies a specific gap.
+### Phase 1 — Measurement baseline
 
-**Exit:** reproducible baseline report, model card/profile draft, agreed supported scene envelope, sample adapter output.
+**Lead:** product lead/AI-ML owner. **Support:** backend owner for fixture requirements.
 
-### Phase 2 — Parallel vertical slices
+- Prepare a representative, manually checked evaluation subset split by video or site.
+- Evaluate the current model and analyze misses, false detections, undercount, ID fragmentation, and dense-scene failures.
+- Record baseline performance and limitations. Additional training should follow identified error analysis rather than precede it.
 
-- AI/ML lead: detector/tracker adapter + deterministic fixture outputs + evaluation CLI/report.
-- Teammate 1: video job API/service using fixture observations; progress/result/export endpoints.
-- Teammate 2: dashboard and zone editor using the same fixture/API contract; quality state views.
+**Exit criteria:** a reproducible baseline report, model-profile draft, supported-scene description, and sample adapter output are available.
 
-**Exit:** a demo can show fixture observations end-to-end without model inference; owners confirm contract works.
+### Phase 2 — Parallel implementation slices
 
-### Phase 3 — Integrate real recorded video
+- **AI/ML owner:** detector/tracker adapter, deterministic fixture outputs, and evaluation command/report.
+- **Backend owner:** video-job service/API using fixture observations, including progress, results, and export interfaces.
+- **Frontend owner:** dashboard and zone editor using the shared fixture/API contract, including quality-state presentation.
+
+**Exit criteria:** an end-to-end fixture demonstration is available without model inference, and all owners confirm the interface contract.
+
+### Phase 3 — Recorded-video integration
 
 - Connect the versioned model adapter to the job service.
-- Implement zone occupancy, image-space heat map, replay overlay, trends, alert episodes and downloads.
-- Handle unsupported/partial/invalid observations and failed or cancelled jobs.
+- Implement zone occupancy, image-space heat map, replay overlay, trends, alert episodes, and downloads.
+- Handle unsupported, partial, and invalid observations, as well as failed and cancelled jobs.
 
-**Exit:** one permitted recorded clip produces a complete reviewable result from a documented command/UI flow.
+**Exit criteria:** a permitted recorded clip produces a complete, reviewable result through a documented command or user workflow.
 
-### Phase 4 — Validate pilot and harden
+### Phase 4 — Pilot validation and hardening
 
-- Compare output against held-out manual ground truth by scene condition and zone.
-- Check latency/throughput on named hardware, large file behavior, invalid input, failure recovery, retention/deletion, and operator comprehension.
-- Fix blocking accuracy/usability issues and document residual risks.
+- Compare outputs with held-out manual ground truth by scene condition and zone.
+- Evaluate throughput on named hardware, large-file behavior, invalid input, failure recovery, retention/deletion, and operator comprehension.
+- Resolve blocking accuracy and usability issues and document residual limitations.
 
-**Exit:** pilot owner accepts stated limitations and target measures; team recommends proceed, revise, or stop. Live video is a separate milestone.
+**Exit criteria:** the pilot owner reviews the stated limitations and measures and records a proceed/revise/stop decision. Live video requires a separate milestone.
 
-## 7. Acceptance checklist for the MVP
+## 7. MVP acceptance checklist
 
-- [ ] User can process a permitted recorded video and see clear progress and failure reasons.
-- [ ] User can define named zones and see zones over the matching video image.
-- [ ] Results show per-zone visible counts, time trend, image-space heat map, and annotated replay.
-- [ ] Data carries model/config versions and source/session/frame/media-time metadata.
-- [ ] Missing calibration prevents geographic density from appearing as a valid number.
-- [ ] Invalid, stale, partial, and unsupported outputs are distinguishable from zero.
-- [ ] Alert thresholds are site-configurable, persistence is applied, and operator review is explicit.
-- [ ] CSV/JSON exports match documented schemas.
-- [ ] Evaluation uses manual labels and a held-out site/video split; reports errors, dense failures, and throughput honestly.
-- [ ] No unauthorized video/data/weights are copied into Git; model/license provenance and data retention are documented.
-- [ ] README includes setup, model artifact retrieval, run/demo command, outputs, and limitations.
+- [ ] A permitted recorded video can be processed with clear progress and failure information.
+- [ ] Named zones can be defined and displayed over the corresponding video frame.
+- [ ] Results include per-zone visible counts, time trends, an image-space heat map, and annotated replay.
+- [ ] Results include model/configuration versions and source/session/frame/media-time metadata.
+- [ ] Missing calibration prevents geographic density from being presented as valid.
+- [ ] Invalid, stale, partial, and unsupported observations are distinguishable from zero.
+- [ ] Alert thresholds are site-configurable, persistence is applied, and human review is explicit.
+- [ ] CSV/JSON exports follow documented schemas.
+- [ ] Evaluation uses manual labels and held-out site/video splits and reports errors, dense-scene failures, and throughput.
+- [ ] Unauthorized video, data, or weights are excluded from Git; provenance and retention are documented.
+- [ ] Setup, artifact retrieval, execution, outputs, and limitations are documented in the README before application release.
 
-The site owner must set numerical accuracy and alert thresholds. Do not invent a universal standard or claim these targets have passed before running the evaluation.
+Numerical accuracy and alert thresholds must be set by the pilot-site owner. No universal standard is assumed, and no target is considered passed until supported by evaluation evidence.
 
-## 8. Team working agreement
+## 8. Working agreement
 
-- Work in small branches or focused commits with one owner per area. Keep the shared `common` schemas stable after Phase 0.
-- Before merging, describe behavior changed, show a small example request/result, and note unverified limitations.
-- Store decisions in `docs/architecture/decisions.md`; store measured model results in `docs/evaluation/` with the video/model/config hashes and hardware.
-- Keep source media, labels, and checkpoints in approved private storage where required. Put only synthetic/small permitted fixtures in Git.
-- Do not silently widen scope to live streaming, geospatial density, new sensors, or new model training; propose them after MVP evidence.
+- Work in small, reviewable branches or commits with one accountable owner per area.
+- Keep shared schemas stable after Phase 0. Schema changes require coordinated updates to implementation, documentation, and fixtures.
+- Each integration change should document behavior, include a representative request/result, and identify unverified limitations.
+- Record cross-team technical decisions in `docs/architecture/decisions.md` and measured model results in `docs/evaluation/` with video/model/config hashes and hardware details.
+- Store source media, labels, and checkpoints in approved locations when required. Git should contain only synthetic or otherwise permitted small fixtures.
+- Scope changes involving live video, geographic density, new sensors, or additional model training require review against MVP evidence.
 
-## 9. First actions by owner
+## 9. Initial actions
 
-- **AI/ML lead:** list available trained models and provenance; select candidate; draft model profile; prepare a small permitted evaluation manifest and adapter example.
-- **Teammate 1:** propose API/job schema and local job lifecycle; create fixture-backed API stub; state storage limits and retention behavior.
-- **Teammate 2:** create clickable/wireframe result flow; implement zone and quality-state interaction against agreed sample JSON; draft operator wording.
-- **All three:** choose pilot clip/site, confirm permissions, freeze the JSON contract, and agree review date and numerical acceptance criteria with the pilot owner.
+- **Product lead/AI-ML owner:** inventory trained models and provenance; select a candidate; draft a model profile; prepare a permitted evaluation manifest and adapter example.
+- **Backend owner:** finalize the API/job proposal; implement a fixture-backed service skeleton; document storage limits and retention behavior.
+- **Frontend owner:** prepare the operator-flow prototype; implement zone and quality-state presentation against the sample JSON; draft user-facing terminology.
+- **All owners:** select a pilot clip/site; confirm permissions; freeze the JSON contract; schedule a review; agree numerical acceptance criteria with the pilot-site owner.
