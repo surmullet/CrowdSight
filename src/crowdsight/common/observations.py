@@ -65,7 +65,11 @@ class PersonDetection:
 
 @dataclass(frozen=True, slots=True)
 class FrameObservation:
-    """AI output associated with one source frame."""
+    """AI output associated with one source frame.
+
+    Producers must explicitly supply zone coverage. An empty tuple is a
+    deliberate statement that no configured zone is fully observable.
+    """
 
     source_id: str
     session_id: str
@@ -78,10 +82,10 @@ class FrameObservation:
     image_width: int
     image_height: int
     detections: tuple[PersonDetection, ...]
+    fully_observed_zones: tuple[str, ...]
     quality: QualityState = QualityState.VALID
     captured_at: Optional[datetime] = None
     registration_valid: bool = False
-    fully_observed_zones: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for name in ("source_id", "session_id", "model_profile_id"):
