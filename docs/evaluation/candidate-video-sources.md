@@ -41,6 +41,16 @@ SAM-generated masks or boxes are **pseudo-labels**. A human reviewer must correc
 
 ## Current access status
 
-The current Python runtime does not have the `sam3`, `segment_anything`, or `ultralytics` packages installed, and no SAM-related credential environment variable is configured. No SAM3 annotation has been run. To proceed, make an authorized SAM3 runtime available in this environment (for example, the official model/API access configured through a local secret store); do not commit credentials or place tokens in this repository. Then visually inspect the selected video, produce candidate annotations, and manually review them before evaluating a model.
+No SAM3 annotation has been run. On 2026-09-25, the default Python was 3.10.11 with no PyTorch installed; the machine GPU was an NVIDIA GeForce GTX 1650 Ti with 4 GiB VRAM. The separately recorded crowd-inference runtime uses PyTorch 2.5.1+cu121. The [official SAM3 repository](https://github.com/facebookresearch/sam3) currently requires Python 3.12+, PyTorch 2.7+, and a CUDA-compatible GPU with CUDA 12.6+; its current installation example uses PyTorch 2.10.0 with CUDA 12.8. SAM3 therefore needs its own isolated environment. The 4 GiB local GPU has not been validated for SAM3 video inference and may run out of memory; the official prerequisite page does not specify a minimum VRAM amount.
+
+### Local setup path
+
+1. Review and accept the checkpoint-access conditions on the [SAM3 Hugging Face model page](https://huggingface.co/facebook/sam3). The page requires authentication and access approval before downloading the weights.
+2. In a separate Conda environment, follow the official SAM3 repository's current Windows-compatible Python/CUDA instructions. The documented baseline is Python 3.12+, PyTorch 2.7+, and CUDA 12.6+; the current install example pins PyTorch 2.10.0 and CUDA 12.8.
+3. Install the official SAM3 repository and authenticate locally with `hf auth login` after access is granted. Enter the Hugging Face token only in the local credential prompt; never paste it into chat, a project file, terminal transcript committed to Git, or `.env` tracked by Git.
+4. Before annotating the full review set, run one representative frame and confirm model loading, GPU memory, and output quality. If the 4 GiB GPU cannot complete this step, use an authorized machine with more memory or another approved SAM3 runtime.
+5. Export SAM proposals as candidate boxes/masks, then complete human review and adjudication in the prediction-free review workflow. Preserve model-generated and human-reviewed labels as separate artifacts.
+
+Use the model only for annotation assistance; generated masks or boxes remain pseudo-labels until a human has checked misses, duplicates, merged people, and incorrect classes. Check the SAM3 model and software license before use. Keep Hugging Face credentials, model checkpoints, source frames, pseudo-labels, and reviewed labels outside Git. The local SAM3 source code's CUDA and installation instructions do not establish permission to use any particular video source.
 
 The sibling UAV project has a SAM 3.1 inference output for a different Pexels clip, not this intersection source. Its saved output is a model estimate rather than ground truth and cannot be substituted as labels. Its local Python environment also does not contain `sam3`, `torch`, OpenCV, or Ultralytics at this check. The intersection source remains unlabelled; SAM-generated proposals, if produced later, require frame-by-frame human correction.
