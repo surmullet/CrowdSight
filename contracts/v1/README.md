@@ -24,6 +24,7 @@ The examples contain synthetic IDs and values and do not represent measured mode
 5. Who approves schema changes and maintains compatibility for the two model namespaces?
 6. For parking, does `camera_view_id` name the exact trained/profile-supported view, and who maintains the mapping from source IDs to view IDs?
 7. Confirm parking frame quality: `VALID` means all configured stalls have known states; `PARTIAL` means a mix of known and `UNKNOWN`; `UNKNOWN`/`STALE` means every configured stall is `UNKNOWN`. The service owner must also set the freshness limit that transitions an observation to `STALE`.
+8. If customer waiting-time estimates are in scope, define whether the estimate covers parking-entry wait or a customer-service queue, identify the timestamped event/throughput source and its owner, and review a separate versioned analytics contract. Do not add wait time to the parking occupancy frame output without that decision; occupancy states alone do not supply the required queue/service evidence.
 
 ## Compatibility findings from the two reference applications
 

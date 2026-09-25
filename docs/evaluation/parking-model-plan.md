@@ -73,6 +73,14 @@ Report per-space precision, recall, F1 and a three-state confusion matrix; site-
 
 Compare decisions against manual labels collected independently of model output. Alert/availability thresholds require site-owner approval. Metrics remain descriptive until approved acceptance thresholds exist.
 
+## Customer waiting-time estimate extension
+
+Waiting-time estimation is a separate downstream analytics problem; it is not part of `ParkingOccupancyModel` and cannot be inferred from `OCCUPIED`/`AVAILABLE` stall states alone. Before designing a model or API, the product owner must define whether the measure is time waiting to enter/park or time waiting in a customer-service queue.
+
+At minimum, an estimator needs a configured queue/entry/service boundary, time-ordered anonymous queue observations, a trustworthy media/capture time basis, and observed service-start/completion or departure events (or independently measured throughput). If the camera cannot observe the queue or the required events are absent, return an unavailable status. Any estimate should identify the queue and time window, report an interval or percentile with quality/freshness, and remain advisory; it must not be presented as a guaranteed individual wait. Use short-lived anonymous event association only if needed, with no persistent identity or re-identification.
+
+Evaluate this extension separately using permitted, source-separated queue sessions with independent timestamps for actual arrival and service/departure. Report median absolute error, signed bias, upper-quantile error, interval coverage when intervals are emitted, and the proportion of time the estimator abstains, stratified by queue load and operating conditions. Lock evaluation sessions before tuning and return `UNKNOWN`/`STALE` when event coverage or freshness is insufficient. A separate reviewed contract version and backend/frontend owner approval are required before exposing the estimate. This section is a requirements proposal; no wait-time model, event feed, labels, or output schema exists yet.
+
 ## Release requirements
 
 - Completed model card, label mapping, dataset provenance/license, data split manifest, training configuration, framework versions, checkpoint checksum, and artifact retrieval process.

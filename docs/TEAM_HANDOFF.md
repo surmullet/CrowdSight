@@ -85,6 +85,8 @@ All three team members share responsibility for product scope, interface contrac
 
 Parking occupancy is a separate follow-on module, not part of the crowd MVP acceptance gate. The product lead/AI-ML owner will train and evaluate a dedicated occupancy model. Teammate 1 will own the parking result API, space-configuration versioning, and aggregation after the contract is approved. Teammate 2 will own parking-space configuration and occupancy/unknown-state presentation. The initial behavior is advisory availability for operators or information displays. Gate/barrier commands, reservations, and vehicle routing require a separate approved system design and are excluded from this module contract.
 
+Customer waiting-time estimation is a separate downstream analytics feature, not a field emitted by the occupancy model. Occupancy states alone cannot determine waiting time; the feature needs a defined queue, queue/entry observations with timestamps, and service or departure events (or measured throughput). At a joint review, the product, backend, frontend, and AI/ML owners must decide whether “waiting time” means parking-entry wait or an on-site service queue, identify the event source and responsible owner, and approve an estimate format and freshness policy. The AI/ML owner will define and evaluate the estimator after those inputs exist; Teammate 1 will integrate event inputs and result storage; Teammate 2 will show estimates as ranges with quality/freshness and unknown states. Do not introduce customer identity or persistent re-identification. Keep the occupancy contract and its evaluation separate.
+
 ## 4. Repository structure and asset policy
 
 ```text
