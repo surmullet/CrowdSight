@@ -88,6 +88,8 @@ class ParkingFrameObservation:
             not isinstance(result, ParkingSpaceResult) for result in self.spaces
         ):
             raise ValueError("spaces must be a nonempty tuple of ParkingSpaceResult values")
+        if any(result.evidence_time_s != self.media_time_s for result in self.spaces):
+            raise ValueError("each parking space evidence_time_s must match the frame media_time_s")
         states = [result.state for result in self.spaces]
         known_present = any(state is not ParkingState.UNKNOWN for state in states)
         unknown_present = any(state is ParkingState.UNKNOWN for state in states)
