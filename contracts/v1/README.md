@@ -9,7 +9,8 @@ These JSON Schemas describe the proposed AI-to-application frame outputs. They a
 - `fixtures/crowd-frame-observation.valid.json`: synthetic valid replay observation.
 - `fixtures/crowd-frame-observation.partial.json`: synthetic partial observation with only one fully observed zone.
 - `fixtures/crowd-frame-observation.unknown.json`: synthetic failed/unknown observation with no detections.
-- `fixtures/parking-frame-observation.valid.json`: synthetic advisory occupancy result, including an unknown stall.
+- `fixtures/parking-frame-observation.valid.json`: synthetic fully observed parking result with every stall classified.
+- `fixtures/parking-frame-observation.partial.json`: synthetic partially observed result with a mix of known and unknown stalls.
 - `fixtures/parking-frame-observation.unknown.json`: synthetic unavailable parking observation with all configured stalls unknown and confidence null.
 
 The examples contain synthetic IDs and values and do not represent measured model performance, a real site, or approved operating thresholds. They contain no footage or checkpoint artifacts.
@@ -22,6 +23,7 @@ The examples contain synthetic IDs and values and do not represent measured mode
 4. Confirm that `confidence_semantics: RAW_MODEL_SCORE` is surfaced as an uncalibrated score; any future calibrated-probability claim requires calibration evidence and a reviewed contract revision.
 5. Who approves schema changes and maintains compatibility for the two model namespaces?
 6. For parking, does `camera_view_id` name the exact trained/profile-supported view, and who maintains the mapping from source IDs to view IDs?
+7. Confirm parking frame quality: `VALID` means all configured stalls have known states; `PARTIAL` means a mix of known and `UNKNOWN`; `UNKNOWN`/`STALE` means every configured stall is `UNKNOWN`. The service owner must also set the freshness limit that transitions an observation to `STALE`.
 
 ## Compatibility findings from the two reference applications
 

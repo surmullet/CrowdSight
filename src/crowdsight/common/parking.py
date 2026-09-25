@@ -88,9 +88,14 @@ class ParkingFrameObservation:
             not isinstance(result, ParkingSpaceResult) for result in self.spaces
         ):
             raise ValueError("spaces must be a nonempty tuple of ParkingSpaceResult values")
-        if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and any(
-            result.state is not ParkingState.UNKNOWN for result in self.spaces
-        ):
+        states = [result.state for result in self.spaces]
+        known_present = any(state is not ParkingState.UNKNOWN for state in states)
+        unknown_present = any(state is ParkingState.UNKNOWN for state in states)
+        if self.quality is QualityState.VALID and unknown_present:
+            raise ValueError("VALID parking frames require a known state for every configured space")
+        if self.quality is QualityState.PARTIAL and not (known_present and unknown_present):
+            raise ValueError("PARTIAL parking frames require both known and UNKNOWN spaces")
+        if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and known_present:
             raise ValueError("UNKNOWN/STALE frames may contain only UNKNOWN spaces")
         space_ids = [result.space_id for result in self.spaces]
         if len(space_ids) != len(set(space_ids)):

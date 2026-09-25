@@ -3,17 +3,17 @@
   "camera_view_id": "synthetic-view-east-v1",
   "space_layout_version": "synthetic-layout-v1",
   "source_id": "demo-parking-camera-01",
-  "session_id": "synthetic-run-002",
-  "frame_index": 120,
-  "media_time_s": 4.0,
+  "session_id": "synthetic-run-004",
+  "frame_index": 122,
+  "media_time_s": 4.08,
   "captured_at": null,
   "model_profile_id": "parking_occupancy_site_v1",
   "model_profile_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "checkpoint_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "confidence_semantics": "RAW_MODEL_SCORE",
-  "quality": "VALID",
+  "quality": "PARTIAL",
   "spaces": [
-    {"space_id": "A-017", "state": "OCCUPIED", "confidence": 0.91, "evidence_time_s": 4.0},
-    {"space_id": "A-018", "state": "AVAILABLE", "confidence": 0.89, "evidence_time_s": 4.0}
+    {"space_id": "A-017", "state": "OCCUPIED", "confidence": 0.91, "evidence_time_s": 4.08},
+    {"space_id": "A-018", "state": "UNKNOWN", "confidence": null, "evidence_time_s": 4.08}
   ]
 }

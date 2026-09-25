@@ -67,6 +67,45 @@
   },
   "allOf": [
     {
+      "if": {"properties": {"quality": {"const": "VALID"}}, "required": ["quality"]},
+      "then": {
+        "properties": {
+          "spaces": {
+            "items": {
+              "properties": {
+                "state": {"enum": ["OCCUPIED", "AVAILABLE"]}
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"quality": {"const": "PARTIAL"}}, "required": ["quality"]},
+      "then": {
+        "properties": {
+          "spaces": {
+            "allOf": [
+              {
+                "contains": {
+                  "properties": {"state": {"const": "UNKNOWN"}},
+                  "required": ["state"]
+                },
+                "minContains": 1
+              },
+              {
+                "contains": {
+                  "properties": {"state": {"enum": ["OCCUPIED", "AVAILABLE"]}},
+                  "required": ["state"]
+                },
+                "minContains": 1
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
       "if": {"properties": {"quality": {"enum": ["UNKNOWN", "STALE"]}}, "required": ["quality"]},
       "then": {
         "properties": {

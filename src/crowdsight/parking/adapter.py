@@ -212,4 +212,13 @@ def validate_parking_predictions(
     missing = [space_id for space_id in space_ids if space_id not in by_space]
     if missing:
         raise ValueError(f"Model omitted configured parking spaces: {missing}")
-    return tuple(by_space[space_id] for space_id in space_ids)
+    ordered = tuple(by_space[space_id] for space_id in space_ids)
+    known_present = any(item.state is not ParkingState.UNKNOWN for item in ordered)
+    unknown_present = any(item.state is ParkingState.UNKNOWN for item in ordered)
+    if quality is QualityState.VALID and unknown_present:
+        raise ValueError("VALID parking frames require a known state for every configured space")
+    if quality is QualityState.PARTIAL and not (known_present and unknown_present):
+        raise ValueError("PARTIAL parking frames require both known and UNKNOWN spaces")
+    if quality in (QualityState.UNKNOWN, QualityState.STALE) and known_present:
+        raise ValueError("UNKNOWN/STALE frames may contain only UNKNOWN spaces")
+    return ordered

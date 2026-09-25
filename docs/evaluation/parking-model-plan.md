@@ -61,7 +61,7 @@ The supplied parking reference is a rendered/top-down stall illustration, useful
 }
 ```
 
-`space_layout_version` binds each `space_id` to an immutable site geometry version; `space_id` is a configuration key, not a vehicle identity. Return `UNKNOWN` for blocked, off-frame, stale, invalid, or unsupported observations; never infer `AVAILABLE` from missing detections alone. For replay, `captured_at` remains null. The backend should aggregate only valid states and show coverage and unknown-space counts.
+`space_layout_version` binds each `space_id` to an immutable site geometry version; `space_id` is a configuration key, not a vehicle identity. Quality is defined consistently at frame and stall level: `VALID` requires every configured stall to be `OCCUPIED` or `AVAILABLE`; `PARTIAL` requires at least one known stall and at least one `UNKNOWN`; `UNKNOWN` and `STALE` require every configured stall to be `UNKNOWN` with null confidence. Return `UNKNOWN` for blocked, off-frame, stale, invalid, or unsupported stalls; never infer `AVAILABLE` from missing detections alone. For replay, `captured_at` remains null. The backend should aggregate only known states and show coverage and unknown-space counts.
 
 ## Evaluation
 
