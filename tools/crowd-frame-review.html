@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CrowdSight frame review</title>
+<style>
+  :root { color-scheme: dark; font: 16px/1.45 system-ui, sans-serif; background:#10151d; color:#e9eef5; }
+  body { margin:0; }
+  main { max-width:1280px; margin:auto; padding:24px; }
+  h1,h2 { line-height:1.2; }
+  h1 { margin:0 0 4px; }
+  p { color:#c4ceda; }
+  .card { background:#19212c; border:1px solid #354253; border-radius:10px; padding:16px; margin:16px 0; }
+  .row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+  label { display:inline-flex; gap:8px; align-items:center; }
+  input,button,textarea { font:inherit; }
+  input[type=text] { min-width:220px; padding:8px; }
+  input[type=file] { max-width:100%; }
+  button { background:#26364a; border:1px solid #4a5d75; color:#fff; padding:8px 12px; border-radius:6px; cursor:pointer; }
+  button:hover { background:#334a66; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .primary { background:#145a72; }
+  .danger { background:#692e35; }
+  .status { padding:10px 12px; border-radius:6px; background:#202c3a; white-space:pre-wrap; }
+  .status.error { background:#542c34; color:#ffe4e7; }
+  .status.good { background:#1d493b; color:#dbfff1; }
+  canvas { display:block; width:100%; height:auto; max-height:72vh; object-fit:contain; background:#090c10; border:1px solid #566274; touch-action:none; cursor:crosshair; }
+  textarea { box-sizing:border-box; width:100%; min-height:76px; padding:8px; }
+  .muted { color:#9eacbd; font-size:.92rem; }
+  .pill { padding:3px 8px; border:1px solid #566274; border-radius:999px; }
+  details { color:#c4ceda; }
+  #video { display:none; }
+  @media (max-width:700px) { main { padding:12px; } .row > * { width:100%; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>CrowdSight frame review</h1>
+  <p>Offline, prediction-free box annotation for a locked evaluation sample. The page processes selected files in this browser tab; it has no upload or network function.</p>
+
+  <section class="card">
+    <h2>1. Load the locked manifest and source video</h2>
+    <div class="row">
+      <label>Manifest JSON <input id="manifestFile" type="file" accept="application/json,.json"></label>
+      <label>Source video <input id="videoFile" type="file" accept="video/*,.mp4,.avi,.mov,.mkv"></label>
+      <label>Reviewer ID <input id="reviewer" type="text" autocomplete="off" placeholder="team member ID"></label>
+      <label>Restore labels <input id="labelsFile" type="file" accept="application/json,.json"></label>
+    </div>
+    <p class="muted">For the current candidate, select <code>mixkit-busy-intersection-test-v1.manifest.json</code> and the original <code>busy-intersection-fullhd.mp4</code>. Video hash, dimensions, duration, and frame rate are checked against the manifest before annotation.</p>
+    <div id="status" class="status" role="status">Load a manifest to begin.</div>
+  </section>
+
+  <section id="review" class="card" hidden>
+    <h2>2. Review every selected frame</h2>
+    <div class="row" style="margin-bottom:12px">
+      <button id="prev">Previous</button>
+      <button id="next">Next</button>
+      <span id="frameInfo" class="pill"></span>
+      <span id="boxInfo" class="pill"></span>
+      <button id="toggleUncertain">Mark selected box uncertain</button>
+      <button id="deleteBox" class="danger">Delete selected box</button>
+      <button id="complete" class="primary">Mark frame complete</button>
+    </div>
+    <canvas id="canvas" aria-label="Video frame. Drag to draw one person box. Click a box to select it."></canvas>
+    <p class="muted">Drag to draw a tight box around each visible person. Click a box to select it; mark unresolved plausible people uncertain. Include identifiable partially visible people. Do not label shadows, infer fully hidden people, or use model predictions. Complete a genuinely empty frame with zero boxes.</p>
+    <label for="notes">Frame notes</label>
+    <textarea id="notes" placeholder="Optional note about occlusion or ambiguity; do not add names or identity details."></textarea>
+    <div class="row" style="margin-top:12px">
+      <button id="export" class="primary">Download labels JSON</button>
+      <span id="saveInfo" class="muted"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>Review policy and data handling</summary>
+      <p>These are manual reference labels. Pseudo-labels from SAM or another model must be reviewed and corrected before export. A complete frame means every visible person in the whole frame has been reviewed; an empty box list means a reviewed zero-person frame. Use pixel <code>bbox_xyxy</code> coordinates in original image dimensions. Flag unresolved regions as uncertain rather than guessing. Labels are autosaved in this browser's local storage and are not uploaded. Export and store them only in the approved private dataset location.</p>
+      <p>The current manifest records data permission as pending. Label review can proceed, but do not run held-out inference or describe results as held out until the data owner completes the permission review and independence evidence is reviewed.</p>
+    </details>
+  </section>
+</main>
+<video id="video" muted playsinline preload="auto"></video>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const manifestInput = $('manifestFile'), videoInput = $('videoFile'), labelsInput = $('labelsFile');
+  const reviewerInput = $('reviewer'), statusEl = $('status'), reviewEl = $('review');
+  const video = $('video'), canvas = $('canvas'), ctx = canvas.getContext('2d');
+  let manifest = null, labels = null, sourceFile = null, sourceUrl = null, current = 0;
+  let selectedBox = -1, drawing = null, decoded = false;
+
+  function status(message, kind='') {
+    statusEl.textContent = message;
+    statusEl.className = `status ${kind}`.trim();
+  }
+  function localKey() { return manifest ? `crowdsight-labels:${manifest.dataset_id}:${manifest.source_sha256}` : ''; }
+  function currentFrame() { return labels?.frames?.[current]; }
+  function fmtTime(value) { return Number(value).toFixed(3); }
+  function normalizeLabels(value) {
+    if (!value || value.schema_version !== 1 || value.dataset_id !== manifest.dataset_id ||
+        String(value.source_sha256).toLowerCase() !== manifest.source_sha256.toLowerCase() ||
+        !Array.isArray(value.frames)) throw new Error('Labels file does not match the loaded manifest/source.');
+    const expected = new Set(manifest.samples.map(s => s.frame_index));
+    const seen = new Set();
+    for (const row of value.frames) {
+      if (!expected.has(row.frame_index) || seen.has(row.frame_index) || !Array.isArray(row.boxes))
+        throw new Error('Labels file has an unknown, duplicate, or malformed frame.');
+      seen.add(row.frame_index);
+      row.complete = row.complete === true;
+      row.reviewer = String(row.reviewer || '');
+      row.notes = String(row.notes || '');
+      row.boxes = row.boxes.map(box => {
+        const coords = box.bbox_xyxy;
+        if (!Array.isArray(coords) || coords.length !== 4 || coords.some(n => !Number.isFinite(n)))
+          throw new Error(`Malformed box in frame ${row.frame_index}.`);
+        const [x1,y1,x2,y2] = coords.map(Number);
+        if (!(0 <= x1 && x1 < x2 && x2 <= manifest.width && 0 <= y1 && y1 < y2 && y2 <= manifest.height))
+          throw new Error(`Box outside frame bounds in frame ${row.frame_index}.`);
+        return {bbox_xyxy:[x1,y1,x2,y2], uncertain:box.uncertain === true};
+      });
+      if (row.complete && !row.reviewer.trim()) row.complete = false;
+    }
+    if (seen.size !== expected.size) throw new Error('Labels file must contain every selected frame exactly once.');
+    return {schema_version:1,dataset_id:value.dataset_id,source_sha256:value.source_sha256,frames:value.frames};
+  }
+  function freshLabels() {
+    return {schema_version:1,dataset_id:manifest.dataset_id,source_sha256:manifest.source_sha256,
+      frames:manifest.samples.map(s=>({frame_index:s.frame_index,complete:false,reviewer:'',notes:'',boxes:[]}))};
+  }
+  function saveLocal() {
+    if (!labels || !manifest) return;
+    try {
+      localStorage.setItem(localKey(), JSON.stringify(labels));
+      $('saveInfo').textContent = 'Saved locally in this browser.';
+    } catch (_) { $('saveInfo').textContent = 'Local browser storage is unavailable; download labels regularly.'; }
+  }
+  function updateCurrent() {
+    if (!labels) return;
+    const frame = currentFrame();
+    frame.reviewer = reviewerInput.value.trim();
+    frame.notes = $('notes').value;
+    if (frame.complete && !frame.reviewer) frame.complete = false;
+    saveLocal();
+  }
+  function boxColor(box) { return box.uncertain ? '#ffca58' : '#48e09b'; }
+  function redraw() {
+    if (!decoded || !canvas.width) return;
+    ctx.drawImage(video,0,0,canvas.width,canvas.height);
+    const boxes = currentFrame()?.boxes || [];
+    boxes.forEach((box,i)=>{
+      const [x1,y1,x2,y2] = box.bbox_xyxy;
+      ctx.lineWidth = Math.max(2,canvas.width/900);
+      ctx.strokeStyle = boxColor(box);
+      ctx.setLineDash(box.uncertain ? [10,6] : []);
+      ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+      ctx.setLineDash([]);
+      ctx.fillStyle = boxColor(box);
+      ctx.font = `bold ${Math.max(16,canvas.width/80)}px system-ui`;
+      ctx.fillText(`${i+1}${box.uncertain?'?':''}`,x1+3,Math.max(18,y1-4));
+      if (i===selectedBox) {
+        ctx.strokeStyle='#ffffff'; ctx.lineWidth=Math.max(2,canvas.width/700);
+        ctx.strokeRect(x1,y1,x2-x1,y2-y1);
+      }
+    });
+    if (drawing) {
+      const x=Math.min(drawing.x,drawing.endX), y=Math.min(drawing.y,drawing.endY);
+      ctx.strokeStyle='#58b8ff'; ctx.lineWidth=Math.max(2,canvas.width/900);
+      ctx.strokeRect(x,y,Math.abs(drawing.endX-drawing.x),Math.abs(drawing.endY-drawing.y));
+    }
+    const sample=manifest.samples[current], frame=currentFrame();
+    $('frameInfo').textContent=`${current+1}/${manifest.samples.length} · frame ${sample.frame_index} · ${fmtTime(sample.media_time_s)} s`;
+    const definite=frame.boxes.filter(b=>!b.uncertain).length, uncertain=frame.boxes.length-definite;
+    $('boxInfo').textContent=`${definite} definite · ${uncertain} uncertain · ${frame.complete?'COMPLETE':'IN REVIEW'}`;
+    $('prev').disabled=current===0; $('next').disabled=current===manifest.samples.length-1;
+    $('toggleUncertain').disabled=selectedBox<0; $('deleteBox').disabled=selectedBox<0;
+    $('complete').textContent=frame.complete?'Reopen frame':'Mark frame complete';
+  }
+  function videoFrame(index) {
+    return new Promise((resolve,reject)=>{
+      const sample=manifest.samples[index];
+      if (sample.frame_index >= manifest.source_frames) return reject(new Error('Selected frame index exceeds source frame count.'));
+      let settled=false;
+      const timer=setTimeout(()=>finish(reject,new Error('Timed out waiting for the selected video frame to decode.')) ,5000);
+      const finish=(callback,value)=>{if(settled)return;settled=true;clearTimeout(timer);cleanup();callback(value);};
+      const onSeeked=()=>{
+        const checkTime=actual=>{
+          const nearest=Math.round(actual*manifest.source_fps);
+          if (nearest!==sample.frame_index) return finish(reject,new Error(`Browser decoded frame ${nearest}; manifest requires ${sample.frame_index}. This frame cannot be labelled reliably in this browser.`));
+          finish(resolve);
+        };
+        if (typeof video.requestVideoFrameCallback==='function') {
+          video.requestVideoFrameCallback((_,metadata)=>checkTime(metadata.mediaTime));
+        } else {
+          finish(reject,new Error('This browser cannot verify the decoded source frame. Use a current Chrome or Edge browser.'));
+        }
+      };
+      const onError=()=>finish(reject,new Error('Browser could not seek to this selected video frame.'));
+      const cleanup=()=>{video.removeEventListener('seeked',onSeeked);video.removeEventListener('error',onError);video.removeEventListener('loadeddata',seek);};
+      video.addEventListener('seeked',onSeeked,{once:true}); video.addEventListener('error',onError,{once:true});
+      const seek=()=>{
+        if(Math.abs(video.currentTime-sample.media_time_s)<1e-8 && video.readyState>=2) onSeeked();
+        else video.currentTime=sample.media_time_s;
+      };
+      if(video.readyState<2) video.addEventListener('loadeddata',seek,{once:true}); else seek();
+    });
+  }
+  async function showFrame(index) {
+    if (!manifest || !decoded || !labels) return;
+    updateCurrent(); current=index; selectedBox=-1; drawing=null;
+    reviewerInput.value=currentFrame().reviewer || reviewerInput.value;
+    $('notes').value=currentFrame().notes || '';
+    try { await videoFrame(current); redraw(); }
+    catch (error) { status(error.message,'error'); }
+  }
+  async function readJson(file) { return JSON.parse(await file.text()); }
+  async function validateManifest(value) {
+    if (!value || value.schema_version!==1 || typeof value.dataset_id!=='string' ||
+        typeof value.source_sha256!=='string' || !Array.isArray(value.samples) || !value.samples.length)
+      throw new Error('Manifest does not match the CrowdSight frame manifest format.');
+    if (value.samples.some(s=>!Number.isInteger(s.frame_index)||s.frame_index<0||!Number.isFinite(s.media_time_s)))
+      throw new Error('Manifest has invalid frame indices or timestamps.');
+    if (new Set(value.samples.map(s=>s.frame_index)).size!==value.samples.length)
+      throw new Error('Manifest frame indices must be unique.');
+    manifest=value;
+    if (!sourceFile) { status('Manifest loaded. Select the source video.'); return; }
+    await validateVideo();
+  }
+  async function validateVideo() {
+    if (!manifest || !sourceFile) return;
+    if (!crypto?.subtle) throw new Error('Web Crypto is unavailable in this browser. Open this file in a current browser or use a local HTTP server.');
+    status(`Checking source video SHA-256 for ${sourceFile.name} (${(sourceFile.size/1048576).toFixed(1)} MiB)…`);
+    const digest=await crypto.subtle.digest('SHA-256',await sourceFile.arrayBuffer());
+    const actual=[...new Uint8Array(digest)].map(b=>b.toString(16).padStart(2,'0')).join('');
+    if (actual.toLowerCase()!==manifest.source_sha256.toLowerCase()) throw new Error(`Video SHA-256 mismatch. Expected ${manifest.source_sha256}; selected file hashes to ${actual}.`);
+    if (sourceFile.size!==manifest.source_bytes) throw new Error('Video byte size does not match manifest.');
+    if (!sourceUrl) sourceUrl=URL.createObjectURL(sourceFile);
+    video.pause(); video.removeAttribute('src'); video.load();
+    await new Promise((resolve,reject)=>{
+      video.addEventListener('loadedmetadata',resolve,{once:true});
+      video.addEventListener('error',()=>reject(new Error('Browser could not read video metadata.')),{once:true});
+      video.src=sourceUrl; video.load();
+    });
+    if (video.videoWidth!==manifest.width || video.videoHeight!==manifest.height) throw new Error('Video dimensions do not match manifest.');
+    if (Math.abs(video.duration-manifest.source_duration_s)>0.15) throw new Error('Video duration does not match manifest.');
+    if (manifest.source_fps && manifest.samples.some(s=>Math.abs(s.media_time_s-s.frame_index/manifest.source_fps)>0.00001))
+      throw new Error('Manifest sample time does not match its frame index and source FPS.');
+    labels=freshLabels();
+    const saved=localStorage.getItem(localKey());
+    if (saved) {
+      try { labels=normalizeLabels(JSON.parse(saved)); }
+      catch (error) { status(`Saved labels were not restored: ${error.message}`,'error'); }
+    }
+    decoded=true; canvas.width=manifest.width; canvas.height=manifest.height;
+    $('review').hidden=false; current=0;
+    status(`Source verified: ${manifest.samples.length} locked frames. Hash ${actual}. Permission status: ${manifest.data_permission?.status || 'not recorded'}.`,'good');
+    await showFrame(0);
+  }
+  function point(event) {
+    const r=canvas.getBoundingClientRect();
+    return {x:Math.max(0,Math.min(canvas.width,(event.clientX-r.left)*canvas.width/r.width)),
+            y:Math.max(0,Math.min(canvas.height,(event.clientY-r.top)*canvas.height/r.height))};
+  }
+  canvas.addEventListener('pointerdown',event=>{
+    if (!decoded) return;
+    canvas.setPointerCapture(event.pointerId);
+    const p=point(event); drawing={x:p.x,y:p.y,endX:p.x,endY:p.y}; redraw();
+  });
+  canvas.addEventListener('pointermove',event=>{if(drawing){const p=point(event);drawing.endX=p.x;drawing.endY=p.y;redraw();}});
+  canvas.addEventListener('pointerup',event=>{
+    if(!drawing)return;
+    const d=drawing, p=point(event); drawing=null;
+    const x1=Math.min(d.x,p.x),y1=Math.min(d.y,p.y),x2=Math.max(d.x,p.x),y2=Math.max(d.y,p.y);
+    if(Math.hypot(p.x-d.x,p.y-d.y)<6){
+      const boxes=currentFrame().boxes; selectedBox=-1;
+      for(let i=boxes.length-1;i>=0;i--){const b=boxes[i].bbox_xyxy;if(d.x>=b[0]&&d.x<=b[2]&&d.y>=b[1]&&d.y<=b[3]){selectedBox=i;break;}}
+    } else if(x2-x1>=3&&y2-y1>=3){
+      currentFrame().boxes.push({bbox_xyxy:[Number(x1.toFixed(1)),Number(y1.toFixed(1)),Number(x2.toFixed(1)),Number(y2.toFixed(1))],uncertain:false});
+      selectedBox=currentFrame().boxes.length-1; currentFrame().complete=false; updateCurrent();
+    }
+    redraw();
+  });
+  manifestInput.addEventListener('change',async()=>{try{await validateManifest(await readJson(manifestInput.files[0]));}catch(e){status(e.message,'error');}});
+  videoInput.addEventListener('change',async()=>{try{if(sourceUrl){URL.revokeObjectURL(sourceUrl);sourceUrl=null;}sourceFile=videoInput.files[0];await validateVideo();}catch(e){decoded=false;reviewEl.hidden=true;status(e.message,'error');}});
+  labelsInput.addEventListener('change',async()=>{try{labels=normalizeLabels(await readJson(labelsInput.files[0]));saveLocal();await showFrame(current);status('Labels restored and source identity checked.','good');}catch(e){status(e.message,'error');}});
+  reviewerInput.addEventListener('input',()=>{if(labels){updateCurrent();redraw();}});
+  $('notes').addEventListener('input',()=>{if(labels){updateCurrent();}});
+  $('prev').addEventListener('click',()=>showFrame(Math.max(0,current-1)));
+  $('next').addEventListener('click',()=>showFrame(Math.min(manifest.samples.length-1,current+1)));
+  $('toggleUncertain').addEventListener('click',()=>{const b=currentFrame().boxes[selectedBox];b.uncertain=!b.uncertain;currentFrame().complete=false;updateCurrent();redraw();});
+  $('deleteBox').addEventListener('click',()=>{currentFrame().boxes.splice(selectedBox,1);selectedBox=-1;currentFrame().complete=false;updateCurrent();redraw();});
+  $('complete').addEventListener('click',()=>{
+    const reviewer=reviewerInput.value.trim(); if(!reviewer){status('Enter a reviewer ID before completing a frame.','error');reviewerInput.focus();return;}
+    const f=currentFrame();f.reviewer=reviewer;f.notes=$('notes').value;f.complete=!f.complete;saveLocal();redraw();
+  });
+  $('export').addEventListener('click',()=>{
+    updateCurrent();
+    const incomplete=labels.frames.filter(f=>!f.complete||!f.reviewer.trim()).length;
+    if(incomplete){status(`${incomplete} selected frame(s) remain incomplete. Export is allowed for backup, but evaluation will reject missing reviews.`,'error');}
+    const blob=new Blob([JSON.stringify(labels,null,2)+'\n'],{type:'application/json'});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`${manifest.dataset_id}.labels.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  });
+  window.addEventListener('beforeunload',()=>{if(sourceUrl)URL.revokeObjectURL(sourceUrl);});
+})();
+</script>
+</body>
+</html>

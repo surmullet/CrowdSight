@@ -13,6 +13,8 @@
   "source_sha256": "e9084a41628e578d45f356e1a9ae1bfb6ad182f3786d09ad4f965aab259fe6a1",
   "source_bytes": 202527196,
   "source_fps": 23.976023976023978,
+  "source_frames": 1429,
+  "source_duration_s": 59.60120833333333,
   "width": 1920,
   "height": 1080,
   "zone_polygons_normalized": {},
