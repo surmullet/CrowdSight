@@ -250,6 +250,10 @@ def evaluate(
     sequence_inventory_complete = model.get("training_sequence_inventory_complete") is True
     independence_ref = model.get("independence_evidence_ref")
     independence_sha = model.get("independence_evidence_sha256")
+    if independence_ref is not None and (
+        not isinstance(independence_ref, str) or not independence_ref.strip()
+    ):
+        raise ValueError("independence_evidence_ref must be nonempty or null")
     independence_evidence = (
         isinstance(independence_ref, str) and bool(independence_ref.strip())
         and _valid_sha(independence_sha)

@@ -314,6 +314,10 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
             raise ValueError(f"Model {model_id} training_overlap_status is invalid")
         independence_evidence = model.get("independence_evidence_ref")
         independence_evidence_sha = model.get("independence_evidence_sha256")
+        if independence_evidence is not None and (
+            not isinstance(independence_evidence, str) or not independence_evidence.strip()
+        ):
+            raise ValueError(f"Model {model_id} independence_evidence_ref must be nonempty or null")
         if independence_evidence_sha is not None and not _is_sha256(independence_evidence_sha):
             raise ValueError(f"Model {model_id} independence_evidence_sha256 is invalid")
         training_hashes = model.get("training_source_sha256s")
