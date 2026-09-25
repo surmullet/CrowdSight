@@ -1,10 +1,12 @@
-# Experimental Plaza-adapted pair; checkpoint is not present locally.
+# Experimental Plaza-adapted pair; checkpoint is available in the UAV sibling
+# project's returned pilot artifacts and remains external to this repository.
 profile_id: crowd_pilot_last_experimental_v1
-status: experimental_checkpoint_not_installed
+status: experimental_checkpoint_available_external
 task: person_detection_and_tracking
 model_family: ultralytics_yolo11s
 checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
 checkpoint_sha256: 6d4b691a82ad74eb3d36ee61c386bd8724c2bac39eaa1945f3a3eb838bfe485f
+source_artifact: ../uav-crowd-monitoring/artifacts/e01-finetune-returned/last.pt
 class_mapping:
   person: 0
 preprocessing:
