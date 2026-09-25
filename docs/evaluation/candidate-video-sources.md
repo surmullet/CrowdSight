@@ -1,6 +1,16 @@
 # Candidate video sources for exploratory evaluation
 
-These are candidate sources only. No video has been downloaded, annotated, or admitted to an evaluation split. Inspect the actual clip, capture source metadata and SHA-256, and record a data-permission decision before creating labels or running model predictions. Keep downloaded media and frame exports outside Git.
+These are source candidates, not approved evaluation splits. The Pexels candidates below have not been downloaded or annotated. One Mixkit clip is already available in a sibling project, but has no reviewed labels and has not been admitted to an evaluation split. Record a data-permission decision before held-out inference; keep downloaded media and frame exports outside Git.
+
+## Existing independent overhead test candidate
+
+- **Clip:** [Busy intersection aerial view](https://mixkit.co/free-stock-video/busy-intersection-aerial-view-60/)
+- **Source page:** describes a static drone view over an avenue, parking lots, cars, trees, and pedestrians; lists 1920×1080 Full HD, about 60 seconds, and the Mixkit Stock Video Free License.
+- **Local source record:** the downloaded original and source evidence already exist outside this repository in the sibling UAV project at `../uav-crowd-monitoring/artifacts/independent-intersection/`. Source SHA-256: `e9084a41628e578d45f356e1a9ae1bfb6ad182f3786d09ad4f965aab259fe6a1`; 202,527,196 bytes; 1,429 decoded frames; 23.976 fps; 1920×1080; 59.60 seconds. The local sampling contact sheet was created before model inference.
+- **Visual/source review:** nearly fixed overhead drone view with sparse pedestrians around sidewalks and crosswalks. Small people and tree occlusion make it useful for a sparse-scene miss/false-positive diagnostic, but it is not a dense-crowd benchmark, Vietnam footage, or fixed CCTV. Parking stalls are not individually labelled, so this is not parking occupancy or waiting-time evidence.
+- **Known training relationship:** the sibling source record says the clip was not used in the E01 fine-tuning pilot and was reserved before inference for comparison. Upstream pretraining/source-identity overlap has not been independently audited.
+- **Permission status:** the source page states the clip is under Mixkit's Stock Video Free License and permits personal or commercial project use; the license page describes download, copy, modification, distribution, public performance, and broadcast rights, subject to Mixkit User Terms. Record a named data-owner review and the applicable terms/evidence in the private manifest before running the held-out gate or redistributing frames/labels. This source review is not a rights determination.
+- **Use:** highest-priority available candidate for external sparse overhead crowd/person evaluation after a locked frame sample is manually labelled and permission evidence is reviewed. Any resulting report must remain exploratory unless the complete training inventory and source-independence evidence are reviewed.
 
 ## General crowd-density candidate
 
@@ -26,3 +36,5 @@ SAM-generated masks or boxes are **pseudo-labels**. A human reviewer must correc
 ## Current access status
 
 The current Python runtime does not have the `sam3`, `segment_anything`, or `ultralytics` packages installed, and no SAM-related credential environment variable is configured. No SAM3 annotation has been run. To proceed, make an authorized SAM3 runtime available in this environment (for example, the official model/API access configured through a local secret store); do not commit credentials or place tokens in this repository. Then visually inspect the selected video, produce candidate annotations, and manually review them before evaluating a model.
+
+The sibling UAV project has a SAM 3.1 inference output for a different Pexels clip, not this intersection source. Its saved output is a model estimate rather than ground truth and cannot be substituted as labels. Its local Python environment also does not contain `sam3`, `torch`, OpenCV, or Ultralytics at this check. The intersection source remains unlabelled; SAM-generated proposals, if produced later, require frame-by-frame human correction.
