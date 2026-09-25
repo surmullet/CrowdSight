@@ -101,6 +101,8 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
     for document, name in ((labels, "labels"), (predictions, "predictions")):
         if document.get("dataset_id") != manifest["dataset_id"]:
             raise ValueError(f"{name} dataset_id does not match manifest")
+        if document.get("site_id") != manifest["site_id"]:
+            raise ValueError(f"{name} site_id does not match manifest")
         if not _valid_hash(document.get("source_sha256")) or document["source_sha256"].lower() != source_hash.lower():
             raise ValueError(f"{name} source_sha256 does not match manifest")
         if document.get("space_layout_version") != manifest["space_layout_version"]:
@@ -167,6 +169,9 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
         normalized_labels[index] = states
 
     for index, row in prediction_frames.items():
+        time_s = row.get("media_time_s")
+        if type(time_s) not in (int, float) or not math.isfinite(time_s) or time_s != by_frame[index]["media_time_s"]:
+            raise ValueError("Prediction media_time_s must match the sampled frame")
         spaces = row.get("spaces")
         if not isinstance(spaces, list):
             raise ValueError("Each prediction frame needs a spaces array")
@@ -184,6 +189,13 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
                 raise ValueError("Prediction confidence must be null or a finite value in [0,1]")
             if state == "UNKNOWN" and confidence is not None:
                 raise ValueError("UNKNOWN predictions must have null confidence")
+            evidence_time_s = item.get("evidence_time_s")
+            if (
+                type(evidence_time_s) not in (int, float)
+                or not math.isfinite(evidence_time_s)
+                or evidence_time_s != time_s
+            ):
+                raise ValueError("Each parking-space evidence_time_s must match its frame media_time_s")
             states[space_id] = state
         if set(states) != expected_spaces:
             raise ValueError("Every prediction frame must cover every configured space")
@@ -262,19 +274,29 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
     overlap_status = training.get("overlap_status", "unknown_or_mixed")
     if overlap_status not in ("verified_disjoint", "verified_overlap", "overlap_possible", "unknown_or_mixed"):
         raise ValueError("Invalid training overlap status")
-    if overlap_status == "verified_disjoint" and (hash_overlap or partition_overlap):
-        raise ValueError("Training evidence claims disjointness but overlaps test data")
-    if overlap_status == "verified_overlap" and not (hash_overlap or partition_overlap):
-        raise ValueError("Training evidence claims confirmed overlap but no source/partition overlap is recorded")
     evidence_ref = training.get("independence_evidence_ref")
     evidence_sha = training.get("independence_evidence_sha256")
     if evidence_sha is not None and not _valid_hash(evidence_sha):
         raise ValueError("training_evidence.independence_evidence_sha256 must be a SHA-256 digest")
+    if overlap_status == "verified_disjoint" and (
+        not complete_inventory or not training_hashes or not training_partitions
+        or not _valid_hash(inventory_hash)
+        or not isinstance(evidence_ref, str) or not evidence_ref.strip()
+        or not _valid_hash(evidence_sha)
+        or hash_overlap or partition_overlap
+    ):
+        raise ValueError(
+            "verified_disjoint requires a complete nonempty hash-identified source/partition inventory, "
+            "training-manifest and independence-evidence hashes, and no exact test overlap"
+        )
+    if overlap_status == "verified_overlap" and not (hash_overlap or partition_overlap):
+        raise ValueError("Training evidence claims confirmed overlap but no source/partition overlap is recorded")
     model = predictions.get("model")
     if not isinstance(model, dict) or not isinstance(model.get("profile_id"), str) or not model["profile_id"].strip():
         raise ValueError("Predictions must identify a model profile")
-    if model.get("camera_view_id") != manifest["camera_view_id"]:
-        raise ValueError("Predictions model camera_view_id does not match manifest")
+    for key in ("site_id", "camera_view_id", "space_layout_version"):
+        if model.get(key) != manifest[key]:
+            raise ValueError(f"Predictions model {key} does not match manifest")
     for key in ("profile_sha256", "checkpoint_sha256"):
         if not _valid_hash(model.get(key)):
             raise ValueError(f"Predictions model.{key} must be a SHA-256 digest")
@@ -302,7 +324,10 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
             "TRAINING_FIT_PARKING_EVALUATION_OVERLAP_CONFIRMED"
             if overlap_status == "verified_overlap" or hash_overlap or partition_overlap
             else "HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW"
-            if held_out_candidate else "EXPLORATORY_PARKING_EVALUATION_OVERLAP_UNVERIFIED"
+            if held_out_candidate
+            else "EXPLORATORY_PARKING_EVALUATION_DISJOINTNESS_RECORDED"
+            if overlap_status == "verified_disjoint"
+            else "EXPLORATORY_PARKING_EVALUATION_OVERLAP_UNVERIFIED"
         ),
         "dataset_id": manifest["dataset_id"],
         "split": manifest["split"],
