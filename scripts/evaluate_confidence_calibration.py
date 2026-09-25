@@ -1,12 +1,14 @@
 """Evaluate raw detector-score calibration against reviewed person boxes.
 
-This tool evaluates probabilities implied by raw scores; it does not fit a
-calibrator or change model output semantics. See the evaluation format guide.
+This tool evaluates raw scores against reviewed matches and can render an
+optional reliability diagram. It does not fit a calibrator or change model
+output semantics. See the evaluation format guide.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
+import html
 import json
 import math
 from pathlib import Path
@@ -69,6 +71,100 @@ def _metric_rows(scores: list[float], outcomes: list[int], bins: int) -> dict[st
             "Interpretation requires enough independent reviewed examples and condition-stratified review.",
         ],
     }
+
+
+def _reliability_svg(report: dict[str, Any]) -> str:
+    """Render a dependency-free reliability diagram from the all-detection bins."""
+    width, height = 900, 680
+    left, top, plot_size = 100, 70, 500
+    right, bottom = left + plot_size, top + plot_size
+    colors = ["#1769aa", "#d04a35", "#2e8540", "#7a4fa3", "#c47a00", "#00838f"]
+    parts = [
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title description">',
+        '<title id="title">Detection score reliability diagram</title>',
+        '<desc id="description">Observed matched-box accuracy against mean raw detector score, '
+        'grouped into equal-width score bins. This diagram does not calibrate the scores.</desc>',
+        '<rect width="100%" height="100%" fill="white"/>',
+        '<text x="450" y="32" text-anchor="middle" font-family="sans-serif" '
+        'font-size="20" font-weight="bold">Raw detection score reliability</text>',
+    ]
+    for tick in range(6):
+        value = tick / 5
+        x = left + value * plot_size
+        y = bottom - value * plot_size
+        parts.extend([
+            f'<line x1="{x:.1f}" y1="{top}" x2="{x:.1f}" y2="{bottom}" stroke="#e3e7eb"/>',
+            f'<line x1="{left}" y1="{y:.1f}" x2="{right}" y2="{y:.1f}" stroke="#e3e7eb"/>',
+            f'<text x="{x:.1f}" y="{bottom + 23}" text-anchor="middle" '
+            f'font-family="sans-serif" font-size="12">{value:.1f}</text>',
+            f'<text x="{left - 12}" y="{y + 4:.1f}" text-anchor="end" '
+            f'font-family="sans-serif" font-size="12">{value:.1f}</text>',
+        ])
+    parts.extend([
+        f'<line x1="{left}" y1="{bottom}" x2="{right}" y2="{top}" '
+        'stroke="#555" stroke-width="2" stroke-dasharray="7 6"/>',
+        f'<rect x="{left}" y="{top}" width="{plot_size}" height="{plot_size}" '
+        'fill="none" stroke="#303840" stroke-width="1.5"/>',
+        f'<text x="{left + plot_size / 2}" y="{bottom + 52}" text-anchor="middle" '
+        'font-family="sans-serif" font-size="14">Mean raw model score</text>',
+        f'<text x="25" y="{top + plot_size / 2}" text-anchor="middle" '
+        'font-family="sans-serif" font-size="14" '
+        f'transform="rotate(-90 25 {top + plot_size / 2})">Observed matched-box accuracy</text>',
+        f'<text x="{left + 8}" y="{top + 20}" font-family="sans-serif" '
+        'font-size="12" fill="#555">Ideal agreement</text>',
+    ])
+    any_points = False
+    legend_y = top + 8
+    for index, (model_id, model) in enumerate(sorted(report.get("models", {}).items())):
+        color = colors[index % len(colors)]
+        metrics = model.get("groups", {}).get("all", {})
+        points = [
+            row for row in metrics.get("bins", [])
+            if row.get("n", 0) and row.get("mean_score") is not None
+            and row.get("observed_accuracy") is not None
+        ]
+        points.sort(key=lambda row: row["mean_score"])
+        escaped_id = html.escape(str(model_id), quote=True)
+        parts.append(
+            f'<line x1="650" y1="{legend_y}" x2="676" y2="{legend_y}" '
+            f'stroke="{color}" stroke-width="3"/>'
+            f'<text x="684" y="{legend_y + 4}" font-family="sans-serif" '
+            f'font-size="12">{escaped_id} (n={metrics.get("n", 0)})</text>'
+        )
+        legend_y += 24
+        if not points:
+            parts.append(
+                f'<text x="650" y="{legend_y}" font-family="sans-serif" '
+                f'font-size="11" fill="#555">No scorable detections</text>'
+            )
+            legend_y += 22
+            continue
+        any_points = True
+        coords = [
+            (left + float(row["mean_score"]) * plot_size,
+             bottom - float(row["observed_accuracy"]) * plot_size)
+            for row in points
+        ]
+        for (x, y), row in zip(coords, points):
+            parts.extend([
+                f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5" fill="{color}" '
+                f'stroke="white" stroke-width="1.5"><title>n={row["n"]}, '
+                f'mean score={row["mean_score"]:.4f}, '
+                f'observed accuracy={row["observed_accuracy"]:.4f}</title></circle>',
+            ])
+    if not any_points:
+        parts.append(
+            '<text x="350" y="320" text-anchor="middle" font-family="sans-serif" '
+            'font-size="16" fill="#555">No scorable detections in any model</text>'
+        )
+    parts.extend([
+        '<text x="100" y="660" font-family="sans-serif" font-size="11" fill="#555">'
+        'Equal-width bins; empty bins omitted. This descriptive plot does not fit a calibrator '
+        'or authorize probability claims.</text>',
+        '</svg>',
+    ])
+    return "\n".join(parts) + "\n"
 
 
 def evaluate_calibration(
@@ -168,6 +264,10 @@ def main() -> None:
     parser.add_argument("--labels", required=True, type=Path)
     parser.add_argument("--predictions", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument(
+        "--reliability-svg", type=Path,
+        help="optionally write a private SVG reliability diagram; refuses to overwrite",
+    )
     parser.add_argument("--iou", type=float, default=0.5)
     parser.add_argument("--bins", type=int, default=10)
     args = parser.parse_args()
@@ -181,11 +281,31 @@ def main() -> None:
         "predictions": _sha256(args.predictions),
     }
     report["evaluator_script_sha256"] = _sha256(Path(__file__).resolve())
+    svg_text = _reliability_svg(report) if args.reliability_svg else None
+    if svg_text is not None:
+        report["reliability_diagram"] = {
+            "artifact_sha256": hashlib.sha256(svg_text.encode("utf-8")).hexdigest(),
+            "x": "mean raw model score per non-empty equal-width bin",
+            "y": "observed matched-box accuracy per non-empty equal-width bin",
+            "scope": "all scorable emitted detections, by model",
+            "calibrator_fit": False,
+        }
     args.output.parent.mkdir(parents=True, exist_ok=True)
+    if svg_text is not None:
+        args.reliability_svg.parent.mkdir(parents=True, exist_ok=True)
+        if args.reliability_svg.resolve() == args.output.resolve():
+            raise ValueError("--reliability-svg and --output must be different paths")
+    if args.output.exists() or (args.reliability_svg and args.reliability_svg.exists()):
+        raise FileExistsError("Refusing to overwrite an evaluation artifact")
     with args.output.open("x", encoding="utf-8") as stream:
         json.dump(report, stream, indent=2, allow_nan=False)
         stream.write("\n")
-    print(json.dumps({"status": "EVALUATED", "report": str(args.output)}))
+    result = {"status": "EVALUATED", "report": str(args.output)}
+    if svg_text is not None:
+        with args.reliability_svg.open("x", encoding="utf-8", newline="\n") as stream:
+            stream.write(svg_text)
+        result["reliability_diagram"] = str(args.reliability_svg)
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":
