@@ -276,6 +276,8 @@ def evaluate(manifest: Any, labels: Any, predictions: Any) -> dict[str, Any]:
         raise ValueError("Invalid training overlap status")
     evidence_ref = training.get("independence_evidence_ref")
     evidence_sha = training.get("independence_evidence_sha256")
+    if evidence_ref is not None and (not isinstance(evidence_ref, str) or not evidence_ref.strip()):
+        raise ValueError("training_evidence.independence_evidence_ref must be nonempty or null")
     if evidence_sha is not None and not _valid_hash(evidence_sha):
         raise ValueError("training_evidence.independence_evidence_sha256 must be a SHA-256 digest")
     if overlap_status == "verified_disjoint" and (
