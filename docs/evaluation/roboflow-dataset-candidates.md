@@ -56,6 +56,8 @@ The project page links these YouTube sources for images included in its dataset.
 - [Clark Pacific — Coleman Highline Parking Structure 2 Time Lapse](https://www.youtube.com/watch?v=5cEAZQnJr0I)
 - [Underground parking garage entrance](https://www.youtube.com/watch?v=ADgl0X9JAxM)
 
+The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. FAPS is too short to be the primary temporal evaluation clip; either source would first need visual confirmation of a stable view and suitable motorbike examples.
+
 ## Parking-area motorbike detection discovery candidate: Parking Lot Occupany 2
 
 - Project: [Parking Lot Occupany 2 on Roboflow Universe](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
