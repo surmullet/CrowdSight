@@ -11,10 +11,11 @@ These are candidate sources only. No video has been downloaded, annotated, or ad
 ## Vietnam motorbike traffic candidates
 
 - **Clip:** [Vehicles in a Busy Intersection](https://www.pexels.com/video/vehicles-in-a-busy-intersection-5036725/)
-- **Page description:** Busy Saigon intersection with motorcycles under a highway overpass. The page includes a time-lapse tag; verify camera stability, viewpoint, and motion before use.
+- **Pexels metadata:** 1920×1080, 16:9, 11 seconds. The page includes a time-lapse tag.
+- **Visual inspection:** The preview shows a low oblique street-level view beneath an overpass, with motorbikes passing through the intersection and no marked parking bays. The view does not match the fixed overhead parking reference and is unsuitable for stall-occupancy evaluation. It may support only a short qualitative Vietnam traffic demo; do not use it as target parking or crowd-density evidence.
 - **Alternative:** [Busy Vietnamese City Traffic with Motorbikes](https://www.pexels.com/video/busy-vietnamese-city-traffic-with-motorbikes-33383205/)
 - **Page metadata:** 3840×2160, 60 seconds, 59.94 fps; page description identifies motorbike traffic in Vietnam. The page does not establish a fixed CCTV angle.
-- **Use:** Potential exploratory motorbike/traffic demo only after frame review. Neither candidate is established as fixed-camera parking footage, so neither can validate parking-space occupancy.
+- **Use:** Potential exploratory motorbike/traffic demo only after frame review. Neither candidate is established as fixed-camera parking footage, so neither can validate parking-space occupancy. No public candidate found so far matches the required fixed overhead view of a Vietnam motorbike parking area; request pilot-camera footage and owner permission for the parking workstream.
 
 ## License and annotation handling
 
