@@ -10,7 +10,62 @@ The sibling `chosen.txt` selects six sequences (`00001`, `00019`, `00037`, `0005
 
 ## Annotation and metric compatibility
 
-The labels are per-frame head points in `frame_id,x,y` format, not person bounding boxes. The existing CrowdSight box evaluator therefore cannot score this dataset as-is. The sibling evaluator supports point-distance matching, but its default 25-pixel radius and every-fifth-frame sampling are legacy settings, not approved CrowdSight evaluation policy. If data use is approved, create a CrowdSight-owned, provenance-gated point-evaluation manifest/scorer, decide and justify the point-matching radius before predictions, and report point precision/recall/F1 and per-frame count MAE/RMSE/bias. Do not compare these point metrics directly with box-IoU metrics. This dataset cannot establish confidence calibration unless the evaluation protocol separately defines binary correctness for emitted detections and accounts for conditioning on the score threshold.
+The labels are per-frame head points in `frame_id,x,y` format, not person bounding boxes. The existing CrowdSight box evaluator cannot score localization from these labels. The official [DroneCrowd challenge metric](https://aiskyeye.com/evaluate/crowd-counting/) is per-frame count MAE and MSE, so CrowdSight will use count-only scoring here and will not claim box-IoU precision/recall, head localization, or tracking quality. `scripts/evaluate_dronecrowd_counts.py` reports MAE, MSE, RMSE, signed count bias, unknown prediction rate, and per-sequence/per-condition count metrics. A complete point annotation is converted to its point count by the authorized private data-preparation step; no labels or footage are committed to Git. This point-count evaluation does not establish confidence calibration.
+
+The scorer accepts three JSON documents. The manifest records a locked selection and source archive hash; each sample has a stable `sequence_id` and one-based `frame_id`. Labels contain a complete human-reviewed `person_count` for each selected frame. Predictions contain the valid/unknown state and count from the versioned CrowdSight detector plus checkpoint/profile/runtime and complete training-lineage metadata. Example row shapes:
+
+```json
+{
+  "schema_version": 1,
+  "dataset_id": "dronecrowd-remaining-v1",
+  "split": "held_out",
+  "source_sha256": "<archive-sha256>",
+  "width": 1920,
+  "height": 1080,
+  "evaluation_protocol": {
+    "split_unit": "sequence",
+    "test_partition_id": "dronecrowd-remaining-sequences-v1",
+    "selection_locked_before_predictions": true
+  },
+  "data_permission": {
+    "status": "approved",
+    "permitted_uses": ["model_evaluation"],
+    "evidence_ref": "private://permission-review",
+    "evidence_sha256": "<permission-evidence-sha256>",
+    "reviewer_id": "reviewer-id"
+  },
+  "samples": [
+    {"sequence_id": "00002", "frame_id": 1, "image_path": "sequences/00002/00001.jpg", "image_sha256": "<image-sha256>", "stratum": "dense"}
+  ]
+}
+```
+
+For each manifest sample, a labels frame has `sequence_id`, `frame_id`, `complete: true`, a nonempty `reviewer`, and integer `person_count`. The corresponding prediction frame has `sequence_id`, `frame_id`, `valid: true|false`, and nonnegative integer `count` when valid. An invalid frame has no count and is included in the unknown prediction rate, not accuracy metrics. The predictions root has `schema_version`, matching `dataset_id` and `source_sha256`, and `model` metadata: `profile_id`, `profile_sha256`, `checkpoint_sha256`, `training_overlap_status`, `training_source_inventory_complete`, `training_source_sha256s`, `training_sequence_inventory_complete`, `training_sequence_ids`, `training_partition_ids`, `independence_evidence_ref`, `independence_evidence_sha256`, and `runtime`. The two inventory-complete flags must reflect a reviewed, full lineage inventory; use empty arrays only when a reviewer confirms there are no entries. Exact source, partition, or sequence overlap forces `TRAINING_FIT`. A `HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW` report additionally requires complete inventories, `verified_disjoint`, an independence evidence hash, and approved evaluation permission. The scorer checks metadata fields only; a named reviewer must authenticate the evidence artifacts.
+
+Once the source owner has approved this use and the archive/image hashes and manifest are prepared, infer from the extracted image tree without loading labels:
+
+```powershell
+$env:CROWDSIGHT_CROWD_CHECKPOINT = "D:\approved-artifacts\best.pt"
+python scripts/run_crowd_image_inference.py `
+  --images-root D:\approved-data\dronecrowd\VisDrone2020-CC `
+  --source-archive D:\approved-data\dronecrowd\dronecrowd.zip `
+  --manifest D:\approved-data\dronecrowd\manifest.json `
+  --profile configs/models/crowd_best_local.yaml `
+  --training-evidence D:\approved-data\model-lineage\best-local-training-evidence.json `
+  --output D:\approved-results\dronecrowd\predictions.json
+```
+
+The runner refuses unapproved permission metadata, archive-hash mismatch, frame-hash mismatch, path escape from the supplied image root, or dimension mismatch. It writes one result per selected frame and refuses to overwrite an existing prediction file. The runner and scorer record their own script hashes. Permission and lineage evidence references still require human authentication.
+
+After permission is approved and selected-frame count labels and predictions are stored privately, run:
+
+```powershell
+python scripts/evaluate_dronecrowd_counts.py `
+  --manifest D:\approved-data\dronecrowd\manifest.json `
+  --labels D:\approved-data\dronecrowd\labels.json `
+  --predictions D:\approved-results\dronecrowd\predictions.json `
+  --output D:\approved-results\dronecrowd\count-report.json
+```
 
 ## Permission and independence gates
 
@@ -21,4 +76,4 @@ The labels are per-frame head points in `frame_id,x,y` format, not person boundi
 
 ## Decision
 
-This is more promising than the Mixkit intersection for crowd localization/count diagnostics because it contains annotated aerial crowd sequences, but it is **not ready to use**. The 76 sequence IDs and all 30 frame IDs per sequence have been frozen before any new inference in the [candidate selection record](manifests/dronecrowd-remaining-train-sequences-candidate-v1.json). The record is explicitly pending permission and scorer readiness; it is not a CrowdSight evaluation manifest and contains no predictions. Next steps are to establish data permission, verify that the 76 candidate sequences were not used by this checkpoint in any other way, and implement a point-based provenance-gated scorer. Until each gate passes, the candidate cannot close the held-out evaluation requirement.
+This is more promising than the Mixkit intersection for aerial crowd-count diagnostics because it contains point-annotated crowd sequences, but it is **not ready to use**. The 76 sequence IDs and all 30 frame IDs per sequence have been frozen before any new inference in the [candidate selection record](manifests/dronecrowd-remaining-train-sequences-candidate-v1.json). The record remains pending source-specific permission and full checkpoint-lineage review; it is not a CrowdSight evaluation manifest and contains no predictions. The count scorer is now prepared, but no data processing is authorized by that code or by the public download page. Next steps are to obtain a permission record for the intended noncommercial evaluation, confirm the sequence-level annotation preparation policy, verify the 76 candidates were not present in any checkpoint training source, then produce predictions and score them. Until those gates pass, no held-out claim is supported.
