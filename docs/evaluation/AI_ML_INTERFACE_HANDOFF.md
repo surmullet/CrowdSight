@@ -8,16 +8,16 @@ Machine-readable proposed v1 schemas and synthetic review fixtures are in [`cont
 
 Implemented adapter interfaces are in `src/crowdsight/detection/adapter.py`; YAML profile loading is in `src/crowdsight/detection/profile_loader.py`; shared frame/person observation types are in `src/crowdsight/common/observations.py`. `UltralyticsPersonDetector` returns current person detections. `UltralyticsPersonTracker` returns only tracker-associated current observations and must be instantiated per video session. The tracker adapter does not emit predicted lost tracks as observed people. Use detector-only outputs if raw detections are required.
 
-Profile loading requires PyYAML, while inference requires NumPy, PyTorch, and the compatible Ultralytics runtime. The observed Windows/CUDA direct-version pins are in [`requirements/crowd-inference-cu121-windows.txt`](../../requirements/crowd-inference-cu121-windows.txt); they are not a clean-install-verified transitive lock.
+Profile loading requires PyYAML, while inference requires NumPy, PyTorch, and the compatible Ultralytics runtime. The observed Windows/CUDA direct pins are in [`requirements/crowd-inference-cu121-windows.txt`](../../requirements/crowd-inference-cu121-windows.txt); the captured recursive exact-version lock is [`requirements/crowd-inference-cu121-windows.lock.txt`](../../requirements/crowd-inference-cu121-windows.lock.txt). The lock is not wheel-hash-locked and has not been clean-install-verified.
 
 Install the shared adapter package from the repository root before using the documented imports:
 
 ```powershell
-py -3.10 -m pip install -e .
-py -3.10 -m pip install -r requirements\crowd-inference-cu121-windows.txt --extra-index-url https://download.pytorch.org/whl/cu121
+py -3.10 -m pip install -r requirements\crowd-inference-cu121-windows.lock.txt --extra-index-url https://download.pytorch.org/whl/cu121
+py -3.10 -m pip install --no-deps -e .
 ```
 
-The second command is for the recorded Windows/CUDA 12.1 environment. For other platforms or CUDA versions, select a compatible PyTorch wheel separately, then record the exact installed versions and device in the inference output. The pinned requirements file is a direct-version record rather than a complete transitive lock and has not been clean-install-verified.
+These commands target the recorded Windows/CUDA 12.1 environment. The lock was assembled from installed package metadata for the recorded inference environment; it constrains versions but does not verify wheel hashes or prove clean-install success. For other platforms or CUDA versions, select a compatible PyTorch wheel separately, then record the exact installed versions and device in the inference output.
 
 ```python
 from pathlib import Path

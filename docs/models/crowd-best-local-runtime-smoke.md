@@ -10,12 +10,13 @@ The CrowdSight adapter loaded the checkpoint and returned structurally valid det
 - Operating system: Windows 10, build 19045.
 - Python: `3.10.11`.
 - Direct runtime versions: PyTorch `2.5.1+cu121`; torchvision `0.20.1+cu121`; Ultralytics `8.4.153`; NumPy `2.2.6`; OpenCV Python package `5.0.0.93` (`cv2` reports `5.0.0`); PyYAML `6.0.3`; Pillow `12.3.0`.
-- Compatibility pin file: [`requirements/crowd-inference-cu121-windows.txt`](../../requirements/crowd-inference-cu121-windows.txt). This records observed direct versions; it is not a complete transitive/hash lock and has not been installed in a clean environment.
-- Proposed clean-environment install command (not yet run):
+- Direct compatibility summary: [`requirements/crowd-inference-cu121-windows.txt`](../../requirements/crowd-inference-cu121-windows.txt). Recursive exact-version lock captured from that installed environment: [`requirements/crowd-inference-cu121-windows.lock.txt`](../../requirements/crowd-inference-cu121-windows.lock.txt). The lock is not wheel-hash-locked and has not been installed in a clean environment.
+- Proposed clean-environment install commands (not yet run):
 
   ```powershell
   py -3.10 -m venv .venv-crowd
-  .\.venv-crowd\Scripts\python -m pip install -r requirements\crowd-inference-cu121-windows.txt --extra-index-url https://download.pytorch.org/whl/cu121
+  .\.venv-crowd\Scripts\python -m pip install -r requirements\crowd-inference-cu121-windows.lock.txt --extra-index-url https://download.pytorch.org/whl/cu121
+  .\.venv-crowd\Scripts\python -m pip install --no-deps -e .
   ```
 - CrowdSight profile ID: `crowd_best_local_v1`.
 - Model-profile SHA-256: `20cb9e8c95492c5b68ce86d8a57ec97a3b8e8234773d816024c5b0b450a5d2eb`.
