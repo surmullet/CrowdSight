@@ -66,7 +66,7 @@ The proposed per-frame wire example:
 
 Coordinates are normalized to `[0,1]`; `x,y` are the bottom-centre ground-contact approximation. Detector-only `track_id` is null. Tracking IDs are run-local and temporary. Replay `captured_at` is null; `media_time_s` must not be converted to capture UTC. Confidence is a raw model score unless calibration has been evaluated; it is not a correctness probability.
 
-Contract v1 serializes `confidence_semantics: RAW_MODEL_SCORE` only. A calibrated-probability output requires a reviewed contract revision, a versioned calibrator trained on a separate calibration partition, and independent test evidence (reliability diagram, Brier score, negative log-likelihood, declared-bin ECE, and condition-stratified results) plus site-owner approval. Until those gates pass, consumers must display the value as a raw score or omit it.
+Contract v1 serializes `confidence_semantics: RAW_MODEL_SCORE` only. The inference archive preserves each raw detection score for evaluation, and `scripts/evaluate_confidence_calibration.py` measures Brier score, negative log-likelihood, and equal-width ECE against reviewed boxes by IoU matching. These diagnostics are conditional on emitted detections, do not fit a calibrator, and do not turn the raw score into a probability. A calibrated-probability output requires a reviewed contract revision, a versioned calibrator trained on a separate calibration partition, and independent test evidence (reliability diagram, Brier score, negative log-likelihood, declared-bin ECE, sample counts, and condition-stratified results) plus site-owner approval. Until those gates pass, consumers must display the value as a raw score or omit it.
 
 ### Contract decision required: boxes for annotated replay
 

@@ -152,8 +152,21 @@ def run_inference(
                         for detection in detections
                         if detection.bbox_xyxy_px is not None
                     ]
+                    scored_boxes = [
+                        {
+                            "bbox_xyxy": list(detection.bbox_xyxy_px),
+                            "raw_score": detection.confidence,
+                        }
+                        for detection in detections
+                        if detection.bbox_xyxy_px is not None
+                    ]
                     frame_predictions.append(
-                        {"frame_index": current_index, "valid": True, "boxes": boxes}
+                        {
+                            "frame_index": current_index,
+                            "valid": True,
+                            "boxes": boxes,
+                            "scored_boxes": scored_boxes,
+                        }
                     )
                     remaining.remove(current_index)
                 except Exception as exc:
@@ -163,6 +176,7 @@ def run_inference(
                             "frame_index": current_index,
                             "valid": False,
                             "boxes": [],
+                            "scored_boxes": [],
                             "failure_type": type(exc).__name__,
                         }
                     )
