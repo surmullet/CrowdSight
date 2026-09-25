@@ -29,6 +29,10 @@ These are source candidates, not approved evaluation splits. The Pexels candidat
 - **Page metadata:** 3840×2160, 60 seconds, 59.94 fps; page description identifies motorbike traffic in Vietnam. The page does not establish a fixed CCTV angle.
 - **Use:** Potential exploratory motorbike/traffic demo only after frame review. Neither candidate is established as fixed-camera parking footage, so neither can validate parking-space occupancy. No public candidate found so far matches the required fixed overhead view of a Vietnam motorbike parking area; request pilot-camera footage and owner permission for the parking workstream.
 
+## Parking CCTV source leads found through Roboflow
+
+The Roboflow [Parking Lot Occupany project](roboflow-dataset-candidates.md#parking-motorbike-detection-candidate-parking-lot-occupany) lists eight YouTube recordings as sources for its annotated images, including [FAPS H.264 PC-DVR CCTV Parking Lot Overview](https://www.youtube.com/watch?v=Z-ZgqqwEQZ4) and [ClearPix Camera Grocery Parking Lot](https://www.youtube.com/watch?v=KhtwB8faMpU). These are leads for visual review, not approved evaluation clips: source-level use rights, camera stability, motorcycle content, and exact relation between source frames and dataset images require review. They are not identified as Vietnam footage. If the model trains on that Roboflow dataset, any source video whose frames appear in it must be excluded from the held-out test partition.
+
 ## License and annotation handling
 
 The [Pexels license](https://www.pexels.com/license/) says its videos are free to use and modify, and lists use on websites, apps, and presentations. It also restricts certain uses involving identifiable people and forbids implying endorsement. Record the license URL and the date the source was checked in the private dataset manifest. This is a practical source check, not a legal opinion or proof of rights in the people depicted.

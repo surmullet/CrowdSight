@@ -40,8 +40,21 @@ Checked 2026-09-25. These are candidate image datasets for exploratory training 
 - Project: [Parking Lot Occupany on Roboflow Universe](https://universe.roboflow.com/mohamed-traore-w4h8y/parking-lot-occupany)
 - Published metadata: 350 project images across 3 versions; classes `vehicle` and `moped or motorcycle`; project declares CC BY 4.0. The page says it combines annotated images forked from several public Roboflow projects and includes images from YouTube videos. The hosted model references a version with 842 images, so version counts differ and must be resolved before selecting a package.
 - Possible use: the closest candidate found so far for exploratory parking-area motorbike/vehicle detection.
-- Limits: it does not label individual parking stalls or occupied/free state. The underlying YouTube source list, recording identities, camera angle, source rights, and source-separated split lineage are not established by the page summary. A declared project license does not by itself settle rights in every upstream source.
-- Decision: inspect version pages and image examples; verify source attribution and permission before download or model use. Do not treat the default split as held-out evidence.
+- Limits: it does not label individual parking stalls or occupied/free state. The page now exposes eight linked YouTube source titles, including several parking-lot CCTV examples, but does not map individual images to source recordings or prove source-separated split lineage. A declared project license does not by itself settle rights in every upstream source.
+- Decision: review the linked source clips below and verify source attribution and permission before use. If training uses this Roboflow dataset, do not evaluate on any of its source videos unless every source-derived frame is excluded from training and source-level separation is verified. Do not treat the default split as held-out evidence.
+
+### Source videos listed by the Roboflow project
+
+The project page links these YouTube sources for images included in its dataset. The titles indicate likely parking/CCTV relevance, but the source pages and use permissions must be reviewed individually; Roboflow does not provide the full source videos as dataset downloads.
+
+- [ClearPix Camera Grocery Parking Lot](https://www.youtube.com/watch?v=KhtwB8faMpU)
+- [FAPS H.264 PC-DVR CCTV Security Surveillance Camera Video of Parking Lot Overview](https://www.youtube.com/watch?v=Z-ZgqqwEQZ4)
+- [Robbery at a hotel parking lot Caught on Surveillance camera](https://www.youtube.com/watch?v=5vcen4HYPRs)
+- [BLK-HDPTZ12 Security Camera Parking Lot Surveillance Video](https://www.youtube.com/watch?v=U7HRKjlXK-Y)
+- [Empty Parking Garage — Lighting, Wind, Ventilation](https://www.youtube.com/watch?v=fUTIjMhQtq0)
+- [Nighttime Parking Lot Ambience](https://www.youtube.com/watch?v=ErNAuJSI8GI)
+- [Clark Pacific — Coleman Highline Parking Structure 2 Time Lapse](https://www.youtube.com/watch?v=5cEAZQnJr0I)
+- [Underground parking garage entrance](https://www.youtube.com/watch?v=ADgl0X9JAxM)
 
 ## Parking-area motorbike detection discovery candidate: Parking Lot Occupany 2
 
