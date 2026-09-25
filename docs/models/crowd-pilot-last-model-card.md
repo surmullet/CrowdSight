@@ -14,7 +14,7 @@ The two external copies were hashed directly during the 2026-09-25 inventory ref
 
 ## Training lineage
 
-The UAV run record identifies dataset `e01-finetune-pilot-v1`, a 10-epoch fine-tune using PyTorch `2.10.0+cu128`, Ultralytics `8.4.143`, two Tesla T4 GPUs, image size 1280, seed 42, and deterministic mode. The initial E01 checkpoint hash is `8332891c201ec99458c567e17b059bbac59ed8fa57134d1cc7a7048905a31483`; that initial artifact was not found in the scanned local model artifacts.
+The UAV run record identifies dataset `e01-finetune-pilot-v1`, a 10-epoch fine-tune using PyTorch `2.10.0+cu128`, Ultralytics `8.4.143`, two Tesla T4 GPUs, image size 1280, seed 42, and deterministic mode. The initial E01 checkpoint hash is `8332891c201ec99458c567e17b059bbac59ed8fa57134d1cc7a7048905a31483`; it is available as a verified member in the external fine-tuning archive, but is not installed as a standalone CrowdSight checkpoint.
 
 The pilot manifest records:
 
