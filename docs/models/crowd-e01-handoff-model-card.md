@@ -2,12 +2,13 @@
 
 ## Status and artifact identity
 
-This is the original E01-T02 YOLO11s person detector and conservative ByteTrack baseline. The checkpoint is present inside the external UAV fine-tuning archive, but it is not installed or stored in CrowdSight.
+This is the original E01-T02 YOLO11s person detector and conservative ByteTrack baseline. The checkpoint is stored outside CrowdSight as a local file in the UAV project and as a member of the fine-tuning archive.
 
 - Profile: [`crowd_e01_handoff.yaml`](../../configs/models/crowd_e01_handoff.yaml), profile ID `crowd_e01_t02_v1`.
 - Embedded checkpoint: `../uav-crowd-monitoring/artifacts/e01-finetune-pilot.zip#weights/e01.pt`.
 - Source archive size: 174,734,900 bytes; archive SHA-256 `74393ff0dba9878d195f11fdd9a1ad58a607a53e99f0288b6b81dd72ee8bfd5c`.
 - Embedded checkpoint size: 19,241,754 bytes; SHA-256 `8332891c201ec99458c567e17b059bbac59ed8fa57134d1cc7a7048905a31483`.
+- The extracted pilot input at `../uav-crowd-monitoring/artifacts/e01-finetune-pilot/weights/e01.pt` was directly hashed on 2026-09-25: 19,241,754 bytes and the same SHA-256 as the archived member.
 - The checkpoint was extracted only to `%TEMP%` for inference; no weight file was added to Git.
 
 The archive hash and embedded checkpoint hash were computed directly. The member digest matches the expected value in the profile and the sibling UAV baseline record.
