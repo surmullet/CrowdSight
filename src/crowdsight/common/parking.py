@@ -84,10 +84,10 @@ class ParkingFrameObservation:
             not isinstance(self.captured_at, datetime) or self.captured_at.utcoffset() is None
         ):
             raise ValueError("captured_at must be timezone-aware")
-        if not isinstance(self.spaces, tuple) or any(
+        if not isinstance(self.spaces, tuple) or not self.spaces or any(
             not isinstance(result, ParkingSpaceResult) for result in self.spaces
         ):
-            raise ValueError("spaces must be a tuple of ParkingSpaceResult values")
+            raise ValueError("spaces must be a nonempty tuple of ParkingSpaceResult values")
         if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and any(
             result.state is not ParkingState.UNKNOWN for result in self.spaces
         ):
