@@ -100,6 +100,8 @@ The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. 
 
 ## Data intake gates before download or model use
 
+Use the private [parking training data record template](parking-training-data-record-template.md) to capture the selected Roboflow version, source-group/image hashes, annotation mapping, permission, and split ancestry before a model-training run.
+
 1. Confirm project approval for the specific dataset/version and intended use. Record the source URL, access date, declared license, attribution text, version ID, and SHA-256 for the downloaded archive and extracted manifest.
 2. Review representative images and labels; identify class mapping, camera angle, source videos/cameras/dates, and whether the target motorbike/parking conditions appear.
 3. Inspect source-level provenance and partition IDs. Keep all frames and derived augmentations from one original source in one partition. If source identities are unavailable, classify the dataset as training-only exploratory material and never as held-out evidence.

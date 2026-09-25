@@ -26,6 +26,8 @@ The supplied parking reference is a rendered/top-down stall illustration, useful
 
 ## Data plan
 
+For each image or video dataset version, complete the [parking training data record](parking-training-data-record-template.md) in private artifact storage. It captures source-group IDs, image and annotation hashes, augmentation ancestry, partition assignment, rights, and whether labels actually represent stall states. Keep generated image variants in the same source partition; generate augmentations only after the source split is fixed.
+
 - Inventory camera resolution, mounting angle, lens, frame rate, night illumination, weather exposure, compression, network/storage limits, and camera movement.
 - Confirm the fixed-view assumption and approve the exact camera-view ID and space-layout version before collecting classifier crops.
 - Create a site-approved label guide and annotate space geometry/version plus per-space state and observation quality.
