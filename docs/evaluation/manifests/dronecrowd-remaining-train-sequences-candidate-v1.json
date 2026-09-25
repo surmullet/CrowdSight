@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "selection_id": "dronecrowd-remaining-train-sequences-candidate-v1",
+  "status": "SELECTION_LOCKED_PENDING_PERMISSION_AND_SCORER",
+  "selected_at_utc": "2026-09-25T06:21:37Z",
+  "purpose": "Candidate auxiliary point-annotation evaluation of CrowdSight crowd/person detection; not an approved or scored held-out evaluation.",
+  "source": {
+    "dataset": "DroneCrowd / VisDrone2020-CC",
+    "official_project": "https://github.com/VisDrone/DroneCrowd",
+    "local_archive_bytes": 1108851195,
+    "local_archive_sha256": "08de7262b9f1c6fcf46f52cb88218842beb59f13e05452affd6a59252ee962c9",
+    "official_partition": "training_sequences",
+    "annotation_type": "per-frame head points (frame_id,x,y), not person boxes",
+    "sequence_unit": "sequence folder containing 30 ordered frame images"
+  },
+  "permission": {
+    "status": "UNRESOLVED",
+    "reason": "No license or terms file was found in the extracted package or archive; obtain a source-specific permission/license record before inference, transformed annotation use, or redistribution."
+  },
+  "independence": {
+    "status": "UNKNOWN_OR_MIXED",
+    "prior_comparison_excluded_sequence_ids": ["00001", "00019", "00037", "00053", "00072", "00089"],
+    "complete_upstream_model_source_inventory_available": false,
+    "note": "The 76 selected sequences are outside the six sequences recorded in the previous best.pt DroneCrowd comparison, but complete upstream checkpoint/source independence is not established."
+  },
+  "sampling": {
+    "split_unit": "sequence",
+    "selection_rule": "Every sequence in the local 82-sequence trainlist except the six IDs in prior_comparison_excluded_sequence_ids.",
+    "frame_rule": "All 30 labeled frame IDs, 1 through 30, in each selected sequence.",
+    "selected_sequence_count": 76,
+    "frames_per_sequence": 30,
+    "expected_frame_count": 2280,
+    "prediction_generated": false
+  },
+  "model": {
+    "profile_id": "crowd_best_local_v2",
+    "checkpoint_sha256": "12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc"
+  },
+  "selected_sequence_ids": [
+    "00002", "00003", "00004", "00005", "00006", "00007", "00008", "00009", "00010", "00012",
+    "00013", "00014", "00020", "00021", "00025", "00026", "00027", "00028", "00029", "00030",
+    "00031", "00032", "00033", "00036", "00038", "00039", "00040", "00041", "00045", "00046",
+    "00047", "00048", "00049", "00050", "00051", "00052", "00054", "00055", "00056", "00057",
+    "00058", "00059", "00060", "00064", "00066", "00067", "00068", "00071", "00073", "00076",
+    "00077", "00078", "00079", "00080", "00081", "00083", "00084", "00085", "00086", "00087",
+    "00090", "00091", "00092", "00093", "00094", "00096", "00097", "00098", "00099", "00100",
+    "00102", "00104", "00106", "00107", "00109", "00110"
+  ]
+}
