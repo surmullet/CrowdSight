@@ -31,6 +31,11 @@ def load_person_detector_profile(
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     if not isinstance(config, dict):
         raise ValueError(f"Model profile must contain a YAML mapping: {config_path}")
+    if config.get("task") not in ("person_detection", "person_detection_and_tracking"):
+        raise ValueError("Model profile task must identify a person-detection model")
+    profile_id = config.get("profile_id")
+    if not isinstance(profile_id, str) or not profile_id.strip():
+        raise ValueError("Model profile profile_id must be a nonempty string")
     checkpoint_env = config.get("checkpoint_env")
     resolved_checkpoint = checkpoint_path
     if resolved_checkpoint is None and isinstance(checkpoint_env, str):
@@ -42,27 +47,38 @@ def load_person_detector_profile(
             f"Supply checkpoint_path or set profile variable {checkpoint_env!r}; "
             "model weights are stored outside the source repository"
         )
-    mapping = config.get("class_mapping") or {}
-    preprocessing = config.get("preprocessing") or {}
-    inference = config.get("inference") or {}
-    try:
-        person_class_id = int(mapping["person"])
-        expected_sha256 = str(config["checkpoint_sha256"])
-        image_size = int(preprocessing["image_size"])
-        confidence = float(inference["confidence"])
-    except (KeyError, TypeError, ValueError) as exc:
-        raise ValueError(f"Incomplete person-detector profile: {config_path}") from exc
+    mapping = config.get("class_mapping")
+    preprocessing = config.get("preprocessing")
+    inference = config.get("inference")
+    if not all(isinstance(section, dict) for section in (mapping, preprocessing, inference)):
+        raise ValueError(f"Person-detector sections must be mappings: {config_path}")
+    person_class_id = mapping.get("person")
+    expected_sha256 = config.get("checkpoint_sha256")
+    image_size = preprocessing.get("image_size")
+    confidence = inference.get("confidence")
+    if type(person_class_id) is not int or person_class_id < 0:
+        raise ValueError("class_mapping.person must be a nonnegative integer")
+    if not isinstance(expected_sha256, str):
+        raise ValueError("checkpoint_sha256 must be a 64-character hex string")
+    if type(image_size) is not int or image_size <= 0:
+        raise ValueError("preprocessing.image_size must be a positive integer")
+    if type(confidence) not in (int, float):
+        raise ValueError("inference.confidence must be a number")
     if preprocessing.get("color_order") != "BGR":
         raise ValueError("The current adapter accepts BGR images; profile must declare BGR")
+    device = inference.get("device", "auto")
+    if not isinstance(device, str) or not device.strip():
+        raise ValueError("inference.device must be a nonempty string")
+    selected_device = device if device_override is None else device_override
     return PersonDetectorProfile(
-        profile_id=str(config["profile_id"]),
+        profile_id=profile_id,
         checkpoint_path=Path(resolved_checkpoint),
         expected_sha256=expected_sha256,
         profile_sha256=hashlib.sha256(config_path.read_bytes()).hexdigest(),
         person_class_id=person_class_id,
         confidence=confidence,
         image_size=image_size,
-        device=device_override or str(inference.get("device", "auto")),
+        device=selected_device,
     )
 
 
