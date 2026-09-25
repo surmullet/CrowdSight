@@ -7,6 +7,7 @@ These JSON Schemas describe the proposed AI-to-application frame outputs. They a
 - `crowd-frame-observation.schema.json`: one crowd-model frame observation.
 - `parking-frame-observation.schema.json`: separate configured-space occupancy output.
 - `fixtures/crowd-frame-observation.valid.json`: synthetic valid replay observation.
+- `fixtures/crowd-frame-observation.partial.json`: synthetic partial observation with only one fully observed zone.
 - `fixtures/crowd-frame-observation.unknown.json`: synthetic failed/unknown observation with no detections.
 - `fixtures/parking-frame-observation.valid.json`: synthetic advisory occupancy result, including an unknown stall.
 
@@ -15,7 +16,7 @@ The examples contain synthetic IDs and values and do not represent measured mode
 ## Contract decisions for joint review
 
 1. Should annotated replay transport pixel bounding boxes in the frame detection object, or should the video worker keep boxes internal?
-2. Should an observation use one frame-level quality state, per-detection quality, or both?
+2. Confirm the `fully_observed_zones` list: `PARTIAL` uses `observation_valid: true` but permits counts only for listed zones; `UNKNOWN` and `STALE` require an empty list and no detections.
 3. Which field should carry the heat-map artifact reference, and what retention/access semantics apply?
 4. Confirm that `confidence_semantics: RAW_MODEL_SCORE` is surfaced as an uncalibrated score; any future calibrated-probability claim requires calibration evidence and a reviewed contract revision.
 5. Who approves schema changes and maintains compatibility for the two model namespaces?
@@ -27,7 +28,7 @@ These are read-only integration findings from the current sibling projects, not 
 
 ### UAV Crowd Monitor (`../uav-crowd-monitoring`)
 
-The current Pydantic `crowd.models.Frame` API expects `source_id`, `session_id`, `mode`, `frame_index`, `tracking_epoch`, `media_time_s`, optional `captured_at`, `observation_valid`, `registration_valid`, `fully_observed_zones`, and normalized detections (`track_id`, `x`, `y`, `confidence`). It does not currently accept CrowdSight's `model_profile_id`, profile/checkpoint/tracker hashes, image dimensions, quality enum, or `confidence_semantics`. CrowdSight's normalized bottom-centre anchors and scores map to its `Detection` fields, but the full serialized CrowdSight observation is not a drop-in request body.
+The current Pydantic `crowd.models.Frame` API expects `source_id`, `session_id`, `mode`, `frame_index`, `tracking_epoch`, `media_time_s`, optional `captured_at`, `observation_valid`, `registration_valid`, `fully_observed_zones`, and normalized detections (`track_id`, `x`, `y`, `confidence`). CrowdSight's proposed v1 now carries `fully_observed_zones` and its normalized bottom-centre anchors/scores map to the backend's detection fields. The backend does not currently accept CrowdSight's `model_profile_id`, profile/checkpoint/tracker hashes, image dimensions, quality enum, or `confidence_semantics`. The full serialized CrowdSight observation is not a drop-in request body.
 
 Before integration, the backend owner must choose one of these designs and record it here:
 

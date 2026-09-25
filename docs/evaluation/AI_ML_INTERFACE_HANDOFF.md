@@ -50,6 +50,7 @@ The proposed per-frame wire example:
   "image_height": 1080,
   "observation_valid": true,
   "quality": "VALID",
+  "fully_observed_zones": ["main-plaza"],
   "registration_valid": false,
   "confidence_semantics": "RAW_MODEL_SCORE",
   "detections": [
@@ -79,6 +80,8 @@ Avoid silently extending a frozen API schema.
 ## Quality and metric-density behavior
 
 `QualityState` values are `VALID`, `PARTIAL`, `UNKNOWN`, and `STALE`. `UNKNOWN` and `STALE` frames must not carry detections. Inference exceptions or corrupt frames should be recorded as failed/unknown frame observations or a failed job according to the video-service recovery policy; they must never become zero occupancy. `STALE` is mainly relevant to future live ingestion and should not be applied to historical replay solely because the media timestamp is old.
+
+`fully_observed_zones` carries the zone IDs that have complete usable coverage in this frame. For `PARTIAL`, only those listed zones may produce counts; every configured but unlisted zone is unavailable, not zero. For `VALID`, list all configured zones covered by the frame. For `UNKNOWN` or `STALE`, this list and `detections` must both be empty. `observation_valid` remains true for `PARTIAL` for compatibility with the current backend, which must use `fully_observed_zones` to avoid treating uncovered zones as valid. The list must be built where frame coverage and configured zone geometry are both available; the detector adapter alone cannot infer it.
 
 The `assess_density_validity()` gate in `src/crowdsight/geospatial/validity.py` returns density only when the observation is valid, coverage is complete, registration is valid, calibration ID and measured usable area exist, and an independent held-out calibration residual passes an explicitly site-approved maximum. Passing also requires references and SHA-256 hashes for the calibration evidence, the independence review, and the site-policy approval, plus explicit independence-verification and site-approval flags. The gate checks that references are present and hashes are well formed; its caller must verify the referenced artifact contents and approval before setting those flags. Missing evidence or a non-finite/underflowing density calculation produces a named unavailable status. No universal residual threshold is embedded. The input may be an integer detection count or a continuous density-model estimate; the output remains an estimate and must not be displayed as an exact headcount.
 

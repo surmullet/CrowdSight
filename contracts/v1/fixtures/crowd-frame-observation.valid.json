@@ -12,6 +12,7 @@
   "image_height": 1080,
   "observation_valid": true,
   "registration_valid": false,
+  "fully_observed_zones": ["north-gate"],
   "confidence_semantics": "RAW_MODEL_SCORE",
   "quality": "VALID",
   "detections": [

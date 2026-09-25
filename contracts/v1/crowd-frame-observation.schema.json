@@ -18,6 +18,7 @@
     "image_height",
     "observation_valid",
     "registration_valid",
+    "fully_observed_zones",
     "confidence_semantics",
     "quality",
     "detections"
@@ -36,6 +37,12 @@
     "image_height": {"type": "integer", "minimum": 1},
     "observation_valid": {"type": "boolean"},
     "registration_valid": {"type": "boolean"},
+    "fully_observed_zones": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1},
+      "uniqueItems": true,
+      "description": "Zone IDs with complete observable coverage in this frame. Omitted configured zones remain unavailable, especially for PARTIAL observations."
+    },
     "confidence_semantics": {"const": "RAW_MODEL_SCORE"},
     "quality": {"enum": ["VALID", "PARTIAL", "UNKNOWN", "STALE"]},
     "detections": {
@@ -71,6 +78,7 @@
       "then": {
         "properties": {
           "observation_valid": {"const": false},
+          "fully_observed_zones": {"maxItems": 0},
           "detections": {"maxItems": 0}
         }
       }

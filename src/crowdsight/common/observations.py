@@ -81,6 +81,7 @@ class FrameObservation:
     quality: QualityState = QualityState.VALID
     captured_at: Optional[datetime] = None
     registration_valid: bool = False
+    fully_observed_zones: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for name in ("source_id", "session_id", "model_profile_id"):
@@ -103,6 +104,12 @@ class FrameObservation:
             not isinstance(detection, PersonDetection) for detection in self.detections
         ):
             raise ValueError("detections must be a tuple of PersonDetection values")
+        if (
+            not isinstance(self.fully_observed_zones, tuple)
+            or any(not isinstance(zone_id, str) or not zone_id.strip() for zone_id in self.fully_observed_zones)
+            or len(self.fully_observed_zones) != len(set(self.fully_observed_zones))
+        ):
+            raise ValueError("fully_observed_zones must be a tuple of unique nonempty zone IDs")
         if self.tracker_config_sha256 is not None and (
             not isinstance(self.tracker_config_sha256, str)
             or len(self.tracker_config_sha256) != 64
@@ -119,8 +126,10 @@ class FrameObservation:
             not isinstance(self.captured_at, datetime) or self.captured_at.utcoffset() is None
         ):
             raise ValueError("captured_at must be timezone-aware")
-        if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and self.detections:
-            raise ValueError("UNKNOWN/STALE observations must not carry detections")
+        if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and (
+            self.detections or self.fully_observed_zones
+        ):
+            raise ValueError("UNKNOWN/STALE observations must not carry detections or fully observed zones")
 
     def to_contract_dict(self) -> dict[str, object]:
         """Serialize the proposed shared frame-observation schema."""
@@ -145,6 +154,7 @@ class FrameObservation:
                 QualityState.STALE,
             ),
             "registration_valid": self.registration_valid,
+            "fully_observed_zones": list(self.fully_observed_zones),
             "confidence_semantics": "RAW_MODEL_SCORE",
             "quality": self.quality.value,
             "detections": [d.to_contract_dict() for d in self.detections],

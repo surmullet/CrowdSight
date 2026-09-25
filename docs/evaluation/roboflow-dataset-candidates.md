@@ -27,6 +27,30 @@ Checked 2026-09-25. These are candidate image datasets for exploratory training 
 - Limits: the project has no published dataset description and no `person`, stall, or occupancy labels. It cannot evaluate crowd counts, parking-space states, or waiting time. The page does not establish source recording identities, split independence, or the origins/rights of the underlying images.
 - Decision: image review and source metadata audit required; exploratory training only unless independent source-level evidence is obtained.
 
+## Traffic detector candidate: Traffic Density Prediction
+
+- Project: [Traffic Density Prediction on Roboflow Universe](https://universe.roboflow.com/prediction-of-traffic-situations-using-realtime-traffic-density-estimation/traffic-density-prediction)
+- Published metadata: 9,087 images across 7 versions; classes include `motorcycle`, `pedestrian`, `bicycle`, `car`/`vehicle`, `truck`, `bus`-adjacent tricycle types; project declares CC BY 4.0.
+- Possible use: a larger exploratory source for motorbike/person detector adaptation and traffic-scene review.
+- Limits: no published dataset description or visible source-level recording/split provenance in the summary metadata. It is a traffic dataset, not a stall occupancy or queue-duration dataset. It cannot support waiting-time or temporal tracking evaluation without the original ordered videos and timestamps.
+- Decision: inspect selected version, examples, source/video identities, and split lineage before use; training-only unless provenance is independently established.
+
+## Parking motorbike detection candidate: Parking Lot Occupany
+
+- Project: [Parking Lot Occupany on Roboflow Universe](https://universe.roboflow.com/mohamed-traore-w4h8y/parking-lot-occupany)
+- Published metadata: 350 project images across 3 versions; classes `vehicle` and `moped or motorcycle`; project declares CC BY 4.0. The page says it combines annotated images forked from several public Roboflow projects and includes images from YouTube videos. The hosted model references a version with 842 images, so version counts differ and must be resolved before selecting a package.
+- Possible use: the closest candidate found so far for exploratory parking-area motorbike/vehicle detection.
+- Limits: it does not label individual parking stalls or occupied/free state. The underlying YouTube source list, recording identities, camera angle, source rights, and source-separated split lineage are not established by the page summary. A declared project license does not by itself settle rights in every upstream source.
+- Decision: inspect version pages and image examples; verify source attribution and permission before download or model use. Do not treat the default split as held-out evidence.
+
+## Parking-area motorbike detection discovery candidate: Parking Lot Occupany 2
+
+- Project: [Parking Lot Occupany 2 on Roboflow Universe](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
+- Published metadata: 2,444 images, one version, classes `car` and `motorcycle`; project declares CC BY 4.0.
+- Possible use: candidate for exploratory motorbike appearance review in parking contexts.
+- Limits: source dataset is attributed to a homework workspace with little project description; no stall-state labels, source provenance, camera consistency, or split independence is established in the metadata reviewed.
+- Decision: review samples and provenance before use; lower confidence than a documented, site-specific collection.
+
 ## Parking occupancy candidate: IAX MY Carpark Occupancy v3
 
 - Project/version: [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
@@ -56,5 +80,8 @@ Checked 2026-09-25. These are candidate image datasets for exploratory training 
 - [BridgeGuard3](https://universe.roboflow.com/iax-my/bridgeguard3)
 - [OverHead Detection](https://universe.roboflow.com/abhayfinal/overhead-detection)
 - [CCTV Vietnam](https://universe.roboflow.com/vehicle-qmmot/cctv-vietnam)
+- [Traffic Density Prediction](https://universe.roboflow.com/prediction-of-traffic-situations-using-realtime-traffic-density-estimation/traffic-density-prediction)
+- [Parking Lot Occupany](https://universe.roboflow.com/mohamed-traore-w4h8y/parking-lot-occupany)
+- [Parking Lot Occupany 2](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
 - [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
 - [Parking Space Detection - Occupancy v1](https://universe.roboflow.com/capstone-project-vb3su/parking-space-detection-occupancy/dataset/1)
