@@ -73,8 +73,8 @@ def _permission_status(manifest: dict[str, Any]) -> dict[str, Any]:
         raise ValueError("Manifest data_permission.permitted_uses must be an array")
     if status == "denied":
         raise ValueError("Scoring is prohibited by the manifest permission record")
-    if status != "approved" or "model_evaluation" not in uses:
-        raise ValueError("Scoring requires approved model_evaluation permission")
+    if status != "approved" or not {"model_evaluation", "annotation_transformation"}.issubset(uses):
+        raise ValueError("Scoring requires approved model_evaluation and annotation_transformation permission")
     if not isinstance(ref, str) or not ref.strip() or not _valid_sha(digest):
         raise ValueError("Approved permission requires evidence_ref and evidence_sha256")
     if not isinstance(reviewer, str) or not reviewer.strip():
@@ -156,6 +156,12 @@ def evaluate(
             if key not in sample_by_key or key in parsed:
                 raise ValueError(f"{name} contains an unknown or duplicate sequence/frame")
             if prediction:
+                expected_image_sha = sample_by_key[key].get("image_sha256")
+                image_sha = row.get("image_sha256")
+                if not _valid_sha(expected_image_sha) or not _valid_sha(image_sha):
+                    raise ValueError("Prediction and manifest must include each frame's image_sha256")
+                if image_sha.lower() != expected_image_sha.lower():
+                    raise ValueError("Prediction image_sha256 does not match the locked manifest sample")
                 valid = row.get("valid")
                 if type(valid) is not bool:
                     raise ValueError("Prediction valid must be boolean")
@@ -166,6 +172,12 @@ def evaluate(
                         raise ValueError("Invalid prediction frames must set count to null")
                     count = None
             else:
+                expected_image_sha = sample_by_key[key].get("image_sha256")
+                image_sha = row.get("image_sha256")
+                if not _valid_sha(expected_image_sha) or not _valid_sha(image_sha):
+                    raise ValueError("Labels and manifest must include each frame's image_sha256")
+                if image_sha.lower() != expected_image_sha.lower():
+                    raise ValueError("Label image_sha256 does not match the locked manifest sample")
                 if row.get("complete") is not True:
                     raise ValueError("Every scored label frame must be complete")
                 reviewer = row.get("reviewer")

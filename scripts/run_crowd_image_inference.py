@@ -52,14 +52,15 @@ def _require_authorized_manifest(manifest: dict[str, Any]) -> None:
         permission.get("reviewer_id"),
     )
     if (
-        not isinstance(uses, list) or "model_evaluation" not in uses
+        not isinstance(uses, list)
+        or not {"model_evaluation", "annotation_transformation"}.issubset(uses)
         or not isinstance(ref, str) or not ref.strip()
         or not isinstance(digest, str) or len(digest) != 64
         or any(char not in "0123456789abcdefABCDEF" for char in digest)
         or not isinstance(reviewer, str) or not reviewer.strip()
     ):
         raise ValueError(
-            "Inference requires approved model_evaluation permission with evidence reference, SHA-256, and reviewer ID"
+            "Inference requires approved model_evaluation and annotation_transformation permission with evidence reference, SHA-256, and reviewer ID"
         )
 
 

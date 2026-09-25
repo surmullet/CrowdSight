@@ -29,7 +29,7 @@ The scorer accepts three JSON documents. The manifest records a locked selection
   },
   "data_permission": {
     "status": "approved",
-    "permitted_uses": ["model_evaluation"],
+    "permitted_uses": ["model_evaluation", "annotation_transformation"],
     "evidence_ref": "private://permission-review",
     "evidence_sha256": "<permission-evidence-sha256>",
     "reviewer_id": "reviewer-id"
@@ -40,9 +40,20 @@ The scorer accepts three JSON documents. The manifest records a locked selection
 }
 ```
 
-For each manifest sample, a labels frame has `sequence_id`, `frame_id`, `complete: true`, a nonempty `reviewer`, and integer `person_count`. The corresponding prediction frame has `sequence_id`, `frame_id`, `valid: true|false`, and nonnegative integer `count` when valid. An invalid frame has no count and is included in the unknown prediction rate, not accuracy metrics. The predictions root has `schema_version`, matching `dataset_id` and `source_sha256`, and `model` metadata: `profile_id`, `profile_sha256`, `checkpoint_sha256`, `training_overlap_status`, `training_source_inventory_complete`, `training_source_sha256s`, `training_sequence_inventory_complete`, `training_sequence_ids`, `training_partition_ids`, `independence_evidence_ref`, `independence_evidence_sha256`, and `runtime`. The two inventory-complete flags must reflect a reviewed, full lineage inventory; use empty arrays only when a reviewer confirms there are no entries. Exact source, partition, or sequence overlap forces `TRAINING_FIT`. A `HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW` report additionally requires complete inventories, `verified_disjoint`, an independence evidence hash, and approved evaluation permission. The scorer checks metadata fields only; a named reviewer must authenticate the evidence artifacts.
+For each manifest sample, a labels frame has `sequence_id`, `frame_id`, the matching `image_sha256`, `complete: true`, a nonempty `reviewer`, and integer `person_count`. The corresponding prediction frame has `sequence_id`, `frame_id`, the matching `image_sha256`, `valid: true|false`, and nonnegative integer `count` when valid. An invalid frame has no count and is included in the unknown prediction rate, not accuracy metrics. The predictions root has `schema_version`, matching `dataset_id` and `source_sha256`, and `model` metadata: `profile_id`, `profile_sha256`, `checkpoint_sha256`, `training_overlap_status`, `training_source_inventory_complete`, `training_source_sha256s`, `training_sequence_inventory_complete`, `training_sequence_ids`, `training_partition_ids`, `independence_evidence_ref`, `independence_evidence_sha256`, and `runtime`. The two inventory-complete flags must reflect a reviewed, full lineage inventory; use empty arrays only when a reviewer confirms there are no entries. Exact source, partition, or sequence overlap forces `TRAINING_FIT`. A `HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW` report additionally requires complete inventories, `verified_disjoint`, an independence evidence hash, and approved evaluation permission. The scorer checks metadata fields only; a named reviewer must authenticate the evidence artifacts.
 
-Once the source owner has approved this use and the archive/image hashes and manifest are prepared, infer from the extracted image tree without loading labels:
+After a reviewer has approved source-specific terms for noncommercial model evaluation and annotation transformation, create a private permission record with `status: approved`, `permitted_uses: ["model_evaluation", "annotation_transformation"]`, `evidence_ref`, `evidence_file`, `evidence_sha256`, and `reviewer_id`. `evidence_file` is an external local path to the reviewed source-terms/permission artifact; the manifest preparer verifies its SHA-256 but does not judge the terms. Keep the permission record and evidence outside Git. Generate the manifest directly from the unchanged frozen selection; the command checks the archive hash, every selected image hash and size, and refuses to write inside the repository:
+
+```powershell
+python scripts/prepare_dronecrowd_manifest.py `
+  --selection docs/evaluation/manifests/dronecrowd-remaining-train-sequences-candidate-v1.json `
+  --images-root D:\approved-data\dronecrowd\VisDrone2020-CC `
+  --source-archive D:\approved-data\dronecrowd\dronecrowd.zip `
+  --permission-record D:\approved-data\dronecrowd\permission-record.json `
+  --output D:\approved-data\dronecrowd\manifest.json
+```
+
+Then infer from the extracted image tree without loading labels:
 
 ```powershell
 $env:CROWDSIGHT_CROWD_CHECKPOINT = "D:\approved-artifacts\best.pt"
@@ -55,7 +66,7 @@ python scripts/run_crowd_image_inference.py `
   --output D:\approved-results\dronecrowd\predictions.json
 ```
 
-The runner refuses unapproved permission metadata, archive-hash mismatch, frame-hash mismatch, path escape from the supplied image root, or dimension mismatch. It writes one result per selected frame and refuses to overwrite an existing prediction file. The runner and scorer record their own script hashes. Permission and lineage evidence references still require human authentication.
+The runner refuses unapproved permission metadata, archive-hash mismatch, frame-hash mismatch, path escape from the supplied image root, or dimension mismatch. It writes one result per selected frame and refuses to overwrite an existing prediction file. The runner and scorer record their own script hashes. Permission and lineage evidence references still require human authentication. The scorer verifies prediction image hashes against the manifest so predictions cannot silently be paired with a different frame at the same sequence/frame ID.
 
 After permission is approved and selected-frame count labels and predictions are stored privately, run:
 
