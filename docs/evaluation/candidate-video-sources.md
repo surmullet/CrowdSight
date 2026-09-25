@@ -1,6 +1,6 @@
 # Candidate video sources for exploratory evaluation
 
-These are source candidates, not validated evaluation results. The Pexels candidates below have not been downloaded or annotated. One Mixkit clip is already available in a sibling project, has a locked 30-frame candidate manifest, and has permission recorded for the limited noncommercial internal evaluation/annotation use. Labels are blank, and training-source independence remains unreviewed. Keep downloaded media and frame exports outside Git.
+These are source candidates, not validated evaluation results. A Mixkit clip is already available in a sibling project, has a locked 30-frame candidate manifest, and has an operational permission record for limited noncommercial internal evaluation/annotation use. Labels are blank, and training-source independence remains unreviewed. Keep downloaded media and frame exports outside Git. Roboflow Universe is useful for discovering labeled image datasets and links to upstream videos; its datasets are not full ordered videos for temporal evaluation.
 
 ## Existing independent overhead test candidate
 
@@ -22,12 +22,26 @@ These are source candidates, not validated evaluation results. The Pexels candid
 
 ## Vietnam motorbike traffic candidates
 
+### Roboflow discovery
+
+- **Vietnam-style detector images:** [CCTV Vietnam](https://universe.roboflow.com/vehicle-qmmot/cctv-vietnam) reports 391 images, one version, classes `car`, `truck`, `bus`, and `motorcycle`, and a declared CC BY 4.0 license. Its project has no source description and no person, parking-stall, or occupancy labels. This is an image-domain review/training lead only, not a video or held-out evaluation source.
+- **Motorbike parking images:** [Kepadatan Parkir Motor](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor) reports the classes `Motorcycle` and `empty` and declares CC BY 4.0. Its accessible v8 page reports 1,440 generated images and a train/validation/test split, while the project overview reports 510 source images and eight versions. Upstream camera/source identity and split independence are not established. It is a training candidate only until reviewed; it cannot validate temporal occupancy or waiting-time estimates.
+- **Source-video links from a parking dataset:** [Parking Lot Occupany](https://universe.roboflow.com/mohamed-traore-w4h8y/parking-lot-occupany) lists YouTube recordings, including [ClearPix Camera Grocery Parking Lot](https://www.youtube.com/watch?v=KhtwB8faMpU) and [FAPS CCTV Parking Lot Overview](https://www.youtube.com/watch?v=Z-ZgqqwEQZ4). These links lead to upstream videos; Roboflow does not provide those full recordings as its image dataset. They are not identified as Vietnam footage, and camera suitability, motorbike coverage, source permissions, and which frames were used remain unverified. Do not use a linked recording for evaluation if its frames appear in training data.
+
+### Pexels candidates: exclude from CrowdSight benchmarking pending express permission
+
 - **Clip:** [Vehicles in a Busy Intersection](https://www.pexels.com/video/vehicles-in-a-busy-intersection-5036725/)
 - **Pexels metadata:** 1920×1080, 16:9, 11 seconds. The page includes a time-lapse tag.
 - **Visual inspection:** The preview shows a low oblique street-level view beneath an overpass, with motorbikes passing through the intersection and no marked parking bays. The view does not match the fixed overhead parking reference and is unsuitable for stall-occupancy evaluation. It may support only a short qualitative Vietnam traffic demo; do not use it as target parking or crowd-density evidence.
-- **Alternative:** [Busy Vietnamese City Traffic with Motorbikes](https://www.pexels.com/video/busy-vietnamese-city-traffic-with-motorbikes-33383205/)
-- **Page metadata:** 3840×2160, 60 seconds, 59.94 fps; page description identifies motorbike traffic in Vietnam. The page does not establish a fixed CCTV angle.
-- **Use:** Potential exploratory motorbike/traffic demo only after frame review. Neither candidate is established as fixed-camera parking footage, so neither can validate parking-space occupancy. No public candidate found so far matches the required fixed overhead view of a Vietnam motorbike parking area; request pilot-camera footage and owner permission for the parking workstream.
+- **Second candidate:** [Busy Vietnamese City Traffic with Motorbikes](https://www.pexels.com/video/busy-vietnamese-city-traffic-with-motorbikes-33383205/), listed as 3840×2160, 60 seconds, 59.94 fps. The page description identifies Vietnam motorbike traffic but does not establish a fixed CCTV angle.
+- **Use decision:** Do not download, annotate, or evaluate CrowdSight on these Pexels clips without express permission for the intended model benchmarking/product work. Although the [Pexels License](https://www.pexels.com/license/) describes broad free-use rights, the [Pexels Terms of Service](https://www.pexels.com/terms-of-service/) restrict accessing the service for performance benchmarking or building/marketing a competitive product. Neither clip is established as fixed-camera parking footage.
+
+## Vietnam motorbike video candidate outside Roboflow
+
+- **Clip:** [Saigon traffic (Go Vap, Ho Chi Minh City)](https://commons.wikimedia.org/wiki/File:Saigon_traffic-oVbn3HeLDA0.webm)
+- **Published metadata:** uploader describes own work dated 29 May 2019; 47 seconds, 1920×1080 WebM; page declares CC BY-SA 4.0.
+- **Fit and open questions:** This is a Vietnam motorbike video candidate, unlike Roboflow's image-only packages. Fixed-camera status, parking-bay visibility, frame quality for person/motorbike labels, and source suitability for the intended evaluation have not been visually confirmed. The declared share-alike license also needs to be recorded and followed for any adapted or redistributed annotation artifacts.
+- **Decision:** metadata candidate only. Do not treat it as fixed-CCTV or parking-occupancy evidence until the video is visually reviewed and attribution/license handling is documented. Do not add the video or extracted frames to Git.
 
 ## Parking CCTV source leads found through Roboflow
 
@@ -35,7 +49,7 @@ The Roboflow [Parking Lot Occupany project](roboflow-dataset-candidates.md#parki
 
 ## License and annotation handling
 
-The [Pexels license](https://www.pexels.com/license/) says its videos are free to use and modify, and lists use on websites, apps, and presentations. It also restricts certain uses involving identifiable people and forbids implying endorsement. Record the license URL and the date the source was checked in the private dataset manifest. This is a practical source check, not a legal opinion or proof of rights in the people depicted.
+Roboflow's project-level license declaration does not document the complete source and rights chain for every upstream image/video. Record the exact version, attribution, upstream sources, and split ancestry in the private dataset manifest before use. Pexels clips are excluded from CrowdSight benchmarking/product evaluation absent express permission because the [Pexels Terms of Service](https://www.pexels.com/terms-of-service/) restrict those purposes. The Commons video is declared CC BY-SA 4.0; preserve attribution and review share-alike obligations before distributing adaptations. These are operational source checks, not legal opinions or proof of rights in people depicted.
 
 SAM-generated masks or boxes are **pseudo-labels**. A human reviewer must correct missed, duplicate, merged, or wrong-class instances before metrics are reported. Keep source frames, pseudo-labels, reviewed labels, and predictions separate. Freeze the sampled frame list and split before model predictions. Use a new video as exploratory external evaluation only; do not call it a site-acceptance test or claim Vietnam-domain performance unless its camera and scene match the intended pilot.
 
