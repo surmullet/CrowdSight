@@ -19,6 +19,14 @@ Checked 2026-09-25. These are candidate image datasets for exploratory training 
 - Limits: the project has no published dataset description. It mixes head and person-like classes, and the page does not provide underlying source identities or source-separated split evidence. It does not describe Vietnam traffic or parking. Do not use as held-out evaluation and do not merge its classes into the CrowdSight person class without manual label mapping and sample review.
 - Decision: lower priority than BridgeGuard3 until source and image composition are reviewed.
 
+## Vietnam motorbike domain candidate: CCTV Vietnam
+
+- Project: [CCTV Vietnam on Roboflow Universe](https://universe.roboflow.com/vehicle-qmmot/cctv-vietnam)
+- Published metadata: 391 images, one version, classes `car`, `truck`, `bus`, and `motorcycle`; project declares CC BY 4.0.
+- Possible use: inspect for Vietnam-style motorbike appearance and camera conditions; if source and annotation quality are confirmed, it may be a small domain-adaptation/training candidate for vehicle detection.
+- Limits: the project has no published dataset description and no `person`, stall, or occupancy labels. It cannot evaluate crowd counts, parking-space states, or waiting time. The page does not establish source recording identities, split independence, or the origins/rights of the underlying images.
+- Decision: image review and source metadata audit required; exploratory training only unless independent source-level evidence is obtained.
+
 ## Parking occupancy candidate: IAX MY Carpark Occupancy v3
 
 - Project/version: [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
@@ -47,5 +55,6 @@ Checked 2026-09-25. These are candidate image datasets for exploratory training 
 
 - [BridgeGuard3](https://universe.roboflow.com/iax-my/bridgeguard3)
 - [OverHead Detection](https://universe.roboflow.com/abhayfinal/overhead-detection)
+- [CCTV Vietnam](https://universe.roboflow.com/vehicle-qmmot/cctv-vietnam)
 - [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
 - [Parking Space Detection - Occupancy v1](https://universe.roboflow.com/capstone-project-vb3su/parking-space-detection-occupancy/dataset/1)
