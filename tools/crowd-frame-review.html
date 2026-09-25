@@ -103,11 +103,10 @@
         String(value.source_sha256).toLowerCase() !== manifest.source_sha256.toLowerCase() ||
         !Array.isArray(value.frames)) throw new Error('Labels file does not match the loaded manifest/source.');
     const expected = new Set(manifest.samples.map(s => s.frame_index));
-    const seen = new Set();
+    const byFrame = new Map();
     for (const row of value.frames) {
-      if (!expected.has(row.frame_index) || seen.has(row.frame_index) || !Array.isArray(row.boxes))
+      if (!expected.has(row.frame_index) || byFrame.has(row.frame_index) || !Array.isArray(row.boxes))
         throw new Error('Labels file has an unknown, duplicate, or malformed frame.');
-      seen.add(row.frame_index);
       row.complete = row.complete === true;
       row.reviewer = String(row.reviewer || '');
       row.notes = String(row.notes || '');
@@ -121,9 +120,11 @@
         return {bbox_xyxy:[x1,y1,x2,y2], uncertain:box.uncertain === true};
       });
       if (row.complete && !row.reviewer.trim()) row.complete = false;
+      byFrame.set(row.frame_index,row);
     }
-    if (seen.size !== expected.size) throw new Error('Labels file must contain every selected frame exactly once.');
-    return {schema_version:1,dataset_id:value.dataset_id,source_sha256:value.source_sha256,frames:value.frames};
+    if (byFrame.size !== expected.size) throw new Error('Labels file must contain every selected frame exactly once.');
+    const ordered=manifest.samples.map(sample=>byFrame.get(sample.frame_index));
+    return {schema_version:1,dataset_id:value.dataset_id,source_sha256:value.source_sha256,frames:ordered};
   }
   function freshLabels() {
     return {schema_version:1,dataset_id:manifest.dataset_id,source_sha256:manifest.source_sha256,
