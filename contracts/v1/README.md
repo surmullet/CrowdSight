@@ -15,6 +15,12 @@ These JSON Schemas describe the proposed AI-to-application frame outputs. They a
 
 The examples contain synthetic IDs and values and do not represent measured model performance, a real site, or approved operating thresholds. They contain no footage or checkpoint artifacts.
 
+## Runtime semantic validation
+
+JSON Schema validation checks the serialized structure and local field constraints; it does not establish that a parking observation matches the active site configuration or its source artifacts. At model load, `load_parking_model_profile()` computes the exact profile-file hash and `verify_parking_checkpoint()` checks the checkpoint bytes against the profile's expected SHA-256. The serializer must populate the observation's profile and checkpoint hashes from that verified profile. `validate_parking_predictions()` checks the reported profile ID, site/camera/layout identity, exactly one result for every configured `space_id` with no duplicates or extras, configured stall order, per-stall evidence time equal to the frame's `media_time_s`, and frame-quality/state consistency. A consumer that receives observations from another service must enforce equivalent configuration and provenance checks at its trust boundary. A JSON Schema validator must assert the `date-time` format for non-null `captured_at`; implementations that treat `format` as annotation only need a separate RFC 3339 check. Hash fields are syntactically constrained by the schema, but the schema cannot verify artifact bytes.
+
+The parking schema also cannot determine whether a state is visually correct, whether the fixed camera still matches the approved view, or whether a stall layout is current in the physical site. Those require site configuration, camera health/shift checks, reviewed labels, and model evaluation; structural schema validity alone is not evidence of occupancy accuracy.
+
 ## Contract decisions for joint review
 
 1. Should annotated replay transport pixel bounding boxes in the frame detection object, or should the video worker keep boxes internal?
