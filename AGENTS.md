@@ -4,6 +4,8 @@
 
 Build the AI/ML workstream for the recorded-video CrowdSight MVP: crowd occupancy, heat maps, zone trends, uncertainty behavior, and a separately trained parking-space occupancy model. This is decision support; operational actions require human review. Parking is advisory only. Physical gate/barrier actuation is out of scope.
 
+Customer waiting-time estimation is a separate downstream queue-analytics extension, not an output of the parking occupancy model. Do not infer waiting time from occupied/available stall states alone. Define the queue, timestamped observations, service/entry/departure event source, responsible owner, and evaluation data before proposing an estimator or shared output schema. Use anonymous short-lived event association only when required; persistent identity and re-identification remain out of scope.
+
 The existing `best.pt` checkpoint is hash-matched to the UAV fine-tuning pilot's returned best model. Its immediate lineage is a mixed Plaza/VisDrone training run, and the Plaza diagnostic source overlap is confirmed. Independent target validation remains unavailable; do not describe Plaza or the reused VisDrone regression set as held out. The parking model is a distinct future training effort with its own profile, data, split, and evaluation.
 
 ## Scope and ownership
