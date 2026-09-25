@@ -222,6 +222,12 @@ def evaluate(
         raise ValueError("training_sequence_ids must contain nonempty strings")
     if len(set(training_sequences)) != len(training_sequences):
         raise ValueError("training_sequence_ids contains duplicates")
+    training_manifest_sha = model.get("training_manifest_sha256")
+    training_evidence_file_sha = model.get("training_evidence_file_sha256")
+    if training_manifest_sha is not None and not _valid_sha(training_manifest_sha):
+        raise ValueError("training_manifest_sha256 must be a SHA-256 or null")
+    if training_evidence_file_sha is not None and not _valid_sha(training_evidence_file_sha):
+        raise ValueError("training_evidence_file_sha256 must be a SHA-256 or null")
     source_overlap = source_sha.lower() in {item.lower() for item in training_hashes}
     partition_overlap = partition_id in set(training_partitions)
     selected_sequences = {key[0] for key in sample_by_key}
@@ -238,11 +244,17 @@ def evaluate(
     )
     if overlap_status == "verified_disjoint" and (
         not inventory_complete or not sequence_inventory_complete
+        or not training_hashes or not training_partitions
+        or not _valid_sha(training_manifest_sha)
+        or not _valid_sha(training_evidence_file_sha)
         or not independence_evidence or exact_overlap
     ):
-        raise ValueError("verified_disjoint conflicts with incomplete or overlapping evidence")
+        raise ValueError(
+            "verified_disjoint requires complete nonempty hash-identified source and partition inventories, "
+            "training manifest/evidence hashes, independence evidence, and no exact overlap"
+        )
     if overlap_status == "verified_overlap" and not exact_overlap:
-        raise ValueError("verified_overlap requires an exact source or partition overlap")
+        raise ValueError("verified_overlap requires an exact source, partition, or sequence overlap")
 
     evaluation_scope = "EXPLORATORY"
     if exact_overlap or overlap_status == "verified_overlap":
@@ -251,6 +263,10 @@ def evaluate(
         manifest["split"] in ("test", "held_out")
         and inventory_complete
         and sequence_inventory_complete
+        and bool(training_hashes)
+        and bool(training_partitions)
+        and _valid_sha(training_manifest_sha)
+        and _valid_sha(training_evidence_file_sha)
         and not exact_overlap
         and overlap_status == "verified_disjoint"
         and independence_evidence
@@ -301,8 +317,13 @@ def evaluate(
         "data_permission": permission,
         "lineage": {
             "training_overlap_status": overlap_status,
+            "training_manifest_sha256": training_manifest_sha.lower() if _valid_sha(training_manifest_sha) else None,
+            "training_evidence_file_sha256": training_evidence_file_sha.lower() if _valid_sha(training_evidence_file_sha) else None,
             "training_source_inventory_complete": inventory_complete,
+            "training_source_sha256s": [item.lower() for item in training_hashes],
             "training_sequence_inventory_complete": sequence_inventory_complete,
+            "training_sequence_ids": training_sequences,
+            "training_partition_ids": training_partitions,
             "training_source_overlap": source_overlap,
             "training_partition_overlap": partition_overlap,
             "training_sequence_overlap_ids": sequence_overlap_ids,
