@@ -19,16 +19,19 @@
   "height": 1080,
   "zone_polygons_normalized": {},
   "data_permission": {
-    "status": "pending",
-    "permitted_uses": [],
-    "evidence_ref": null,
-    "evidence_sha256": null,
-    "reviewer_id": null
+    "status": "approved",
+    "permitted_uses": [
+      "model_evaluation",
+      "annotation"
+    ],
+    "evidence_ref": "docs/evaluation/mixkit-busy-intersection-permission-review.md",
+    "evidence_sha256": "80ecf8ebd781eb903e6be338bc4e5b0edcb826de99996cddde4ff512cfe865a3",
+    "reviewer_id": "product-lead-user-authorization-2026-09-25"
   },
   "source_review": {
     "source_page": "https://mixkit.co/free-stock-video/busy-intersection-aerial-view-60/",
     "license_page": "https://mixkit.co/license/modal/videoFree/",
-    "source_review_status": "candidate_only_pending_named_data_owner_review",
+    "source_review_status": "approved_for_noncommercial_internal_evaluation_and_annotation_only",
     "independence_status": "not_yet_independently_reviewed"
   },
   "samples": [

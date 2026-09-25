@@ -19,7 +19,8 @@ The system is intended to support operational decisions. Alerts require human re
 - [Crowd runtime pins](requirements/crowd-inference-cu121-windows.txt): direct package versions observed during the adapter smoke; clean-environment installation remains unverified.
 - [Crowd evaluation format](docs/evaluation/crowd-evaluation-format.md): data contract, split/overlap evidence rules, and reproducible inference/scoring workflow.
 - [Crowd frame review tool](tools/crowd-frame-review.html): offline prediction-free annotation page that verifies selected source video and locked frame identity before labeling.
-- [Locked Mixkit candidate manifest](docs/evaluation/manifests/mixkit-busy-intersection-test-v1.manifest.json): 30 uniform overhead frames for a sparse-scene diagnostic; permission review is pending and labels remain blank.
+- [Locked Mixkit candidate manifest](docs/evaluation/manifests/mixkit-busy-intersection-test-v1.manifest.json): 30 uniform overhead frames for a sparse-scene diagnostic; permission is approved for noncommercial internal evaluation/annotation and labels remain blank.
+- [Mixkit inference record](docs/models/crowd-best-local-mixkit-inference.md): pinned `crowd_best_local_v2` inference is complete for the 30 locked frames; predictions remain local/outside Git, and no accuracy metrics are available until labels are reviewed.
 - [Candidate datasets and videos](docs/evaluation/roboflow-dataset-candidates.md) and [video source notes](docs/evaluation/candidate-video-sources.md): Roboflow dataset suitability, source provenance limits, licenses, and review status.
 - [Density estimator model card](docs/models/density-net-model-card.md): separate model type and unverified source benchmark details.
 - [AI/ML integration note](docs/evaluation/AI_ML_INTERFACE_HANDOFF.md): proposed shared schemas and decisions for both application owners.
