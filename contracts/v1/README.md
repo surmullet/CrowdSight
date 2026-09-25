@@ -10,6 +10,7 @@ These JSON Schemas describe the proposed AI-to-application frame outputs. They a
 - `fixtures/crowd-frame-observation.partial.json`: synthetic partial observation with only one fully observed zone.
 - `fixtures/crowd-frame-observation.unknown.json`: synthetic failed/unknown observation with no detections.
 - `fixtures/parking-frame-observation.valid.json`: synthetic advisory occupancy result, including an unknown stall.
+- `fixtures/parking-frame-observation.unknown.json`: synthetic unavailable parking observation with all configured stalls unknown and confidence null.
 
 The examples contain synthetic IDs and values and do not represent measured model performance, a real site, or approved operating thresholds. They contain no footage or checkpoint artifacts.
 
