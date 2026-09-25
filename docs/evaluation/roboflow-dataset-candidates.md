@@ -66,13 +66,13 @@ The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. 
 - Limits: the publisher provides no dataset description, the word `bike` does not establish motorcycle rather than bicycle coverage, and source camera/site/date provenance and split independence are not established. No Vietnam match is documented.
 - Decision: inspect sample images and exact version before considering a training-label mapping. Treat as exploratory training data only unless source-level independence is proven; do not use the published split as held-out evidence.
 
-## Motorcycle parking appearance candidate: Kepadatan Parkir Motor
+## Best Roboflow parking-training lead: Kepadatan Parkir Motor
 
-- Project/version: [Kepadatan Parkir Motor](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor/dataset/8)
-- Published metadata: project lists 510 images across 8 versions, classes `Motorcycle` and `empty`, and declares CC BY 4.0. Version 8 contains 1,440 images with 1,240/100/100 train/valid/test split, resize to 640x480, and four augmented outputs per training example.
-- Possible use: exploratory motorbike/empty-region detector adaptation and parking-scene review; it does not directly provide stable per-space IDs or a complete configured-space state table.
-- Limits: no published description, source camera/site/date identities, geographic context, or source-separated split evidence. Augmented copies and possible common-source images can leak across splits; the default split is not independent test evidence.
-- Decision: review original-image groupings, labels, and permission/provenance before download. Keep in the training-only candidate pool unless the source inventory and split lineage are audited.
+- Project: [Kepadatan Parkir Motor](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor)
+- Published metadata: the project lists 510 source images, 2 classes (`Motorcycle`, `empty`), and declares CC BY 4.0. The version list now includes v9 (1,440 generated images). The accessible v8 page reports 1,440 images, a 1,240/100/100 train/valid/test split, resize to 640x480, and four augmented outputs per training example. The current v9 split/configuration was not independently fetched during this review.
+- Possible use: best Roboflow lead found for exploratory motorbike/empty-region model training and parking-scene review. It is an image/annotation package, not a raw fixed-camera video; it does not directly provide stable per-space IDs or a complete configured-space state table.
+- Limits: no published description, source camera/site/date identities, geographic context, or source-separated split evidence. Augmented copies and possible common-source images can leak across splits; the published split is not independent test evidence. CC BY 4.0 is the project's declared license; source-level rights and attribution details still need intake review.
+- Decision: before training, inspect the exact v9 images, labels, split, attribution, and source lineage; record its version and archive hash. Keep it training-only unless source independence is established. It cannot replace a permissioned fixed-camera video and locked temporal labels for tracking/occupancy evaluation.
 
 ## Parking-area motorbike detection discovery candidate: Parking Lot Occupany 2
 
@@ -116,5 +116,6 @@ The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. 
 - [Parking Lot Occupany 2](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
 - [bike parking](https://universe.roboflow.com/projects-oqpad/bike-parking)
 - [Kepadatan Parkir Motor v8](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor/dataset/8)
+- [Kepadatan Parkir Motor project and version list](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor)
 - [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
 - [Parking Space Detection - Occupancy v1](https://universe.roboflow.com/capstone-project-vb3su/parking-space-detection-occupancy/dataset/1)
