@@ -174,7 +174,11 @@ def evaluate_calibration(
     """Score emitted detection confidences using the box evaluator's match rule."""
     if type(bins) is not int or not 2 <= bins <= 100:
         raise ValueError("bins must be an integer from 2 through 100")
-    if not math.isfinite(iou_threshold) or not 0.0 < iou_threshold <= 1.0:
+    if (
+        type(iou_threshold) not in (int, float)
+        or not math.isfinite(iou_threshold)
+        or not 0.0 < iou_threshold <= 1.0
+    ):
         raise ValueError("iou_threshold must be in (0, 1]")
     # Reuse the strict schema, lineage, permission, frame-completeness, and
     # coordinate checks from the primary evaluator before computing calibration.
