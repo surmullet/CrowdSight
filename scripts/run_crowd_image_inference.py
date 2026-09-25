@@ -160,6 +160,12 @@ def run_inference(
             raise ValueError("Each sample requires a 64-character image_sha256")
         resolved_samples.append((sample, image_path, image_sha.lower()))
 
+    # Validate all present files before loading the checkpoint so a stale or
+    # edited manifest cannot cause partial inference before the mismatch appears.
+    for sample, image_path, expected_sha in resolved_samples:
+        if image_path.is_file() and sha256_file(image_path).lower() != expected_sha:
+            raise ValueError(f"Image SHA-256 does not match manifest: {image_path}")
+
     profile = load_person_detector_profile(
         profile_path,
         checkpoint_path=checkpoint_path,
