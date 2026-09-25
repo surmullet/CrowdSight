@@ -147,20 +147,29 @@ The API must not accept arbitrary server filesystem paths from an untrusted clie
 
 ```json
 {
-  "source_id": "camera-or-uav-name",
-  "session_id": "unique-run-id",
-  "frame_index": 123,
-  "media_time_s": 4.1,
+  "source_id": "demo-camera-01",
+  "session_id": "synthetic-run-001",
+  "model_profile_id": "crowd_best_local_v2",
+  "model_profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "checkpoint_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tracker_config_sha256": null,
+  "frame_index": 42,
+  "media_time_s": 1.4,
   "captured_at": null,
   "image_width": 1920,
   "image_height": 1080,
   "observation_valid": true,
+  "quality": "VALID",
+  "fully_observed_zones": ["north-gate"],
   "registration_valid": false,
+  "confidence_semantics": "RAW_MODEL_SCORE",
   "detections": [
-    {"track_id": 17, "x": 0.51, "y": 0.72, "confidence": 0.87}
+    {"track_id": null, "x": 0.51, "y": 0.72, "confidence": 0.87}
   ]
 }
 ```
+
+This synthetic example matches the complete proposed crowd observation shape; the canonical fixture is [`crowd-frame-observation.valid.json`](../contracts/v1/fixtures/crowd-frame-observation.valid.json).
 
 Coordinates `x` and `y` are normalized to `[0,1]` and represent the bottom-centre/ground-contact image point. `track_id` is anonymous and scoped to one video run. Detector-only observations may have a null track ID. For recorded-video replay, `captured_at` remains null; capture UTC must not be fabricated.
 
