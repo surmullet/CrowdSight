@@ -66,7 +66,7 @@ python scripts/run_crowd_image_inference.py `
   --output D:\approved-results\dronecrowd\predictions.json
 ```
 
-The runner refuses unapproved permission metadata, archive-hash mismatch, frame-hash mismatch, path escape from the supplied image root, or dimension mismatch. It writes one result per selected frame and refuses to overwrite an existing prediction file. The runner and scorer record their own script hashes. Permission and lineage evidence references still require human authentication. The scorer verifies prediction image hashes against the manifest so predictions cannot silently be paired with a different frame at the same sequence/frame ID.
+The runner refuses unapproved permission metadata, archive-hash mismatch, frame-hash mismatch, path escape from the supplied image root, or dimension mismatch. It writes one result per selected frame and refuses to overwrite an existing prediction file. The runner and scorer record their own script hashes. The scorer carries inference-script, manifest, source-archive, profile, and training-evidence hashes into its report, and cross-checks the inference manifest, archive, and profile hashes against the supplied inputs and model profile. Permission and lineage evidence references still require human authentication. The scorer verifies prediction image hashes against the manifest so predictions cannot silently be paired with a different frame at the same sequence/frame ID.
 
 After permission is approved and selected-frame count labels and predictions are stored privately, run:
 

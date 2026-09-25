@@ -201,6 +201,18 @@ def evaluate(
     for name in ("profile_sha256", "checkpoint_sha256"):
         if not _valid_sha(model.get(name)):
             raise ValueError(f"Predictions model.{name} must be a SHA-256")
+    run_metadata = predictions.get("run_metadata")
+    if not isinstance(run_metadata, dict):
+        raise ValueError("Predictions run_metadata must be an object from the versioned inference runner")
+    for name in ("manifest_sha256", "source_archive_sha256", "profile_file_sha256", "inference_script_sha256"):
+        if not _valid_sha(run_metadata.get(name)):
+            raise ValueError(f"Predictions run_metadata.{name} must be a SHA-256")
+    if run_metadata["source_archive_sha256"].lower() != source_sha.lower():
+        raise ValueError("Predictions run_metadata.source_archive_sha256 does not match the manifest")
+    if run_metadata["profile_file_sha256"].lower() != model["profile_sha256"].lower():
+        raise ValueError("Predictions run_metadata.profile_file_sha256 does not match model.profile_sha256")
+    if run_metadata.get("training_evidence_file_sha256") != model.get("training_evidence_file_sha256"):
+        raise ValueError("Predictions training-evidence file hashes are inconsistent")
 
     overlap_status = model.get("training_overlap_status", "unknown_or_mixed")
     if overlap_status not in ("verified_disjoint", "verified_overlap", "overlap_possible", "unknown_or_mixed"):
@@ -337,6 +349,16 @@ def evaluate(
             "checkpoint_sha256": model["checkpoint_sha256"].lower(),
             "runtime": model.get("runtime"),
         },
+        "inference_run_metadata": {
+            name: run_metadata.get(name)
+            for name in (
+                "manifest_sha256",
+                "source_archive_sha256",
+                "profile_file_sha256",
+                "training_evidence_file_sha256",
+                "inference_script_sha256",
+            )
+        },
         "input_sha256": {
             "manifest": None,
             "labels": None,
@@ -367,6 +389,8 @@ def main() -> None:
         "labels": _sha256(args.labels),
         "predictions": _sha256(args.predictions),
     }
+    if report["inference_run_metadata"]["manifest_sha256"].lower() != report["input_sha256"]["manifest"].lower():
+        raise ValueError("Inference manifest hash does not match the manifest supplied to the scorer")
     report["evaluator_sha256"] = _sha256(Path(__file__).resolve())
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
