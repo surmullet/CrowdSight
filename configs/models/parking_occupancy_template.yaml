@@ -1,0 +1,32 @@
+# Template only. Complete after parking task definition, data audit, and training.
+# The loader computes the profile SHA-256 from this file; do not store a self-hash here.
+profile_id: parking_occupancy_site_v1
+status: pending_task_definition_training_and_evaluation
+release_approval: false
+task: parking_space_occupancy_classification
+model_family: pending_selection
+checkpoint_env: CROWDSIGHT_PARKING_CHECKPOINT
+checkpoint_sha256: pending
+site_id: pending
+camera_view_id: pending
+space_layout_version: pending
+class_mapping:
+  occupancy_states:
+    - OCCUPIED
+    - AVAILABLE
+    - UNKNOWN
+unit_of_analysis: configured_parking_space
+required_inputs:
+  - site_camera_frame
+  - space_geometry
+  - space_layout_version
+  - frame_timestamp_or_media_time
+required_outputs:
+  - space_id
+  - space_layout_version
+  - occupancy_state
+  - confidence_or_abstention
+  - evidence_time
+  - quality_state
+  - model_profile_id
+active_gate_or_barrier_control: false

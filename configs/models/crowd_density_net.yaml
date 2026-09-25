@@ -1,0 +1,22 @@
+# Separate density-map estimator; not interchangeable with the box detector.
+profile_id: crowd_density_net_source_v1
+task: crowd_density_map_and_count
+model_family: crowdsight_density_net
+checkpoint_env: CROWDSIGHT_DENSITY_CHECKPOINT
+checkpoint_sha256: 72fa74348afb87fd1b40eaeca2948badae58d2bfd13a70d1e19bad72a19faa0d
+source_artifact: ../heat_map/models/density_net.pt
+output:
+  density_map_resolution: quarter_scale
+  count_type: estimated_float
+  boxes: false
+  track_ids: false
+preprocessing:
+  tile_size: 448
+  density_target_scale: 100.0
+  tile_batch_size: 8
+  amp: false
+evidence_status:
+  checkpoint_hash: locally_computed
+  training_provenance: source_documentation_mentions_dronecrowd; details_to_verify
+  held_out_metrics: documented_but_report_manifest_not_located
+  pilot_site_accuracy: not_established

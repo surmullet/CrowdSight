@@ -1,0 +1,20 @@
+{
+  "source_id": "demo-camera-01",
+  "session_id": "synthetic-run-001",
+  "model_profile_id": "crowd_best_local_v2",
+  "model_profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "checkpoint_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "tracker_config_sha256": null,
+  "frame_index": 42,
+  "media_time_s": 1.4,
+  "captured_at": null,
+  "image_width": 1920,
+  "image_height": 1080,
+  "observation_valid": true,
+  "registration_valid": false,
+  "confidence_semantics": "RAW_MODEL_SCORE",
+  "quality": "VALID",
+  "detections": [
+    {"track_id": null, "x": 0.51, "y": 0.72, "confidence": 0.87}
+  ]
+}

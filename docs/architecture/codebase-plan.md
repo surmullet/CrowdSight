@@ -49,6 +49,8 @@ crowdsight/
 
 ## Data contract to agree before parallel implementation
 
+The proposed complete crowd and parking frame-output schemas and synthetic fixtures are maintained in [`contracts/v1/`](../../contracts/v1/README.md). They remain drafts until all three owners approve the field names, units, nullability, quality behavior, and compatibility policy.
+
 One observation snapshot should include `source_id`, `session_id`, `frame_index`, `media_time_s`, optional timezone-aware `captured_at` for live input, `observation_valid`, `registration_valid`, and detections containing anonymous run-local `track_id`, normalized image coordinates, and confidence. Analytics output should include zone ID, visible count, optional density only with valid measured area/calibration, heat-map reference or grid, quality/freshness state, and active alert state. Replay media time must not be represented as capture UTC. Do not persist raw identities or expose raw video through aggregate endpoints.
 
 ## AI/ML owner deliverables

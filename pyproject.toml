@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crowdsight-ai-ml"
+version = "0.1.0"
+description = "Model adapters, observation contracts, and evaluation tools for CrowdSight"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=2.2.6,<3",
+  "PyYAML>=6.0.3,<7",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

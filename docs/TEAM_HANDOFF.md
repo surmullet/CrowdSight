@@ -81,6 +81,10 @@ The project team consists of three members: the product lead/AI-ML owner and two
 
 All three team members share responsibility for product scope, interface contracts, pilot-data permissions, acceptance criteria, error handling, and demonstration readiness. Each owner reviews changes at adjacent component boundaries. Changes to shared schemas require corresponding updates to documentation and fixtures.
 
+### 3.5 Planned parking-occupancy extension
+
+Parking occupancy is a separate follow-on module, not part of the crowd MVP acceptance gate. The product lead/AI-ML owner will train and evaluate a dedicated occupancy model. Teammate 1 will own the parking result API, space-configuration versioning, and aggregation after the contract is approved. Teammate 2 will own parking-space configuration and occupancy/unknown-state presentation. The initial behavior is advisory availability for operators or information displays. Gate/barrier commands, reservations, and vehicle routing require a separate approved system design and are excluded from this module contract.
+
 ## 4. Repository structure and asset policy
 
 ```text
@@ -122,6 +126,8 @@ The shared product repository must not contain virtual environments, caches, raw
 ## 5. Shared interface contract
 
 The following JSON-compatible contract is the initial proposal. All three owners must review and freeze field names, units, nullability, and error semantics before parallel implementation.
+
+The complete proposed frame-output schemas and synthetic fixtures are maintained in [`contracts/v1/`](../contracts/v1/README.md). The abbreviated examples below describe product intent; the machine-readable schemas contain the full AI-output requirements and remain unapproved pending owner review.
 
 ### 5.1 Run request
 

@@ -20,6 +20,10 @@ Per-frame/per-zone visible counts, image-space heat map, optional geographic den
 
 Litter detection, face recognition, identity inference, persistent person re-identification, autonomous response, universal crowd-safety thresholds, and any claim that image-space pixels are real-world density.
 
+## Planned follow-on module
+
+Parking-space occupancy is a separate extension with its own trained model, space-layout configuration, data split, and held-out evaluation. The first output is advisory occupancy state (`OCCUPIED`, `AVAILABLE`, or `UNKNOWN`). Physical parking control through gates/barriers, reservations, or routing is excluded until a separate authorized control-system design is approved. The parking model is not yet trained or evaluated in this repository.
+
 ## MVP success measures
 
 The pilot owner and team must agree supported scene conditions, count tolerance, dense-scene failure reporting, alert episode quality, processing throughput, and operator usability before claiming acceptance. Record numerical thresholds and approval owner in the evaluation plan.

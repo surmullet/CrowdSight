@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crowdsight.invalid/contracts/v1/parking-frame-observation.schema.json",
+  "title": "CrowdSight Parking Frame Observation v1 (proposed)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "site_id",
+    "camera_view_id",
+    "space_layout_version",
+    "source_id",
+    "session_id",
+    "frame_index",
+    "media_time_s",
+    "captured_at",
+    "model_profile_id",
+    "model_profile_sha256",
+    "checkpoint_sha256",
+    "confidence_semantics",
+    "quality",
+    "spaces"
+  ],
+  "properties": {
+    "site_id": {"type": "string", "minLength": 1},
+    "camera_view_id": {"type": "string", "minLength": 1},
+    "space_layout_version": {"type": "string", "minLength": 1},
+    "source_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "frame_index": {"type": "integer", "minimum": 0},
+    "media_time_s": {"type": "number", "minimum": 0},
+    "captured_at": {"oneOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "model_profile_id": {"type": "string", "minLength": 1},
+    "model_profile_sha256": {"$ref": "#/$defs/sha256"},
+    "checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+    "confidence_semantics": {"const": "RAW_MODEL_SCORE"},
+    "quality": {"enum": ["VALID", "PARTIAL", "UNKNOWN", "STALE"]},
+    "spaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["space_id", "state", "confidence", "evidence_time_s"],
+        "properties": {
+          "space_id": {"type": "string", "minLength": 1},
+          "state": {"enum": ["OCCUPIED", "AVAILABLE", "UNKNOWN"]},
+          "confidence": {
+            "oneOf": [
+              {"type": "number", "minimum": 0, "maximum": 1},
+              {"type": "null"}
+            ],
+            "description": "Uncalibrated model score; not a correctness probability. Null for UNKNOWN."
+          },
+          "evidence_time_s": {"type": "number", "minimum": 0}
+        },
+        "allOf": [
+          {
+            "if": {"properties": {"state": {"const": "UNKNOWN"}}, "required": ["state"]},
+            "then": {"properties": {"confidence": {"type": "null"}}}
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"quality": {"enum": ["UNKNOWN", "STALE"]}}, "required": ["quality"]},
+      "then": {
+        "properties": {
+          "spaces": {
+            "items": {"properties": {"state": {"const": "UNKNOWN"}}}
+          }
+        }
+      }
+    }
+  ]
+}

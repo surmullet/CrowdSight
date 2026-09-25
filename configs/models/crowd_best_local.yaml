@@ -1,0 +1,44 @@
+# Current candidate profile. v1 is preserved in crowd_best_local_v1.yaml because
+# its file hash is referenced by recorded historical inference/evaluation runs.
+profile_id: crowd_best_local_v2
+task: person_detection
+model_family: yolo11s_finetuned
+checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
+checkpoint_sha256: 12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc
+source_artifact: ../heat_map/models/best.pt
+matching_artifact: ../uav-crowd-monitoring/artifacts/e01-finetune-returned/best.pt
+lineage:
+  training_run_id: e01-finetune-pilot-v1
+  initial_checkpoint_sha256: 8332891c201ec99458c567e17b059bbac59ed8fa57134d1cc7a7048905a31483
+  training_manifest_sha256: 93d36c7a9583ceee28dafdab679a484391e0f8f63fbd3b8a0354a8adbc0b5cf7
+  import_report_sha256: 63829b088a3e83c52dfc640170e98db180c2233a71c96fbbdec954fb13bffbb2
+  run_provenance_sha256: 9a406de50b8da1d56dd38f23972a3bf4abacb592127ce9059ecb13bdb42050e4
+  training_mix:
+    plaza_reviewed_adaptation_crops: 90
+    visdrone_replay_images: 256
+    visdrone_regression_validation_images: 548
+  plaza_source_sha256: 921a664f1013c0e76d1a08121263c688fadc23fa258cb3cea35e18d228506f6d
+  independent_target_validation: unavailable
+  deployment_rights_review: pending
+class_mapping:
+  person: 0
+preprocessing:
+  color_order: BGR
+  image_size: 1280
+inference:
+  confidence: 0.25
+  device: auto
+tracker:
+  type: botsort
+  config_source: ../heat_map/configs/trackers/botsort_uav.yaml
+  config_env: CROWDSIGHT_TRACKER_CONFIG
+  config_sha256: f6b571babb8a7d078241934ded037f49d69dd854523a0793481456cd4043e641
+  ids_scope: one_video_session
+evidence_status:
+  checkpoint_hash: verified_against_heat_map_and_uav_returned_artifact
+  architecture_and_pilot_training_lineage: documented
+  independent_target_validation: unavailable
+  visdrone_data_rights_review: pending
+  ultralytics_yolo_license_review: pending
+  deployment_rights: review_required
+  release_approval: pending

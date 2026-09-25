@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://crowdsight.invalid/contracts/v1/crowd-frame-observation.schema.json",
+  "title": "CrowdSight Crowd Frame Observation v1 (proposed)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "source_id",
+    "session_id",
+    "model_profile_id",
+    "model_profile_sha256",
+    "checkpoint_sha256",
+    "tracker_config_sha256",
+    "frame_index",
+    "media_time_s",
+    "captured_at",
+    "image_width",
+    "image_height",
+    "observation_valid",
+    "registration_valid",
+    "confidence_semantics",
+    "quality",
+    "detections"
+  ],
+  "properties": {
+    "source_id": {"type": "string", "minLength": 1},
+    "session_id": {"type": "string", "minLength": 1},
+    "model_profile_id": {"type": "string", "minLength": 1},
+    "model_profile_sha256": {"$ref": "#/$defs/sha256"},
+    "checkpoint_sha256": {"$ref": "#/$defs/sha256"},
+    "tracker_config_sha256": {"oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+    "frame_index": {"type": "integer", "minimum": 0},
+    "media_time_s": {"type": "number", "minimum": 0},
+    "captured_at": {"oneOf": [{"type": "string", "format": "date-time"}, {"type": "null"}]},
+    "image_width": {"type": "integer", "minimum": 1},
+    "image_height": {"type": "integer", "minimum": 1},
+    "observation_valid": {"type": "boolean"},
+    "registration_valid": {"type": "boolean"},
+    "confidence_semantics": {"const": "RAW_MODEL_SCORE"},
+    "quality": {"enum": ["VALID", "PARTIAL", "UNKNOWN", "STALE"]},
+    "detections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["track_id", "x", "y", "confidence"],
+        "properties": {
+          "track_id": {"oneOf": [{"type": "integer", "minimum": 0}, {"type": "null"}]},
+          "x": {"type": "number", "minimum": 0, "maximum": 1},
+          "y": {"type": "number", "minimum": 0, "maximum": 1},
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1,
+            "description": "Uncalibrated model score; not a correctness probability."
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[A-Fa-f0-9]{64}$"}
+  },
+  "allOf": [
+    {
+      "if": {"properties": {"quality": {"enum": ["VALID", "PARTIAL"]}}, "required": ["quality"]},
+      "then": {"properties": {"observation_valid": {"const": true}}}
+    },
+    {
+      "if": {"properties": {"quality": {"enum": ["UNKNOWN", "STALE"]}}, "required": ["quality"]},
+      "then": {
+        "properties": {
+          "observation_valid": {"const": false},
+          "detections": {"maxItems": 0}
+        }
+      }
+    }
+  ]
+}

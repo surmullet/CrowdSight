@@ -1,0 +1,31 @@
+# Experimental Plaza-adapted pair; checkpoint is not present locally.
+profile_id: crowd_pilot_last_experimental_v1
+status: experimental_checkpoint_not_installed
+task: person_detection_and_tracking
+model_family: ultralytics_yolo11s
+checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
+checkpoint_sha256: 6d4b691a82ad74eb3d36ee61c386bd8724c2bac39eaa1945f3a3eb838bfe485f
+class_mapping:
+  person: 0
+preprocessing:
+  color_order: BGR
+  image_size: 1280
+inference:
+  confidence: 0.15
+  device: auto
+tracker:
+  type: bytetrack
+  config_source: ../heat_map/configs/trackers/pilot_last_uav_people.yaml
+  config_env: CROWDSIGHT_TRACKER_CONFIG
+  config_sha256: 6d115a3345fe878f37a4c3b75f81b3b7ee31b00e0603fe6555a4d3495e7b4292
+  high_threshold: 0.20
+  low_threshold: 0.15
+  new_track_threshold: 0.20
+  match_threshold: 0.8
+  buffer_frames: 30
+  fuse_score: false
+  ids_scope: one_video_session
+evidence_status:
+  plaza_training_fit: true
+  visdrone_map5095_recorded: 0.2871
+  pilot_site_accuracy: not_established
