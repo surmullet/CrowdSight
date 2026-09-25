@@ -58,6 +58,22 @@ The project page links these YouTube sources for images included in its dataset.
 
 The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. FAPS is too short to be the primary temporal evaluation clip; either source would first need visual confirmation of a stable view and suitable motorbike examples.
 
+## Parking state-label candidate: bike parking
+
+- Project: [bike parking on Roboflow Universe](https://universe.roboflow.com/projects-oqpad/bike-parking)
+- Published metadata: 404 images across 3 versions; classes `space-empty` and `space-occupied`; project declares CC BY 4.0.
+- Possible use: review as the closest discovered label vocabulary to per-space occupancy classification.
+- Limits: the publisher provides no dataset description, the word `bike` does not establish motorcycle rather than bicycle coverage, and source camera/site/date provenance and split independence are not established. No Vietnam match is documented.
+- Decision: inspect sample images and exact version before considering a training-label mapping. Treat as exploratory training data only unless source-level independence is proven; do not use the published split as held-out evidence.
+
+## Motorcycle parking appearance candidate: Kepadatan Parkir Motor
+
+- Project/version: [Kepadatan Parkir Motor](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor/dataset/8)
+- Published metadata: project lists 510 images across 8 versions, classes `Motorcycle` and `empty`, and declares CC BY 4.0. Version 8 contains 1,440 images with 1,240/100/100 train/valid/test split, resize to 640x480, and four augmented outputs per training example.
+- Possible use: exploratory motorbike/empty-region detector adaptation and parking-scene review; it does not directly provide stable per-space IDs or a complete configured-space state table.
+- Limits: no published description, source camera/site/date identities, geographic context, or source-separated split evidence. Augmented copies and possible common-source images can leak across splits; the default split is not independent test evidence.
+- Decision: review original-image groupings, labels, and permission/provenance before download. Keep in the training-only candidate pool unless the source inventory and split lineage are audited.
+
 ## Parking-area motorbike detection discovery candidate: Parking Lot Occupany 2
 
 - Project: [Parking Lot Occupany 2 on Roboflow Universe](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
@@ -98,5 +114,7 @@ The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. 
 - [Traffic Density Prediction](https://universe.roboflow.com/prediction-of-traffic-situations-using-realtime-traffic-density-estimation/traffic-density-prediction)
 - [Parking Lot Occupany](https://universe.roboflow.com/mohamed-traore-w4h8y/parking-lot-occupany)
 - [Parking Lot Occupany 2](https://universe.roboflow.com/homework-bngpb/parking-lot-occupany-2)
+- [bike parking](https://universe.roboflow.com/projects-oqpad/bike-parking)
+- [Kepadatan Parkir Motor v8](https://universe.roboflow.com/skripsi-lcybh/kepadatan-parkir-motor/dataset/8)
 - [IAX MY Carpark Occupancy v3](https://universe.roboflow.com/iax-my/carpark-occupancy-5j5aj/dataset/3)
 - [Parking Space Detection - Occupancy v1](https://universe.roboflow.com/capstone-project-vb3su/parking-space-detection-occupancy/dataset/1)
