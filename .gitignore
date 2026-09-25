@@ -12,10 +12,9 @@ venv/
 htmlcov/
 outputs/**
 !outputs/README.md
-data/evaluation/**
-data/raw/**
-data/private/**
-data/datasets/**
+# Private data, annotation exports, and derived evaluation artifacts stay out of Git.
+data/**
+!data/README.md
 models/**
 !models/README.md
 *.pt
