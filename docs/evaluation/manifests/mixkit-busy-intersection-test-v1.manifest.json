@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "dataset_id": "mixkit-busy-intersection-60-test-v1",
+  "split": "test",
+  "evaluation_protocol": {
+    "split_unit": "video",
+    "test_partition_id": "mixkit-busy-intersection-fullhd-20260925-test-v1",
+    "selection_locked_before_predictions": true,
+    "selection_locked_at_utc": "2026-09-25T04:03:32Z",
+    "sampling_method": "Uniform: every 48 decoded frames (~2.002 seconds), beginning at frame index 0; 30 frames total."
+  },
+  "source_id": "mixkit-busy-intersection-static-drone",
+  "source_sha256": "e9084a41628e578d45f356e1a9ae1bfb6ad182f3786d09ad4f965aab259fe6a1",
+  "source_bytes": 202527196,
+  "source_fps": 23.976023976023978,
+  "width": 1920,
+  "height": 1080,
+  "zone_polygons_normalized": {},
+  "data_permission": {
+    "status": "pending",
+    "permitted_uses": [],
+    "evidence_ref": null,
+    "evidence_sha256": null,
+    "reviewer_id": null
+  },
+  "source_review": {
+    "source_page": "https://mixkit.co/free-stock-video/busy-intersection-aerial-view-60/",
+    "license_page": "https://mixkit.co/license/modal/videoFree/",
+    "source_review_status": "candidate_only_pending_named_data_owner_review",
+    "independence_status": "not_yet_independently_reviewed"
+  },
+  "samples": [
+    {
+      "frame_index": 0,
+      "media_time_s": 0,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 48,
+      "media_time_s": 2.002,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 96,
+      "media_time_s": 4.004,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 144,
+      "media_time_s": 6.006,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 192,
+      "media_time_s": 8.008,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 240,
+      "media_time_s": 10.01,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 288,
+      "media_time_s": 12.012,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 336,
+      "media_time_s": 14.014,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 384,
+      "media_time_s": 16.016,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 432,
+      "media_time_s": 18.018,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 480,
+      "media_time_s": 20.02,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 528,
+      "media_time_s": 22.022,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 576,
+      "media_time_s": 24.024,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 624,
+      "media_time_s": 26.026,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 672,
+      "media_time_s": 28.028,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 720,
+      "media_time_s": 30.03,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 768,
+      "media_time_s": 32.032,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 816,
+      "media_time_s": 34.034,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 864,
+      "media_time_s": 36.036,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 912,
+      "media_time_s": 38.038,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 960,
+      "media_time_s": 40.04,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1008,
+      "media_time_s": 42.042,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1056,
+      "media_time_s": 44.044,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1104,
+      "media_time_s": 46.046,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1152,
+      "media_time_s": 48.048,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1200,
+      "media_time_s": 50.05,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1248,
+      "media_time_s": 52.052,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1296,
+      "media_time_s": 54.054,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1344,
+      "media_time_s": 56.056,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    },
+    {
+      "frame_index": 1392,
+      "media_time_s": 58.058,
+      "stratum": "OVERHEAD_TRAFFIC_UNREVIEWED"
+    }
+  ]
+}

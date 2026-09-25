@@ -1,0 +1,187 @@
+{
+  "schema_version": 1,
+  "dataset_id": "mixkit-busy-intersection-60-test-v1",
+  "source_sha256": "e9084a41628e578d45f356e1a9ae1bfb6ad182f3786d09ad4f965aab259fe6a1",
+  "frames": [
+    {
+      "frame_index": 0,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 48,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 96,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 144,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 192,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 240,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 288,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 336,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 384,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 432,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 480,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 528,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 576,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 624,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 672,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 720,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 768,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 816,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 864,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 912,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 960,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1008,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1056,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1104,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1152,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1200,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1248,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1296,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1344,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    },
+    {
+      "frame_index": 1392,
+      "complete": false,
+      "reviewer": "",
+      "boxes": []
+    }
+  ]
+}
