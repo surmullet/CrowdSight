@@ -58,6 +58,8 @@ The project page links these YouTube sources for images included in its dataset.
 
 The YouTube player reported 1:17 for ClearPix and 0:16 for FAPS at review time. FAPS is too short to be the primary temporal evaluation clip; either source would first need visual confirmation of a stable view and suitable motorbike examples.
 
+Roboflow also links [BLK-HDPTZ12 Security Camera Parking Lot Surveillance Video](https://www.youtube.com/watch?v=U7HRKjlXK-Y). A preserved [Wikimedia Commons copy](https://commons.wikimedia.org/wiki/File:BLK-HDPTZ12_Security_Camera_Parking_Lot_Surveillance_Video.webm) reports 5 min 17 sec at 1920x1080 and describes it as parking-lot surveillance footage. This is a useful fixed-camera pipeline/demo candidate, but it is a US car park camera-quality demonstration, not a Vietnam motorbike lot, and no motorbike coverage is established. Commons labels it public domain based on the fixed-camera recording, while the source is a deliberately produced commercial camera demonstration; that rationale does not clearly settle the recording's rights. Keep it out of training/evaluation pending a source-rights review, and do not represent it as the target-domain video. Roboflow helps discover and inspect source links; its dataset download itself contains image/annotation packages rather than the raw ordered source video.
+
 ## Parking state-label candidate: bike parking
 
 - Project: [bike parking on Roboflow Universe](https://universe.roboflow.com/projects-oqpad/bike-parking)
