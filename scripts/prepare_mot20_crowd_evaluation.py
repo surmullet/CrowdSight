@@ -210,7 +210,7 @@ def prepare(
     partition_id = "MOT20-train-" + "-".join(selected)
     dataset_id = (
         "mot20-" + "-".join(sequence_id.lower() for sequence_id in selected)
-        + f"-stride{sample_stride}-test-v2"
+        + f"-stride{sample_stride}-test-v4"
     )
     samples: list[dict[str, Any]] = []
     label_frames: list[dict[str, Any]] = []
@@ -294,7 +294,8 @@ def prepare(
         },
         "source_id": "motchallenge-mot20",
         "source_page": "https://motchallenge.net/data/MOT20/",
-        "dataset_license": "CC BY-NC-SA 3.0 (per MOTChallenge site terms)",
+        "dataset_license_status": "UNVERIFIED; current official archive page omits license terms; historical CC BY-NC-SA 3.0 notice requires independent reviewer authentication",
+        "historical_license_notice": "CC BY-NC-SA 3.0 (historical notice; not authenticated from current source)",
         "source_sha256": archive_sha,
         "source_archive_bytes": source_archive.stat().st_size,
         "source_archive_sha256": archive_sha,

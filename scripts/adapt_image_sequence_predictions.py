@@ -125,6 +125,7 @@ def adapt(manifest_path: Path, image_predictions_path: Path) -> dict[str, Any]:
             } | {"frames": adapted_frames}
         },
         "image_prediction_sha256": sha256_file(image_predictions_path),
+        "inference_script_sha256": run_metadata.get("inference_script_sha256"),
         "image_inference_script_sha256": run_metadata.get("inference_script_sha256"),
         "adapter_script_sha256": sha256_file(Path(__file__).resolve()),
         "manifest_sha256": sha256_file(manifest_path),
