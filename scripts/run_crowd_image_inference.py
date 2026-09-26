@@ -173,9 +173,10 @@ def run_inference(
     )
     detector = UltralyticsPersonDetector(profile)
     predictions = []
-    for sample, image_path, expected_sha in resolved_samples:
+    for sample_index, (sample, image_path, expected_sha) in enumerate(resolved_samples):
         if not image_path.is_file():
             predictions.append({
+                "frame_index": sample_index,
                 "sequence_id": sample["sequence_id"],
                 "frame_id": sample["frame_id"],
                 "image_sha256": expected_sha,
@@ -190,6 +191,7 @@ def run_inference(
         frame = cv2.imread(str(image_path), cv2.IMREAD_COLOR)
         if frame is None:
             predictions.append({
+                "frame_index": sample_index,
                 "sequence_id": sample["sequence_id"],
                 "frame_id": sample["frame_id"],
                 "image_sha256": image_sha,
@@ -215,6 +217,7 @@ def run_inference(
         if len(boxes) != len(detections):
             raise RuntimeError("Detector returned a person without a pixel box; cannot produce a reproducible count")
         predictions.append({
+            "frame_index": sample_index,
             "sequence_id": sample["sequence_id"],
             "frame_id": sample["frame_id"],
             "image_sha256": image_sha,

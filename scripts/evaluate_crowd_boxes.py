@@ -188,6 +188,15 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
     if not _is_sha256(manifest.get("source_sha256")):
         raise ValueError("Manifest source_sha256 must be a 64-character hex digest")
     permission_evidence = _permission_evidence(manifest)
+    annotation_source_kind = labels.get("annotation_source_kind", "manual_review")
+    if annotation_source_kind not in ("manual_review", "published_ground_truth"):
+        raise ValueError("Labels annotation_source_kind must be manual_review or published_ground_truth")
+    annotation_source = labels.get("annotation_source")
+    if annotation_source_kind == "published_ground_truth" and (
+        not isinstance(annotation_source, str) or not annotation_source.strip()
+    ):
+        raise ValueError("Published ground-truth labels must identify their annotation_source")
+    label_scope = "PUBLISHED_GROUND_TRUTH" if annotation_source_kind == "published_ground_truth" else "MANUAL_LABEL"
     if not 0.0 < iou_threshold <= 1.0:
         raise ValueError("IoU threshold must be in (0, 1]")
     for document, name in ((labels, "labels"), (predictions, "predictions")):
@@ -209,8 +218,8 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
     split_unit = protocol.get("split_unit")
     partition_id = protocol.get("test_partition_id")
     selection_locked = protocol.get("selection_locked_before_predictions") is True
-    if split_unit not in ("video", "site", "flight", "camera_date"):
-        raise ValueError("Manifest evaluation_protocol.split_unit must name a video/site/flight/camera_date partition")
+    if split_unit not in ("video", "sequence", "site", "flight", "camera_date"):
+        raise ValueError("Manifest evaluation_protocol.split_unit must name a video/sequence/site/flight/camera_date partition")
     if not isinstance(partition_id, str) or not partition_id.strip():
         raise ValueError("Manifest evaluation_protocol.test_partition_id must be nonempty")
     sample_by_frame = {}
@@ -241,7 +250,7 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
         if type(frame_index) is not int or frame_index not in sample_by_frame or frame_index in label_rows:
             raise ValueError("Labels contain an unknown or duplicate frame")
         if row.get("complete") is not True or not str(row.get("reviewer", "")).strip():
-            raise ValueError("Every scored frame must have a complete manual review and reviewer")
+            raise ValueError("Every scored frame must have complete labels and identify its reviewer or publisher")
         boxes = row.get("boxes")
         if not isinstance(boxes, list):
             raise ValueError("Each reviewed frame requires a boxes list; empty means reviewed zero")
@@ -274,7 +283,9 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
     if not isinstance(models, dict) or not models:
         raise ValueError("Predictions must contain at least one named model")
     output: dict[str, Any] = {
-        "scope": "MANUAL_LABEL_EVALUATION",
+        "scope": f"{label_scope}_EVALUATION",
+        "annotation_source_kind": annotation_source_kind,
+        "annotation_source": annotation_source,
         "dataset_id": manifest["dataset_id"],
         "source_sha256": manifest["source_sha256"],
         "split": manifest["split"],
@@ -483,11 +494,11 @@ def evaluate(manifest: dict[str, Any], labels: dict[str, Any], predictions: dict
             "profile_sha256": profile_sha.lower(),
             "checkpoint_sha256": checkpoint_sha.lower(),
             "evaluation_scope": (
-                "TRAINING_FIT_MANUAL_LABEL_EVALUATION_OVERLAP_CONFIRMED"
+                f"TRAINING_FIT_{label_scope}_EVALUATION_OVERLAP_CONFIRMED"
                 if source_overlap or partition_overlap
-                else "HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW"
+                else "HELD_OUT_CANDIDATE_REQUIRES_EVIDENCE_REVIEW"
                 if held_out_candidate
-                else "EXPLORATORY_MANUAL_LABEL_EVALUATION_OVERLAP_UNVERIFIED"
+                else f"EXPLORATORY_{label_scope}_EVALUATION_OVERLAP_UNVERIFIED"
             ),
             "training_overlap_status": (
                 "verified_overlap" if source_overlap or partition_overlap else overlap_status

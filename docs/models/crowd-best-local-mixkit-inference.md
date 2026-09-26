@@ -43,3 +43,9 @@ Reproduce the CPU run from the CrowdSight repository root with the same source v
 ```
 
 The prediction artifacts and source video remain outside Git. Inference used no manually reviewed labels. Complete and adjudicate all 30 frames in the prediction-free review tool, then score either prediction file against the signed labels. Until source independence and complete training lineage are reviewed, the result is exploratory only. The clip is sparse overhead pedestrian footage and cannot validate dense-crowd, Vietnam-domain, parking-occupancy, or waiting-time performance.
+
+## SAM 3.1 annotation-assistance diagnostic
+
+A separate authorized private Kaggle T4 run processed the same 30 locked frames on 2026-09-25. It returned zero person proposals on all frames and zero invalid observations. Original-resolution review found small but visible pedestrians in several frames, so zero proposals likely include misses. It does not establish that every frame is person-free. No manual truth labels were entered, so no accuracy metric is available. See the [SAM3 Kaggle run record](../evaluation/sam3-kaggle-annotation.md).
+
+The SAM output is a proposal artifact, not ground truth. It may be used only as a negative-heavy false-positive diagnostic after prediction-free human labels are completed. It cannot establish crowd recall/count accuracy, dense-crowd or Vietnam-domain performance, or parking performance. The private SAM bundle and outputs are excluded from Git.

@@ -33,7 +33,7 @@ Coordinate all shared schema changes with backend and frontend owners. Keep API/
 
 ## Evaluation
 
-- Split by video, site, flight, date, camera, or a justified camera-date unit; never split neighboring frames from one source across train/validation/test.
+- Split by video, sequence, site, flight, date, camera, or a justified camera-date unit; never split neighboring frames from one source across train/validation/test.
 - Record source hashes, permissions, annotation policy/version, split manifest, model/profile/checkpoint hashes, runtime versions, and hardware.
 - Crowd evaluation includes detection precision/recall under a declared matching rule, per-frame/per-zone count MAE/RMSE/bias, errors by scene condition, unknown/unsupported coverage, and tracking metrics only when tracking claims are made.
 - Parking evaluation is separate and stall-based: per-class and per-space metrics, occupancy count error, unknown/abstention coverage, and conditions such as day/night, weather, glare, vehicle size, occlusion, and camera movement.

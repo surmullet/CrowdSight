@@ -4,7 +4,7 @@
 
 ## Split and annotation policy
 
-Create the train/validation/test split by video, site, or flight before selecting frames. Neighboring frames from a source clip must not be split across datasets. The test manifest should have an immutable dataset ID and source-video SHA-256. Include scene strata such as sparse/moderate/dense, view angle, person scale/altitude, lighting, occlusion and camera motion when available.
+Create the train/validation/test split by video, sequence, site, or flight before selecting frames. For image-sequence sources such as MOT20, the complete published sequence is the split unit; never split neighboring frames from one sequence across datasets. The test manifest should have an immutable dataset ID and source/archive SHA-256. Include scene strata such as sparse/moderate/dense, view angle, person scale/altitude, lighting, occlusion and camera motion when available.
 
 Every selected frame requires a complete manual review, reviewer identifier, and a boxes array. An empty array means a reviewed zero-person frame. Each box has `bbox_xyxy` in original image pixels and a boolean `uncertain`. Detection metrics use certain boxes as positives and ignore unmatched predictions that overlap uncertain boxes at the configured IoU threshold. Count and zone-count metrics exclude any frame with uncertain boxes, since its full count is unresolved. Report uncertain annotations and count exclusions explicitly.
 
@@ -44,11 +44,15 @@ The frame list is selected before running candidate models. For `test` and `held
 
 ## Labels example
 
+Set **annotation_source_kind** to **manual_review** or **published_ground_truth** and identify the source. Keep publisher annotations distinct from independently reviewed human labels; transformation of published annotations does not turn them into manual labels. Every selected frame must have complete labels and identify its reviewer or publisher. For publisher GT, **complete** means the published annotation protocol supplies its complete labeled instances for the selected frame; authenticate protocol coverage before making accuracy claims.
+
 ```json
 {
   "schema_version": 1,
   "dataset_id": "pilot-site-test-v1",
   "source_sha256": "<same source video SHA-256>",
+  "annotation_source_kind": "manual_review",
+  "annotation_source": "Human-reviewed labels, policy v1",
   "frames": [
     {
       "frame_index": 120,
@@ -133,6 +137,46 @@ Choose a new `--output-dir` for each preparation run; the tool fails rather than
 `--training-evidence` is optional and accepts a JSON object with `training_overlap_status`, `independence_evidence_ref`, `independence_evidence_sha256`, `training_manifest_sha256`, `training_source_inventory_complete`, `training_source_sha256s`, and `training_partition_ids`. The runner hashes that evidence file and carries both its file hash and the declared training-manifest hash into predictions. A held-out candidate requires a SHA-256 for the referenced independence-evidence artifact; the evaluator records the digest but does not dereference or authenticate it. Without the option, it records `unknown_or_mixed` and an empty inventory. Use `verified_overlap` only when the training-source or partition overlap is documented; use `verified_disjoint` only when the complete training inventory and independent review support non-overlap and the evaluator's exact guards pass.
 
 The output includes per-model evaluation scope, overlap evidence status, micro precision/recall, frame count MAE/RMSE/bias where fully certain frames exist, zone count MAE/RMSE/bias where fully certain frames exist, condition strata, uncertain annotation and count-exclusion lists, ignored predictions overlapping uncertain regions, invalid/unknown frame rate, input-document hashes, data-permission evidence metadata, and the inference/evaluator script hashes. New inference outputs record Python, NumPy, OpenCV, PyTorch, CUDA runtime, cuDNN, Ultralytics, platform, and device metadata alongside profile thresholds. This metadata improves reproduction but does not guarantee bitwise-equal results across hardware/runtime combinations. A metadata-eligible held-out report is labelled `HELD_OUT_CANDIDATE_REQUIRES_MANUAL_EVIDENCE_REVIEW` only when selection is locked, training independence evidence is complete, and an approved data-permission record covers model evaluation; the evaluator does not dereference or authenticate the independence or permission evidence references, and `release_approval` remains false. A named reviewer must inspect evidence contents and authorization before describing results as verified held-out or approved. IoU matching maximizes the number of one-to-one matches at the configured threshold. Zone counts use each box's bottom-centre point; polygon boundaries count inside. The evaluator does not establish calibration, live latency, tracking quality, or site safety. The site owner must approve numerical acceptance criteria.
+
+### MOT20 labeled image-sequence path
+
+The official [MOT20 archive](https://motchallenge.net/data/MOT20/) publishes annotated training sequences as numbered images plus a separate labels archive. MOTChallenge's format stores one object per row with one-based frame ID, track ID, `left, top, width, height`, mark, class ID, and visibility; the [TrackEval MOTChallenge implementation](https://github.com/JonathonLuiten/TrackEval/blob/master/trackeval/datasets/mot_challenge_2d_box.py) defines pedestrian as class ID 1 and excludes zero-marked rows. The preparation tool follows that mapping, ignores IDs for frame-level detection/count metrics, and fails on image/annotation rows it cannot represent faithfully.
+
+The local MOT20-05 exploratory v2 run used product-lead authorization and a private permission record approving model_evaluation and annotation_transformation. That record does not authenticate current source license terms; human review remains required. The preparation tool does not fetch or extract data: it verifies extracted sampled image bytes against the official video ZIP, verifies selected GT files against the official labels ZIP, hashes both archives, fixes a source-sequence split, and writes manifest and labels outside Git. The complete source sequence is the split unit. The completed 134-frame sample used a 25-frame stride plus the final frame. See the [MOT20-05 diagnostic report](../models/crowd-best-local-mot20-diagnostic.md).
+
+After download and extraction in approved private storage, prepare one dimension-compatible sequence or group (MOT20-01 and MOT20-02 share a size; MOT20-03 and MOT20-05 have different sizes):
+
+```powershell
+python scripts/prepare_mot20_crowd_evaluation.py `
+  --sequences-root D:\private-data\MOT20\train `
+  --source-archive D:\private-data\MOT20.zip `
+  --labels-archive D:\private-data\MOT20Labels.zip `
+  --permission-record D:\private-data\permission-review.json `
+  --sequence-ids MOT20-05 `
+  --sample-stride 25 `
+  --output-dir D:\private-results\mot20-05-test-v1
+
+python scripts/run_crowd_image_inference.py `
+  --images-root D:\private-data\MOT20\train `
+  --source-archive D:\private-data\MOT20.zip `
+  --manifest D:\private-results\mot20-05-test-v1\manifest.json `
+  --profile configs\models\crowd_best_local.yaml `
+  --output D:\private-results\mot20-05-test-v1\image-predictions.json
+
+python scripts/adapt_image_sequence_predictions.py `
+  --manifest D:\private-results\mot20-05-test-v1\manifest.json `
+  --image-predictions D:\private-results\mot20-05-test-v1\image-predictions.json `
+  --output D:\private-results\mot20-05-test-v1\predictions.json
+
+python scripts/evaluate_crowd_boxes.py `
+  --manifest D:\private-results\mot20-05-test-v1\manifest.json `
+  --labels D:\private-results\mot20-05-test-v1\labels.json `
+  --predictions D:\private-results\mot20-05-test-v1\predictions.json `
+  --output D:\private-results\mot20-05-test-v1\report.json `
+  --iou 0.5
+```
+
+The generic evaluator's MOT20-05 report remains exploratory unless complete training-source inventory and sequence-independence evidence pass its checks and are manually authenticated. MOT20 is an external pedestrian benchmark, not a substitute for Vietnam motorbike, parking, or target-camera validation. The completed local result and hashes are recorded in the linked diagnostic report; private data and result files remain outside this worktree.
 
 ### Raw-score calibration evaluation
 
