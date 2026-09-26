@@ -28,7 +28,7 @@ Computed only over emitted detections surviving threshold 0.25; it does not asse
 
 ## Annotation transformation and rights
 
-Publisher ground truth was filtered to marked pedestrians (class_id=1, mark!=0), converted from left/top/width/height to xyxy, clipped at image boundaries for partially visible boxes, and degenerate boxes rejected. The product lead authorized private local noncommercial evaluation and acquisition. ZIP CRC checks passed; data remain outside Git. The v4 manifest records dataset_license_status as UNVERIFIED; the historical CC BY-NC-SA 3.0 notice is explicitly marked unauthenticated. The evaluator records NOT_VERIFIED_BY_EVALUATOR_REVIEW_REQUIRED. Human terms review is required before redistribution or rights claims. Do not upload or publish source or derivatives.
+Publisher ground truth was filtered to marked pedestrians (class_id=1, mark!=0), converted from left/top/width/height to xyxy, clipped at image boundaries for partially visible boxes, and degenerate boxes rejected. The product lead authorized private local noncommercial evaluation and acquisition. ZIP CRC checks passed; data remain outside Git. The v4 manifest records dataset_license_status as UNVERIFIED. The retired official MOTChallenge homepage is indexed with a general CC BY-NC-SA 3.0 dataset notice, but the live home URL returns HTTP 410 and the replacement archive page omits license terms; applicability to these exact archives still requires human authentication. The evaluator records NOT_VERIFIED_BY_EVALUATOR_REVIEW_REQUIRED. Human terms review is required before redistribution or rights claims. Do not upload or publish source or derivatives.
 
 ## Next actions
 
