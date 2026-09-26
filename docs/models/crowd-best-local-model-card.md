@@ -35,7 +35,7 @@ Person detection in recorded UAV/fixed-camera frames for visible occupancy analy
 
 ## Performance
 
-No independent pilot-site performance result is claimed for this candidate. Plaza metrics are training-fit because the same source video contributed reviewed crops to this checkpoint. VisDrone regression-validation results are not independent because those images were previously used by the base model. Evaluation must use a new, permitted, locked site/video split and manual labels; required metrics and split rules are defined in `docs/evaluation/plan.md`.
+No independent pilot-site performance result is claimed for this candidate. Plaza metrics are training-fit because the same source video contributed reviewed crops to this checkpoint. VisDrone regression-validation results are not independent because those images were previously used by the base model. Evaluation must use a new, permitted, locked site/video split and manual labels; required metrics and split rules are defined in `docs/evaluation/plan.md`. An external MOT20-05 v4 exploratory evaluation is now available in [the diagnostic report](crowd-best-local-mot20-diagnostic.md): recall was 0.3155 and count MAE was 103.18 on 134 sampled publisher-labelled frames. Sequence independence and data terms remain unverified, so this result is not held-out or pilot-site evidence.
 
 ## Limitations and abstention
 
