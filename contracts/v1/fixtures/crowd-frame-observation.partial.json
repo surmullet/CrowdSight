@@ -12,10 +12,23 @@
   "image_height": 1080,
   "observation_valid": true,
   "registration_valid": false,
-  "fully_observed_zones": ["north-gate"],
+  "fully_observed_zones": [
+    "north-gate"
+  ],
   "confidence_semantics": "RAW_MODEL_SCORE",
   "quality": "PARTIAL",
   "detections": [
-    {"track_id": null, "x": 0.51, "y": 0.72, "confidence": 0.87}
+    {
+      "track_id": null,
+      "x": 0.51,
+      "y": 0.72,
+      "confidence": 0.87,
+      "bbox_xyxy": [
+        950.4,
+        600,
+        1008,
+        777.6
+      ]
+    }
   ]
 }

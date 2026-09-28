@@ -8,7 +8,8 @@ The system is intended to support operational decisions. Alerts require human re
 
 ## Documentation
 
-- [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, role assignments, data contract, delivery phases, acceptance criteria, and initial actions.
+- [Teammate handoff: start here](TEAMMATE_HANDOFF.md): one-file summary of the crowd MVP, exact AI/ML input and output, quality rules, implementation work, and current limits.
+- [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, shared implementation work areas, data contract, delivery phases, acceptance criteria, and initial actions.
 - [MVP product brief](docs/product/mvp-brief.md): target users, workflow, inputs, outputs, and product boundaries.
 - [Codebase plan](docs/architecture/codebase-plan.md): repository structure and selective reuse guidance for the existing prototypes.
 - [Evaluation plan](docs/evaluation/plan.md): model, count, alert, throughput, and calibration evaluation requirements.
@@ -25,7 +26,7 @@ The system is intended to support operational decisions. Alerts require human re
 - [Mixkit inference record](docs/models/crowd-best-local-mixkit-inference.md): pinned `crowd_best_local_v2` inference is complete for the 30 locked frames; predictions remain local/outside Git, and no accuracy metrics are available until labels are reviewed.
 - [Experimental pilot-last model card](docs/models/crowd-pilot-last-model-card.md): documents the separately hashed final-epoch checkpoint and its inference on the same locked 30-frame sample.
 - [Original E01 model card](docs/models/crowd-e01-handoff-model-card.md): documents the baseline checkpoint verified inside the external pilot archive and its inference on the locked sample.
-- [Candidate video sources](docs/evaluation/candidate-video-sources.md): crowd video suitability, source provenance limits, licenses, and review status.
+- [Crowd video source notes](docs/evaluation/candidate-video-sources.md): source provenance limits, licenses, and review status.
 - [Density estimator model card](docs/models/density-net-model-card.md): separate model type and unverified source benchmark details.
 - [Demo operations runbook](docs/operations/demo-runbook.md): preparation and handling guidance for local demonstrations.
 
@@ -44,4 +45,4 @@ This repository contains planning documents, an initial AI/ML adapter/schema lay
 
 ## AI/ML starting point
 
-The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [crowd contract](contracts/v1/README.md).
+The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [teammate handoff](TEAMMATE_HANDOFF.md).

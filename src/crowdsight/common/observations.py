@@ -21,8 +21,9 @@ class PersonDetection:
 
     Coordinates identify the bottom-centre/approximate ground-contact point,
     not the box centre. Track IDs are anonymous and local to one video run.
-    Pixel boxes are internal rendering metadata and are excluded from the
-    proposed shared JSON contract until approved by all application owners.
+    Pixel boxes use source-frame coordinates with exclusive right/bottom edges.
+    They are serialized for annotated replay; normalized anchors remain the
+    stable geometry for zone membership.
     """
 
     x: float
@@ -60,6 +61,7 @@ class PersonDetection:
             "x": self.x,
             "y": self.y,
             "confidence": self.confidence,
+            "bbox_xyxy": list(self.bbox_xyxy_px) if self.bbox_xyxy_px is not None else None,
         }
 
 
@@ -120,16 +122,33 @@ class FrameObservation:
             or any(char not in "0123456789abcdefABCDEF" for char in self.tracker_config_sha256)
         ):
             raise ValueError("tracker_config_sha256 must be a 64-character hex digest or null")
+        if self.tracker_config_sha256 is None and any(
+            detection.track_id is not None for detection in self.detections
+        ):
+            raise ValueError("tracked detections require tracker_config_sha256")
         if type(self.frame_index) is not int or self.frame_index < 0:
             raise ValueError("frame_index must be nonnegative")
         if type(self.media_time_s) not in (int, float) or not math.isfinite(self.media_time_s) or self.media_time_s < 0:
             raise ValueError("media_time_s must be finite and nonnegative")
         if type(self.image_width) is not int or type(self.image_height) is not int or self.image_width <= 0 or self.image_height <= 0:
             raise ValueError("image dimensions must be positive")
+        for detection in self.detections:
+            if detection.bbox_xyxy_px is not None:
+                x1, y1, x2, y2 = detection.bbox_xyxy_px
+                if x2 > self.image_width or y2 > self.image_height:
+                    raise ValueError("detection bbox_xyxy_px must lie within the source frame")
+                expected_x = ((x1 + x2) / 2.0) / self.image_width
+                expected_y = y2 / self.image_height
+                if not math.isclose(detection.x, expected_x, rel_tol=0.0, abs_tol=1e-9) or not math.isclose(
+                    detection.y, expected_y, rel_tol=0.0, abs_tol=1e-9
+                ):
+                    raise ValueError("normalized detection anchor must match the bbox bottom-centre")
         if self.captured_at is not None and (
             not isinstance(self.captured_at, datetime) or self.captured_at.utcoffset() is None
         ):
             raise ValueError("captured_at must be timezone-aware")
+        if self.quality in (QualityState.VALID, QualityState.PARTIAL) and not self.fully_observed_zones:
+            raise ValueError("VALID/PARTIAL observations require at least one fully observed zone; use UNKNOWN when none are usable")
         if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and (
             self.detections or self.fully_observed_zones
         ):

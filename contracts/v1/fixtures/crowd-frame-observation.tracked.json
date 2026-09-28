@@ -4,7 +4,7 @@
   "model_profile_id": "crowd_best_local_v2",
   "model_profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "checkpoint_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "tracker_config_sha256": null,
+  "tracker_config_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
   "frame_index": 42,
   "media_time_s": 1.4,
   "captured_at": null,
@@ -19,7 +19,7 @@
   "quality": "VALID",
   "detections": [
     {
-      "track_id": null,
+      "track_id": 17,
       "x": 0.51,
       "y": 0.72,
       "confidence": 0.87,

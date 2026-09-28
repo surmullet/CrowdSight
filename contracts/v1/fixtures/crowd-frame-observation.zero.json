@@ -5,8 +5,8 @@
   "model_profile_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
   "checkpoint_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "tracker_config_sha256": null,
-  "frame_index": 42,
-  "media_time_s": 1.4,
+  "frame_index": 46,
+  "media_time_s": 1.533,
   "captured_at": null,
   "image_width": 1920,
   "image_height": 1080,
@@ -17,18 +17,5 @@
   ],
   "confidence_semantics": "RAW_MODEL_SCORE",
   "quality": "VALID",
-  "detections": [
-    {
-      "track_id": null,
-      "x": 0.51,
-      "y": 0.72,
-      "confidence": 0.87,
-      "bbox_xyxy": [
-        950.4,
-        600,
-        1008,
-        777.6
-      ]
-    }
-  ]
+  "detections": []
 }

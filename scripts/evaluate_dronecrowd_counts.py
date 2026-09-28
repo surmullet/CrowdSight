@@ -322,7 +322,7 @@ def evaluate(
         "split": manifest["split"],
         "test_partition_id": partition_id,
         "evaluation_scope": evaluation_scope,
-        "metrics_semantics": "DroneCrowd point-label count evaluation; no box-IoU localization metrics",
+        "metrics_semantics": "Publisher point-label count evaluation; no box-IoU localization metrics",
         "sample_count": len(samples),
         "valid_prediction_frames": len(errors),
         "unknown_prediction_frames": len(unknown_frames),
