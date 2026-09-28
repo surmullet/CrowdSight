@@ -2,7 +2,7 @@
 
 This scorer reports count metrics only. Head-point annotations do not support
 box-IoU detection precision/recall or person localization claims.
-Input format is documented in docs/evaluation/dronecrowd-candidate-evaluation.md.
+Inputs are private manifest, publisher-count label, and prediction JSON records.
 """
 from __future__ import annotations
 
