@@ -22,6 +22,7 @@ Synthetic IDs and scores do not represent measured performance or approved thres
 - Detection anchors `x,y` are normalized source-frame bottom-centre points. `confidence` is a raw model score, not a calibrated correctness probability. Optional tracked IDs are temporary within one video session and require the matching tracker hash.
 - Image-space heat maps are relative to the frame. Metric/geographic density requires separate valid calibration, measured area, coverage, residual, and site-approval evidence.
 - JSON Schema validates structure and local field constraints; a consumer must also compare `fully_observed_zones` with the versioned configured zone set (`VALID`: exact coverage; `PARTIAL`: a nonempty proper subset), verify box/image geometry and artifact hashes, and apply freshness at its trust boundary. A producer must not infer complete zone coverage from a successful detector call alone.
+- An empty, well-formed detector result means zero visible detections for that frame. A missing result, malformed person box/score, or inconsistent tracker output is an inference failure; the video layer must record `UNKNOWN` or fail the job, never convert that failure to a valid zero count.
 
 ## Decisions to record before freezing the application API
 

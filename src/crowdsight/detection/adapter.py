@@ -148,7 +148,9 @@ class UltralyticsPersonDetector:
             classes=[self._profile.person_class_id],
             verbose=False,
         )
-        return self._decode_result(outputs[0] if outputs else None, width, height)
+        if outputs is None or len(outputs) != 1:
+            raise RuntimeError("Detector must return exactly one result for one frame")
+        return self._decode_result(outputs[0], width, height)
 
     def _decode_result(
         self,
@@ -159,14 +161,24 @@ class UltralyticsPersonDetector:
     ) -> tuple[PersonDetection, ...]:
         """Convert one Ultralytics result to normalized person anchors."""
         if result is None or result.boxes is None:
-            return ()
+            raise RuntimeError("Detector returned no boxes result for the frame")
         boxes = result.boxes
         coords = boxes.xyxy.detach().cpu().numpy()
         scores = boxes.conf.detach().cpu().numpy()
-        classes = boxes.cls.detach().cpu().numpy().astype(int)
+        classes = boxes.cls.detach().cpu().numpy()
+        if (
+            coords.ndim != 2
+            or coords.shape[1] != 4
+            or scores.ndim != 1
+            or classes.ndim != 1
+            or len(coords) != len(scores)
+            or len(coords) != len(classes)
+            or (track_ids is not None and (track_ids.ndim != 1 or len(coords) != len(track_ids)))
+        ):
+            raise RuntimeError("Detector box, score, class, or track arrays disagree")
         detections: list[PersonDetection] = []
-        fields = zip(coords, scores, classes) if track_ids is None else zip(
-            coords, scores, classes, track_ids
+        fields = zip(coords, scores, classes, strict=True) if track_ids is None else zip(
+            coords, scores, classes, track_ids, strict=True
         )
         for row in fields:
             box, score, class_id = row[:3]
@@ -174,22 +186,24 @@ class UltralyticsPersonDetector:
             if track_ids is not None:
                 raw_track_id = row[3]
                 if not np.isfinite(raw_track_id) or raw_track_id < 0 or raw_track_id != int(raw_track_id):
-                    continue
+                    raise RuntimeError("Tracker returned an invalid track ID")
                 track_id = int(raw_track_id)
+            if not np.isfinite(class_id) or class_id < 0 or class_id != int(class_id):
+                raise RuntimeError("Detector returned an invalid class ID")
             if class_id != self._profile.person_class_id:
                 continue
             x1, y1, x2, y2 = (float(v) for v in box)
             confidence = float(score)
             if not all(math.isfinite(v) for v in (x1, y1, x2, y2, confidence)):
-                continue
+                raise RuntimeError("Detector returned non-finite person output")
             if x2 <= x1 or y2 <= y1 or not 0.0 <= confidence <= 1.0:
-                continue
+                raise RuntimeError("Detector returned an invalid person box or score")
             x1 = min(max(x1, 0.0), float(width))
             x2 = min(max(x2, 0.0), float(width))
             y1 = min(max(y1, 0.0), float(height))
             y2 = min(max(y2, 0.0), float(height))
             if x2 <= x1 or y2 <= y1:
-                continue
+                raise RuntimeError("Detector returned a person box outside the source frame")
             detections.append(
                 PersonDetection(
                     x=((x1 + x2) / 2.0) / width,
@@ -249,9 +263,13 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
             classes=[self._profile.person_class_id],
             verbose=False,
         )
-        result = outputs[0] if outputs else None
-        if result is None or result.boxes is None or result.boxes.id is None:
-            return ()
+        if outputs is None or len(outputs) != 1 or outputs[0] is None or outputs[0].boxes is None:
+            raise RuntimeError("Tracker must return exactly one boxes result for one frame")
+        result = outputs[0]
+        if result.boxes.id is None:
+            if len(result.boxes.xyxy) != 0:
+                raise RuntimeError("Tracker returned detections without track IDs")
+            return self._decode_result(result, width, height)
         ids = result.boxes.id.detach().cpu().numpy()
         if len(ids) != len(result.boxes.xyxy):
             raise RuntimeError("Tracker ID count does not match returned boxes")
