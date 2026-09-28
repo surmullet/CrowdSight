@@ -25,12 +25,8 @@ The system is intended to support operational decisions. Alerts require human re
 - [Mixkit inference record](docs/models/crowd-best-local-mixkit-inference.md): pinned `crowd_best_local_v2` inference is complete for the 30 locked frames; predictions remain local/outside Git, and no accuracy metrics are available until labels are reviewed.
 - [Experimental pilot-last model card](docs/models/crowd-pilot-last-model-card.md): documents the separately hashed final-epoch checkpoint and its inference on the same locked 30-frame sample.
 - [Original E01 model card](docs/models/crowd-e01-handoff-model-card.md): documents the baseline checkpoint verified inside the external pilot archive and its inference on the locked sample.
-- [Candidate datasets and videos](docs/evaluation/roboflow-dataset-candidates.md) and [video source notes](docs/evaluation/candidate-video-sources.md): Roboflow dataset suitability, source provenance limits, licenses, and review status.
+- [Candidate video sources](docs/evaluation/candidate-video-sources.md): crowd video suitability, source provenance limits, licenses, and review status.
 - [Density estimator model card](docs/models/density-net-model-card.md): separate model type and unverified source benchmark details.
-- [AI/ML integration note](docs/evaluation/AI_ML_INTERFACE_HANDOFF.md): proposed shared schemas and decisions for both application owners.
-- [Parking occupancy model plan](docs/evaluation/parking-model-plan.md): task, data, interface, evaluation, and release requirements for the separate model.
-- [Parking evaluation format](docs/evaluation/parking-evaluation-format.md): versioned manifest, reviewed-label, prediction, and lineage inputs for the parking scorer.
-- [Parking occupancy evaluator](scripts/evaluate_parking_occupancy.py): reproducible per-stall, abstention, confusion-matrix, and site-count metrics for future labeled runs.
 - [Demo operations runbook](docs/operations/demo-runbook.md): preparation and handling guidance for local demonstrations.
 
 ## Repository status
@@ -48,4 +44,4 @@ This repository contains planning documents, an initial AI/ML adapter/schema lay
 
 ## AI/ML starting point
 
-The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [AI/ML integration handoff](docs/evaluation/AI_ML_INTERFACE_HANDOFF.md). The parking model is a separate planned workstream and has not been trained or evaluated in this repository.
+The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [crowd contract](contracts/v1/README.md).

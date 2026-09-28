@@ -47,3 +47,18 @@ models/**
 *.tgz
 .DS_Store
 Thumbs.db
+
+# Local agent instructions and kickoff prompt are not shared repository assets.
+/AGENT.md
+/AGENTS.md
+/docs/AI_ML_KICKOFF_PROMPT.md
+
+# Parking work is private until its model and contract are ready to publish.
+/configs/models/parking_occupancy_template.yaml
+/contracts/v1/parking-frame-observation.schema.json
+/contracts/v1/fixtures/parking-frame-observation.*.json
+/docs/evaluation/parking-*.md
+/docs/evaluation/roboflow-dataset-candidates.md
+/scripts/evaluate_parking_occupancy.py
+/src/crowdsight/common/parking.py
+/src/crowdsight/parking/
