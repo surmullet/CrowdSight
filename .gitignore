@@ -47,3 +47,8 @@ models/**
 *.tgz
 .DS_Store
 Thumbs.db
+
+# Local agent instructions and kickoff prompt are not shared repository assets.
+/AGENT.md
+/AGENTS.md
+/docs/AI_ML_KICKOFF_PROMPT.md
