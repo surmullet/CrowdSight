@@ -41,6 +41,8 @@ class CrowdViewApproval:
     evaluation_ref: str
     evaluation_sha256: str
     independence_verified: bool
+    independence_review_ref: str
+    independence_review_sha256: str
     site_acceptance_passed: bool
     site_policy_approved: bool
     site_approval_ref: str
@@ -93,6 +95,8 @@ def assess_crowd_operating_use(
         not _nonempty(approval.evaluation_ref)
         or not _valid_sha256(approval.evaluation_sha256)
         or approval.independence_verified is not True
+        or not _nonempty(approval.independence_review_ref)
+        or not _valid_sha256(approval.independence_review_sha256)
         or approval.site_acceptance_passed is not True
     ):
         return CrowdUseDecision(CrowdUseStatus.EXPERIMENTAL_EVALUATION_UNVERIFIED, False)

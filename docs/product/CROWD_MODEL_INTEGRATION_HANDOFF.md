@@ -12,7 +12,22 @@ This is visible-occupancy decision support. It does not estimate hidden people, 
 
 **Proposed applicability rule for joint review:** Observation quality describes whether frame and zone evidence is available; `VALID` does not certify count accuracy or approval of the camera view. The serving job/API should carry a separate site-and-profile approval or experimental status, and the operator display should show that status with counts. The product/site owner must approve the operating view and alert policy before counts are used as operational decision support. The v1 frame payload contains no site-approval field; consumers must not infer approval from `VALID` or a nonzero detection count.
 
-The AI/ML helper [`assess_crowd_operating_use`](../../src/crowdsight/detection/applicability.py) returns an experimental status and disables operational alerts when no site/view approval is supplied. Approval must bind the exact site, versioned camera view, profile ID/hash, and checkpoint hash; require a reviewed independent evaluation with site acceptance; and carry a site-policy approval reference and digest. The trusted serving layer must verify referenced evidence and approver authority before constructing an approval record. No approval record exists for the current model, so fixed-camera demos remain experimental. Backend and frontend owners still decide where this separate job/API status is stored and shown.
+The AI/ML helper [`assess_crowd_operating_use`](../../src/crowdsight/detection/applicability.py) returns an experimental status and disables operational alerts when no site/view approval is supplied. Approval must bind the exact site, versioned camera view, profile ID/hash, and checkpoint hash; require evaluation and independence-review references with digests, site acceptance, and a site-policy approval reference and digest. The trusted serving layer must verify referenced evidence and approver authority before constructing an approval record. No approval record exists for the current model, so fixed-camera demos remain experimental. Backend and frontend owners still decide where this separate job/API status is stored and shown.
+
+Illustrative job metadata for a fixed-camera demo, pending backend/frontend field placement:
+
+```json
+{
+  "site_id": "demo-site",
+  "camera_view_id": "demo-fixed-view-v1",
+  "model_applicability": {
+    "status": "EXPERIMENTAL_NO_APPROVAL",
+    "operational_alerts_allowed": false
+  }
+}
+```
+
+The per-frame observation retains its independent `quality` value. A `VALID` frame may appear in an experimental job; the operator display must keep the experimental label visible and suppress operational alerts.
 
 ## Selected integration candidate
 
