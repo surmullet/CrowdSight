@@ -84,7 +84,7 @@ No backend or frontend owner sign-off has been recorded. The proposed JSON Schem
 
 ## Review record
 
-The schemas remain `PROPOSED`; no owner approval is recorded yet. Complete this table during the joint review before backend/frontend implementation treats the structures as frozen.
+The schemas remain `PROPOSED`; no owner approval is recorded yet. Complete this table during the joint review before backend/frontend implementation treats the structures as frozen. The two implementation teammates may review either or both workstreams; the backend and frontend rows do not assign a fixed person.
 
 | Owner | Decisions to confirm | Reviewer/date | Status |
 |---|---|---|---|
