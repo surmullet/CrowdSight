@@ -147,8 +147,8 @@ class FrameObservation:
             not isinstance(self.captured_at, datetime) or self.captured_at.utcoffset() is None
         ):
             raise ValueError("captured_at must be timezone-aware")
-        if self.quality is QualityState.PARTIAL and not self.fully_observed_zones:
-            raise ValueError("PARTIAL observations require at least one fully observed zone; use UNKNOWN when none are usable")
+        if self.quality in (QualityState.VALID, QualityState.PARTIAL) and not self.fully_observed_zones:
+            raise ValueError("VALID/PARTIAL observations require at least one fully observed zone; use UNKNOWN when none are usable")
         if self.quality in (QualityState.UNKNOWN, QualityState.STALE) and (
             self.detections or self.fully_observed_zones
         ):

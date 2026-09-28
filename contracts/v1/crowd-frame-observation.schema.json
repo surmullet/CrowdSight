@@ -209,6 +209,9 @@
         "properties": {
           "observation_valid": {
             "const": true
+          },
+          "fully_observed_zones": {
+            "minItems": 1
           }
         }
       }

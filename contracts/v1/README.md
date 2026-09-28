@@ -18,10 +18,10 @@ Synthetic IDs and scores do not represent measured performance or approved thres
 
 - Preserve `source_id`, `session_id`, zero-based `frame_index`, elapsed source `media_time_s`, image dimensions, profile/checkpoint hashes, tracker configuration hash, and explicit quality.
 - `captured_at` is null for replay unless the source supplies an actual capture timestamp. Replay time is not capture UTC.
-- `VALID` permits counts for fully observed configured zones. `PARTIAL` permits counts only for IDs in `fully_observed_zones`. `UNKNOWN` and `STALE` carry no detections or fully observed zones. An unavailable count is not zero.
+- `VALID` requires at least one fully observed zone and permits counts only when the list covers **every configured zone**. `PARTIAL` requires at least one fully observed zone and permits counts only for IDs in `fully_observed_zones`. If no configured zone is fully observable, use `UNKNOWN`. `UNKNOWN` and `STALE` carry no detections or fully observed zones. An unavailable count is not zero.
 - Detection anchors `x,y` are normalized source-frame bottom-centre points. `confidence` is a raw model score, not a calibrated correctness probability. Optional tracked IDs are temporary within one video session and require the matching tracker hash.
 - Image-space heat maps are relative to the frame. Metric/geographic density requires separate valid calibration, measured area, coverage, residual, and site-approval evidence.
-- JSON Schema validates structure and local field constraints; a consumer must also verify configured zones, box/image geometry, artifact hashes, and freshness at its trust boundary.
+- JSON Schema validates structure and local field constraints; a consumer must also compare `fully_observed_zones` with the versioned configured zone set (`VALID`: exact coverage; `PARTIAL`: a nonempty proper subset), verify box/image geometry and artifact hashes, and apply freshness at its trust boundary. A producer must not infer complete zone coverage from a successful detector call alone.
 
 ## Decisions to record before freezing the application API
 
