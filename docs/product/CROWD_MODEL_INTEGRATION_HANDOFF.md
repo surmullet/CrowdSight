@@ -10,6 +10,8 @@ For a selected recorded video, the system detects visible people in each decoded
 
 This is visible-occupancy decision support. It does not estimate hidden people, attendance, people per square metre, or site safety. It does not identify people. Tracker IDs are temporary within one processing run and are not attendance identities.
 
+**Proposed applicability rule for joint review:** Observation quality describes whether frame and zone evidence is available; `VALID` does not certify count accuracy or approval of the camera view. The serving job/API should carry a separate site-and-profile approval or experimental status, and the operator display should show that status with counts. The product/site owner must approve the operating view and alert policy before counts are used as operational decision support. The v1 frame payload contains no site-approval field; consumers must not infer approval from `VALID` or a nonzero detection count.
+
 ## Selected integration candidate
 
 - Profile: `crowd_best_local_v2`, YOLO11s person detector.
@@ -97,3 +99,4 @@ Machine-readable draft: [crowd v1 contract](../../contracts/v1/README.md) and [f
 - [ ] Both clients handle `VALID`, `PARTIAL`, `UNKNOWN`, and `STALE` without converting missing data to zero.
 - [ ] Model/profile/checkpoint/tracker provenance survives from inference to displayed/exported result.
 - [ ] A permitted fixed-camera demo runs end to end with the interface and quality semantics shown above.
+- [ ] Backend, frontend, and product owners agree where site/profile applicability is stored and how unapproved counts are labeled or withheld from operational alerts.
