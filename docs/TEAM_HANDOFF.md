@@ -273,4 +273,4 @@ Alert thresholds must be approved for each pilot site. No universal operational 
 
 ## Crowd model implementation brief
 
-For the crowd-specific integration tasks, adapter inputs and outputs, observation semantics, selected model profile, and three-person integration checklist, use [Crowd Model Handoff for the Three-Person Team](product/CROWD_MODEL_INTEGRATION_HANDOFF.md). This focused brief supplements the product-wide roles above; backend and frontend owners should review its proposed v1 schema before treating the contract as frozen.
+For the crowd-specific integration tasks, adapter inputs and outputs, observation semantics, selected model profile, and three-person integration checklist, use the [single-file teammate handoff](../TEAMMATE_HANDOFF.md). The application contract remains proposed until both implementation teammates review its decisions and fixtures.

@@ -8,8 +8,8 @@ The system is intended to support operational decisions. Alerts require human re
 
 ## Documentation
 
+- [Teammate handoff: start here](TEAMMATE_HANDOFF.md): one-file summary of the crowd MVP, exact AI/ML input and output, quality rules, implementation work, and current limits.
 - [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, shared implementation work areas, data contract, delivery phases, acceptance criteria, and initial actions.
-- [Crowd integration handoff](docs/product/CROWD_MODEL_INTEGRATION_HANDOFF.md): adapter inputs and outputs, synthetic fixtures, and exact backend/frontend tasks.
 - [MVP product brief](docs/product/mvp-brief.md): target users, workflow, inputs, outputs, and product boundaries.
 - [Codebase plan](docs/architecture/codebase-plan.md): repository structure and selective reuse guidance for the existing prototypes.
 - [Evaluation plan](docs/evaluation/plan.md): model, count, alert, throughput, and calibration evaluation requirements.
@@ -28,7 +28,6 @@ The system is intended to support operational decisions. Alerts require human re
 - [Original E01 model card](docs/models/crowd-e01-handoff-model-card.md): documents the baseline checkpoint verified inside the external pilot archive and its inference on the locked sample.
 - [Candidate datasets and videos](docs/evaluation/roboflow-dataset-candidates.md) and [video source notes](docs/evaluation/candidate-video-sources.md): Roboflow dataset suitability, source provenance limits, licenses, and review status.
 - [Density estimator model card](docs/models/density-net-model-card.md): separate model type and unverified source benchmark details.
-- [AI/ML integration note](docs/evaluation/AI_ML_INTERFACE_HANDOFF.md): proposed shared schemas and decisions for both application owners.
 - [Parking occupancy model plan](docs/evaluation/parking-model-plan.md): task, data, interface, evaluation, and release requirements for the separate model.
 - [Parking evaluation format](docs/evaluation/parking-evaluation-format.md): versioned manifest, reviewed-label, prediction, and lineage inputs for the parking scorer.
 - [Parking occupancy evaluator](scripts/evaluate_parking_occupancy.py): reproducible per-stall, abstention, confusion-matrix, and site-count metrics for future labeled runs.
@@ -49,4 +48,4 @@ This repository contains planning documents, an initial AI/ML adapter/schema lay
 
 ## AI/ML starting point
 
-The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [AI/ML integration handoff](docs/evaluation/AI_ML_INTERFACE_HANDOFF.md). The parking model is a separate planned workstream and has not been trained or evaluated in this repository.
+The `best_local` checkpoint and density estimator remain in the reference `heat_map/` project; no model weights or source footage are stored here. See the [checkpoint inventory](docs/models/crowd-model-inventory.md), [candidate model card](docs/models/crowd-best-local-model-card.md), and [teammate handoff](TEAMMATE_HANDOFF.md). The parking model is a separate planned workstream and has not been trained or evaluated in this repository.
