@@ -68,7 +68,7 @@ class UltralyticsPersonDetector:
 
     Ultralytics is imported lazily. Model-specific logic remains behind this
     adapter. Each result includes a normalized bottom-centre anchor for zone
-    membership and retains a pixel box only as internal rendering metadata.
+    membership and serializes a source-frame pixel box for annotated replay.
     """
 
     def __init__(self, profile: PersonDetectorProfile) -> None:
@@ -170,7 +170,12 @@ class UltralyticsPersonDetector:
         )
         for row in fields:
             box, score, class_id = row[:3]
-            track_id = None if track_ids is None else int(row[3])
+            track_id = None
+            if track_ids is not None:
+                raw_track_id = row[3]
+                if not np.isfinite(raw_track_id) or raw_track_id < 0 or raw_track_id != int(raw_track_id):
+                    continue
+                track_id = int(raw_track_id)
             if class_id != self._profile.person_class_id:
                 continue
             x1, y1, x2, y2 = (float(v) for v in box)
@@ -247,7 +252,7 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
         result = outputs[0] if outputs else None
         if result is None or result.boxes is None or result.boxes.id is None:
             return ()
-        ids = result.boxes.id.detach().cpu().numpy().astype(int)
+        ids = result.boxes.id.detach().cpu().numpy()
         if len(ids) != len(result.boxes.xyxy):
             raise RuntimeError("Tracker ID count does not match returned boxes")
         return self._decode_result(result, width, height, ids)

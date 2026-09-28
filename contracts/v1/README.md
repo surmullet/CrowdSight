@@ -1,6 +1,6 @@
 # Proposed application contracts, version 1
 
-These JSON Schemas describe the proposed AI-to-application frame outputs. They are review artifacts, not a frozen API. Backend and frontend owners must approve field names, nullability, time semantics, error behavior, and versioning before implementation. Changes after approval require a new contract version and synchronized consumer updates.
+These JSON Schemas define the AI/ML producer's v1 implementation baseline for crowd and parking frame outputs. Backend and frontend owners can begin against this baseline. The end-to-end application API remains proposed until transport, persistence, retention, freshness, and display behavior are jointly approved. Breaking changes require a new contract version and synchronized consumer updates.
 
 ## Files
 
@@ -9,11 +9,16 @@ These JSON Schemas describe the proposed AI-to-application frame outputs. They a
 - `fixtures/crowd-frame-observation.valid.json`: synthetic valid replay observation.
 - `fixtures/crowd-frame-observation.partial.json`: synthetic partial observation with only one fully observed zone.
 - `fixtures/crowd-frame-observation.unknown.json`: synthetic failed/unknown observation with no detections.
+- `fixtures/crowd-frame-observation.stale.json`: synthetic expired observation with no current detections.
+- `fixtures/crowd-frame-observation.zero.json`: synthetic valid, fully observed zone with no detections; this supports a real zero count.
+- `fixtures/crowd-frame-observation.tracked.json`: synthetic observation whose run-local track ID carries a tracker-config SHA-256.
 - `fixtures/parking-frame-observation.valid.json`: synthetic fully observed parking result with every stall classified.
 - `fixtures/parking-frame-observation.partial.json`: synthetic partially observed result with a mix of known and unknown stalls.
 - `fixtures/parking-frame-observation.unknown.json`: synthetic unavailable parking observation with all configured stalls unknown and confidence null.
 
 The examples contain synthetic IDs and values and do not represent measured model performance, a real site, or approved operating thresholds. They contain no footage or checkpoint artifacts.
+
+For crowd observations, a non-null `track_id` requires `tracker_config_sha256`; detector-only observations use null track IDs and a null tracker hash. JSON Schema cannot compare box coordinates with `image_width`/`image_height` or prove that `x,y` equal the box bottom-centre. The Python `FrameObservation` producer enforces those relationships; any other consumer must apply equivalent semantic checks at its trust boundary.
 
 ## Runtime semantic validation
 
@@ -23,7 +28,7 @@ The parking schema also cannot determine whether a state is visually correct, wh
 
 ## Contract decisions for joint review
 
-1. Should annotated replay transport pixel bounding boxes in the frame detection object, or should the video worker keep boxes internal?
+1. Confirm transport and storage handling for AI-owned nullable `bbox_xyxy` boxes used by annotated replay; the AI/ML baseline includes source-frame pixels with exclusive right/bottom edges.
 2. Confirm the `fully_observed_zones` list: `PARTIAL` uses `observation_valid: true` but permits counts only for listed zones; `UNKNOWN` and `STALE` require an empty list and no detections.
 3. Which field should carry the heat-map artifact reference, and what retention/access semantics apply?
 4. Confirm that `confidence_semantics: RAW_MODEL_SCORE` is surfaced as an uncalibrated score; any future calibrated-probability claim requires calibration evidence and a reviewed contract revision.
@@ -40,9 +45,9 @@ These are proposed defaults from the AI/ML owner, not backend/frontend approvals
 |---|---|---|
 | Model provenance | Preserve `model_profile_id`, profile SHA-256, checkpoint SHA-256, and tracker-config SHA-256 with every crowd frame. For parking, preserve profile/checkpoint hashes in its separate namespace. Store provenance with the persisted observation even if transport uses an adapter to the current backend model. | Backend owner chooses nested versus top-level envelope fields and persistence location. |
 | Replay time | `frame_index` is zero-based; `media_time_s` is elapsed seconds from the source recording; `captured_at` is an RFC 3339 timestamp only when the source supplies a real capture time, otherwise null. Do not turn replay time into wall-clock time. | Backend owner confirms field names, timezone handling, and ordering/replay behavior. |
-| Crowd quality and zones | `VALID` means every configured zone has complete usable coverage. `PARTIAL` means only IDs in `fully_observed_zones` may produce counts; uncovered zones remain unavailable. `UNKNOWN`/`STALE` carry no detections or fully observed zones. | Backend owner confirms invalid-frame behavior and how quality affects rolling alerts/history; frontend owner confirms unavailable-state display. |
+| Crowd quality and zones | `VALID` means every configured zone has complete usable coverage. `PARTIAL` requires at least one ID in `fully_observed_zones`; only those zones may produce counts and uncovered zones remain unavailable. If no configured zone is fully observed, use `UNKNOWN`. `UNKNOWN`/`STALE` carry no detections or fully observed zones. | Backend owner confirms invalid-frame behavior and how quality affects rolling alerts/history; frontend owner confirms unavailable-state display. |
 | Confidence | Keep `confidence_semantics: RAW_MODEL_SCORE`; do not label it probability. For `UNKNOWN` parking space results, confidence is null. | Frontend owner decides whether raw scores are displayed to staff or kept in diagnostics. |
-| Annotated replay boxes | If the product renders detector boxes on replay video, add optional `bbox_xyxy` in original-frame pixel coordinates and require `image_width`/`image_height` to interpret it. Keep the normalized bottom-centre anchor for zone logic. If overlays are out of scope, keep boxes inside the processing worker. | Backend and frontend owners confirm payload/storage cost and which consumer needs boxes before a new schema version is cut. |
+| Annotated replay boxes | AI/ML v1 includes nullable `bbox_xyxy` in source-frame pixel coordinates (`x2`/`y2` exclusive); current detector adapters populate it. `image_width`/`image_height` define the frame bounds. Keep the normalized bottom-centre anchor for zone logic. | Backend and frontend owners confirm payload/storage handling and overlay needs during integration review. |
 | Heat-map delivery | Label frame-relative maps `IMAGE_SPACE`; label metric/geographic maps separately and only emit those after the density validity gate passes. Prefer a permission-controlled artifact reference for large map arrays instead of embedding arrays in each frame observation. | Backend owner chooses artifact reference, retention, access control, and expiry; frontend owner confirms rendering needs. |
 | Parking availability | Keep parking output separate from crowd output. Bind every result to one `site_id`, exact `camera_view_id`, immutable `space_layout_version`, and one result per configured `space_id`. A blocked, off-view, stale, or ambiguous stall is `UNKNOWN`, never `AVAILABLE`. | Product/camera owner confirms fixed-view and stall-assignment assumptions; backend/frontend owners confirm advisory presentation and update behavior. |
 | Staleness | Treat `STALE` as a service-time freshness decision, not a model classification. The serving layer supplies the freshness limit and converts aged evidence to stale/unknown according to its policy. | Backend owner sets and operates the freshness limit; product owner approves user-facing behavior. |
@@ -81,9 +86,9 @@ The schemas remain `PROPOSED`; no owner approval is recorded yet. Complete this 
 
 | Owner | Decisions to confirm | Reviewer/date | Status |
 |---|---|---|---|
-| AI/ML lead | Model/profile identifiers, frame indexing, normalized anchor semantics, unknown behavior, confidence meaning, and layout-version binding | Pending | PROPOSED |
+| AI/ML lead | Model/profile identifiers, frame indexing, normalized anchor semantics, pixel-box coordinates, unknown behavior, confidence meaning, and layout-version binding | AI/ML lead, 2026-09-26 | APPROVED AI/ML PRODUCER BASELINE |
 | Backend owner | API field names/nullability, time semantics, schema versioning, error/freshness handling, persistence, and artifact references | Pending | PROPOSED |
 | Frontend owner | Display semantics for quality, confidence, unknown spaces, annotated boxes, and heat-map type | Pending | PROPOSED |
 | Product/pilot owner | Site permissions, retention, alert/availability thresholds, advisory-only parking scope, and acceptance criteria | Pending | PROPOSED |
 
-After approval, record the decision date and version in this table, update both application handoffs and fixtures together, and create a new schema version for any breaking change.
+Backend/frontend/product rows remain pending. Record each decision date and version in this table, update both application handoffs and fixtures together, and create a new schema version for any breaking change.
