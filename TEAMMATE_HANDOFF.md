@@ -4,7 +4,7 @@
 
 ## 1. Product to build now
 
-Process a permitted **recorded fixed-camera video**. Display the original video with visible-person boxes, named-zone counts over time, a relative heat map aligned to the image, and explicit unavailable states. The count is the number of **visible detected people in an observed zone**, not attendance or a safety measure. Keep the parking model and waiting-time estimator as separate later workstreams; neither is an input to the crowd model.
+Process a permitted **recorded fixed-camera video**. Display the original video with visible-person boxes, named-zone counts over time, a relative heat map aligned to the image, and explicit unavailable states. The count is the number of **visible detected people in an observed zone**, not attendance or a safety measure. This handoff covers only the crowd workstream.
 
 The AI/ML deliverable is a versioned person detector and a proposed per-frame observation contract. The application deliverable is video processing, zone aggregation, storage/API, replay, trends, heat-map presentation, and operator review. Operational alerts remain disabled for the current experimental camera view.
 
@@ -101,7 +101,7 @@ The **application** should aggregate a valid frame into a result shaped approxim
 
 The serving layer must carry operating-use status separately from frame `quality`: a technically valid frame does not mean the camera view or model is approved. The current [`assess_crowd_operating_use`](src/crowdsight/detection/applicability.py) helper fails closed to experimental status without exact site/view/profile/checkpoint approval evidence. Show that status in the UI and suppress operational alerts for experimental views. Human review remains part of any future alert workflow.
 
-Zone polygons and heat-map coordinates belong to the source image. A heat map is relative visual concentration, not a geographic map or people-per-square-metre measurement. Do not infer waiting time from crowd count or parking occupancy.
+Zone polygons and heat-map coordinates belong to the source image. A heat map is relative visual concentration, not a geographic map or people-per-square-metre measurement. Crowd counts alone do not establish waiting time.
 
 ## 5. Work for the two implementation teammates
 
@@ -123,7 +123,7 @@ The two teammates may divide these packages freely and cross-review each other's
 4. Label heat maps `IMAGE_SPACE`; keep metric density unavailable without valid registration, measured area, and reviewed calibration evidence. Hide raw scores or label them as raw model scores.
 5. Provide a fixture-backed screen before connecting real inference, then connect the permitted demo recording through the job API.
 
-**AI/ML lead:** maintain the checkpoint/profile/adapter and synthetic producer fixtures; answer geometry and quality questions; continue private independent evaluation and calibration review; join the schema review. Parking model training/evaluation remains a separate AI/ML task.
+**AI/ML lead:** maintain the checkpoint/profile/adapter and synthetic producer fixtures; answer geometry and quality questions; continue private independent evaluation and calibration review; join the schema review.
 
 **Joint review before treating the application contract as frozen:** choose API envelope and schema version, storage of provenance, heat-map artifact reference and retention, freshness rule, zone-coverage source, error mapping, and display of experimental status. Any breaking field change needs a new contract version and updated fixtures.
 
@@ -143,8 +143,6 @@ Record the two teammates' review names, dates, and decisions here or in a linked
 | Hash-identified fine-tuned `best.pt` candidate; versioned profile and detector/tracker adapters; v1 proposed crowd schema; six synthetic quality/tracking examples; fail-closed experimental applicability behavior. | Teammate approval of the application API and display contract; permitted target-camera evaluation with reviewed labels and established source independence; site/view acceptance and alert policy; calibration and usable-area evidence for metric density; deployment/redistribution rights review. |
 
 Exploratory diagnostics already show material undercount on external fixed-camera and crowded scenes. They do **not** establish Vietnam-site or independently held-out performance. Use the current model for the experimental demo and preserve `EXPERIMENTAL_NO_APPROVAL` until the evidence gate passes. The published model status and measured limitations are documented in the [model card](docs/models/crowd-best-local-model-card.md) and [evaluation notes](docs/evaluation/plan.md).
-
-Parking uses a separate future car-occupancy model and [`parking-frame-observation` contract](contracts/v1/parking-frame-observation.schema.json). Its planned **input** is a fixed-view frame plus exact `site_id`, `camera_view_id`, and immutable stall-layout version. Its planned **output** has one state per configured stall, with `UNKNOWN` for blocked, off-view, stale, or ambiguous evidence. No trained parking checkpoint is available in this repository. Motorbike support and customer waiting-time estimation are later extensions; parking occupancy alone cannot produce a waiting-time estimate.
 
 ## 7. File map
 

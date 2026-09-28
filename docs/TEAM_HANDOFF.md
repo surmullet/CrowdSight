@@ -81,12 +81,6 @@ The two implementation teammates jointly own backend and frontend delivery. Task
 
 All three team members share responsibility for product scope, interface contracts, pilot-data permissions, acceptance criteria, error handling, and demonstration readiness. Each owner reviews changes at adjacent component boundaries. Changes to shared schemas require corresponding updates to documentation and fixtures.
 
-### 3.5 Planned parking-occupancy extension
-
-Parking occupancy is a separate follow-on module, not part of the crowd MVP acceptance gate. The product lead/AI-ML owner will train and evaluate a dedicated occupancy model. The two implementation teammates will divide the parking result API, space-configuration versioning, aggregation, configuration interface, and occupancy/unknown-state presentation after the contract is approved. The initial behavior is advisory availability for operators or information displays. Gate/barrier commands, reservations, and vehicle routing require a separate approved system design and are excluded from this module contract.
-
-Customer waiting-time estimation is a separate downstream analytics feature, not a field emitted by the occupancy model. Occupancy states alone cannot determine waiting time; the feature needs a defined queue, queue/entry observations with timestamps, and service or departure events (or measured throughput). At a joint review, the product, backend, frontend, and AI/ML owners must decide whether “waiting time” means parking-entry wait or an on-site service queue, identify the event source and responsible owner, and approve an estimate format and freshness policy. The AI/ML owner will define the estimator after those inputs exist; the two implementation teammates will divide event-input integration, result storage, and display of estimate ranges with quality/freshness and unknown states. Do not introduce customer identity or persistent re-identification.
-
 ## 4. Repository structure and asset policy
 
 ```text
