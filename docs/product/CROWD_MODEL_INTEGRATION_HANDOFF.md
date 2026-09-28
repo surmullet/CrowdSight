@@ -44,11 +44,13 @@ The backend then uses valid observations and configured zone polygons to produce
 
 Use the [valid](../../contracts/v1/fixtures/crowd-frame-observation.valid.json), [valid-zero](../../contracts/v1/fixtures/crowd-frame-observation.zero.json), [partial](../../contracts/v1/fixtures/crowd-frame-observation.partial.json), [unknown](../../contracts/v1/fixtures/crowd-frame-observation.unknown.json), [stale](../../contracts/v1/fixtures/crowd-frame-observation.stale.json), and [tracked](../../contracts/v1/fixtures/crowd-frame-observation.tracked.json) synthetic fixtures. The [contract guide](../../contracts/v1/README.md) defines each field.
 
-## Work for each teammate
+## Shared implementation work
 
-### Teammate 1 — Backend and video integration
+The two implementation teammates jointly own the backend, video, frontend, and operator work below. The teammates may divide tasks by feature, component, or review capacity. Each task needs one recorded implementer and one cross-reviewer; no fixed backend or frontend assignment is required.
 
-**Own:** `src/crowdsight/video/`, `api/`, shared `common/` integration, and the processing-job lifecycle.
+### Backend and video integration
+
+**Code areas:** `src/crowdsight/video/`, `api/`, shared `common/` integration, and the processing-job lifecycle.
 
 1. Integrate video decoding with the versioned detection adapter. The API and orchestration layer must call the adapter interface rather than importing YOLO or Ultralytics directly.
 2. Preserve the input video/run ID, frame index, media timestamp, model profile ID and hash, tracker profile ID and hash, and observation quality in results.
@@ -60,9 +62,9 @@ Use the [valid](../../contracts/v1/fixtures/crowd-frame-observation.valid.json),
 
 **Deliver:** one documented service boundary, result provenance in the API response, quality-state behavior, and an example response using the shared fixture.
 
-### Teammate 2 — Frontend and operator display
+### Frontend and operator display
 
-**Own:** `frontend/` and the operator-facing video/zone workflow.
+**Code areas:** `frontend/` and the operator-facing video/zone workflow.
 
 1. Display the original frame with detection boxes and replay timestamps. Keep image coordinates aligned when the preview is resized.
 2. Display per-zone count trends only with the observation quality and freshness state. Show `UNKNOWN`, `STALE`, and `PARTIAL` distinctly; never substitute zero for missing evidence.

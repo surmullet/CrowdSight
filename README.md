@@ -8,7 +8,7 @@ The system is intended to support operational decisions. Alerts require human re
 
 ## Documentation
 
-- [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, role assignments, data contract, delivery phases, acceptance criteria, and initial actions.
+- [Project handoff and delivery plan](docs/TEAM_HANDOFF.md): scope, shared implementation work areas, data contract, delivery phases, acceptance criteria, and initial actions.
 - [Crowd integration handoff](docs/product/CROWD_MODEL_INTEGRATION_HANDOFF.md): adapter inputs and outputs, synthetic fixtures, and exact backend/frontend tasks.
 - [MVP product brief](docs/product/mvp-brief.md): target users, workflow, inputs, outputs, and product boundaries.
 - [Codebase plan](docs/architecture/codebase-plan.md): repository structure and selective reuse guidance for the existing prototypes.
