@@ -142,7 +142,7 @@ Record the two teammates' review names, dates, and decisions here or in a linked
 |---|---|
 | Hash-identified fine-tuned `best.pt` candidate; versioned profile and detector/tracker adapters; v1 proposed crowd schema; six synthetic quality/tracking examples; fail-closed experimental applicability behavior. | Teammate approval of the application API and display contract; permitted target-camera evaluation with reviewed labels and established source independence; site/view acceptance and alert policy; calibration and usable-area evidence for metric density; deployment/redistribution rights review. |
 
-Exploratory diagnostics already show material undercount on external fixed-camera and crowded scenes. In a private QUT fixed-camera count diagnostic, the current profile detected 9 people inside the camera regions against 651 publisher person-location annotations across 153 frames. This result does **not** establish Vietnam-site or independently held-out performance. Use the current model for the experimental demo and preserve `EXPERIMENTAL_NO_APPROVAL` until the evidence gate passes. The published model status and measured limitations are documented in the [model card](docs/models/crowd-best-local-model-card.md) and [evaluation notes](docs/evaluation/plan.md).
+Exploratory diagnostics already show material undercount on external fixed-camera and crowded scenes. In a private QUT fixed-camera count diagnostic, the current profile detected 9 people inside the camera regions against 651 publisher person-location annotations across 153 frames. This result does **not** establish Vietnam-site or independently held-out performance. The checkpoint's known fine-tuning sources are Plaza and VisDrone; complete upstream source independence is unresolved. Use the current model for the experimental demo and preserve `EXPERIMENTAL_NO_APPROVAL` until the evidence gate passes. Detailed evaluation records are retained locally outside Git.
 
 ## 7. File map
 
@@ -152,7 +152,6 @@ Exploratory diagnostics already show material undercount on external fixed-camer
 | Detector/tracker adapter | [`src/crowdsight/detection/adapter.py`](src/crowdsight/detection/adapter.py) |
 | Frame serializer and quality checks | [`src/crowdsight/common/observations.py`](src/crowdsight/common/observations.py) |
 | Proposed JSON Schema and fixtures | [`contracts/v1/`](contracts/v1/README.md) |
-| AI/ML model card and evaluation status | [`docs/models/crowd-best-local-model-card.md`](docs/models/crowd-best-local-model-card.md), [`docs/evaluation/plan.md`](docs/evaluation/plan.md) |
-| Product plan and contract review details | [`docs/TEAM_HANDOFF.md`](docs/TEAM_HANDOFF.md), [`contracts/v1/README.md`](contracts/v1/README.md) |
+| Application contract review decisions | [`contracts/v1/README.md`](contracts/v1/README.md) |
 
 This file is the single teammate starting point. The linked schema and fixtures remain the machine-readable source of truth for exact producer fields.

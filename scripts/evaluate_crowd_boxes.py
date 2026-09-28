@@ -1,6 +1,6 @@
 """Score person boxes/counts against reviewed diagnostic or test manifests.
 
-Input schemas are documented in docs/evaluation/crowd-evaluation-format.md.
+Inputs are private manifest, reviewed-label, and prediction JSON records.
 Metrics are descriptive evidence; this script does not set acceptance limits.
 """
 from __future__ import annotations
