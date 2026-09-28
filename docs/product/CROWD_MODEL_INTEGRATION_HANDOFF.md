@@ -12,6 +12,8 @@ This is visible-occupancy decision support. It does not estimate hidden people, 
 
 **Proposed applicability rule for joint review:** Observation quality describes whether frame and zone evidence is available; `VALID` does not certify count accuracy or approval of the camera view. The serving job/API should carry a separate site-and-profile approval or experimental status, and the operator display should show that status with counts. The product/site owner must approve the operating view and alert policy before counts are used as operational decision support. The v1 frame payload contains no site-approval field; consumers must not infer approval from `VALID` or a nonzero detection count.
 
+The AI/ML helper [`assess_crowd_operating_use`](../../src/crowdsight/detection/applicability.py) returns an experimental status and disables operational alerts when no site/view approval is supplied. Approval must bind the exact site, versioned camera view, profile ID/hash, and checkpoint hash; require a reviewed independent evaluation with site acceptance; and carry a site-policy approval reference and digest. The trusted serving layer must verify referenced evidence and approver authority before constructing an approval record. No approval record exists for the current model, so fixed-camera demos remain experimental. Backend and frontend owners still decide where this separate job/API status is stored and shown.
+
 ## Selected integration candidate
 
 - Profile: `crowd_best_local_v2`, YOLO11s person detector.
@@ -102,3 +104,4 @@ Machine-readable draft: [crowd v1 contract](../../contracts/v1/README.md) and [f
 - [ ] Model/profile/checkpoint/tracker provenance survives from inference to displayed/exported result.
 - [ ] A permitted fixed-camera demo runs end to end with the interface and quality semantics shown above.
 - [ ] Backend, frontend, and product owners agree where site/profile applicability is stored and how unapproved counts are labeled or withheld from operational alerts.
+- [ ] Serving integration applies the experimental/approved operating-use decision separately from per-frame `quality`; no operational alert is emitted for an experimental view.

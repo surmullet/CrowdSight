@@ -55,6 +55,8 @@ These are proposed defaults from the AI/ML owner, not backend/frontend approvals
 | Model applicability | Keep camera/site operating-envelope approval separate from per-frame `quality`. A `VALID` observation means usable frame/zone evidence, not validated count accuracy. Carry an approved-versus-experimental site/profile state in job/API metadata before operational display or alerts; the v1 frame schema does not assert site approval. | Backend owner selects the metadata location; frontend owner confirms the visible label and alert behavior; product/site owner approves the operating view and threshold policy. |
 | Waiting time | Keep customer waiting-time estimation as a separate downstream analytics contract. Do not derive it from stall occupancy. | Product owner defines the queue and event source before the analytics contract is drafted. |
 
+The AI/ML [`assess_crowd_operating_use`](../../src/crowdsight/detection/applicability.py) helper supplies a fail-closed experimental/approved decision for an exact site, versioned camera view, profile, and checkpoint. The serving layer must authenticate evidence and site approval before supplying an approval record. This operating-use decision belongs in job/API metadata after the backend/frontend review; it does not change the v1 per-frame schema or convert `VALID` quality into an accuracy claim.
+
 ## Compatibility findings from the two reference applications
 
 These are read-only integration findings from the current sibling projects, not owner approvals. The frontend folder in this repository is empty; application behavior currently lives in `../uav-crowd-monitoring/` and `../heat_map/`.
