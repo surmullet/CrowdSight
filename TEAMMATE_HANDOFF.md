@@ -142,7 +142,7 @@ Record the two teammates' review names, dates, and decisions here or in a linked
 |---|---|
 | Hash-identified fine-tuned `best.pt` candidate; versioned profile and detector/tracker adapters; v1 proposed crowd schema; six synthetic quality/tracking examples; fail-closed experimental applicability behavior. | Teammate approval of the application API and display contract; permitted target-camera evaluation with reviewed labels and established source independence; site/view acceptance and alert policy; calibration and usable-area evidence for metric density; deployment/redistribution rights review. |
 
-Exploratory diagnostics already show material undercount on external fixed-camera and crowded scenes. They do **not** establish Vietnam-site or independently held-out performance. Use the current model for the experimental demo and preserve `EXPERIMENTAL_NO_APPROVAL` until the evidence gate passes. The published model status and measured limitations are documented in the [model card](docs/models/crowd-best-local-model-card.md) and [evaluation notes](docs/evaluation/plan.md).
+Exploratory diagnostics already show material undercount on external fixed-camera and crowded scenes. In a private QUT fixed-camera count diagnostic, the current profile detected 9 people inside the camera regions against 651 publisher person-location annotations across 153 frames. This result does **not** establish Vietnam-site or independently held-out performance. Use the current model for the experimental demo and preserve `EXPERIMENTAL_NO_APPROVAL` until the evidence gate passes. The published model status and measured limitations are documented in the [model card](docs/models/crowd-best-local-model-card.md) and [evaluation notes](docs/evaluation/plan.md).
 
 ## 7. File map
 

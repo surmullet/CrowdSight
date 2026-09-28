@@ -1,0 +1,8 @@
+configs/models/*.yaml text eol=lf
+configs/models/*.yml text eol=lf
+configs/trackers/*.yaml text eol=lf
+configs/trackers/*.yml text eol=lf
+scripts/prepare_qut_count_diagnostic.py text eol=lf
+scripts/filter_qut_roi_predictions.py text eol=lf
+scripts/run_crowd_image_inference.py text eol=lf
+scripts/evaluate_dronecrowd_counts.py text eol=lf
