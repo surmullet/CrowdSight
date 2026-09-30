@@ -19,8 +19,9 @@ class ArtifactStore:
 
     def _resolve_safe(self, relpath: str) -> Path:
         """Resolve a relative path ensuring it stays strictly inside root_dir."""
-        # Normalize separators
-        clean_rel = relpath.replace("\\", "/").lstrip("/")
+        if not relpath or relpath.startswith(("/", "\\")) or ":" in relpath:
+            raise ArtifactSecurityError(f"Absolute or invalid path rejected: {relpath}")
+        clean_rel = relpath.replace("\\", "/")
         target = (self.root_dir / clean_rel).resolve()
         try:
             target.relative_to(self.root_dir)

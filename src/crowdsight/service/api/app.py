@@ -129,6 +129,13 @@ def create_app() -> FastAPI:
     app.include_router(artifacts_router)
     app.include_router(analytics_router)
 
+    # Mount built frontend if available
+    from pathlib import Path
+    web_dist = Path(__file__).resolve().parents[4] / "web" / "dist"
+    if web_dist.is_dir():
+        from fastapi.staticfiles import StaticFiles
+        app.mount("/", StaticFiles(directory=str(web_dist), html=True), name="static_web")
+
     return app
 
 

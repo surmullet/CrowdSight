@@ -166,7 +166,7 @@ export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
               </div>
               <ul className="space-y-1.5 text-red-200/80 list-disc list-inside">
                 <li>Phát cảnh báo tự động điều phối hiện trường hoặc an ninh.</li>
-                <li>Tính toán sức chứa, lượng người tham dự hoặc thời gian chờ.</li>
+                <li>Tuyệt đối không suy luận sức chứa, lượng người tham dự hoặc thời gian chờ.</li>
                 <li>Suy luận mật độ người/m² khi chưa có hiệu chuẩn được duyệt.</li>
                 <li>Áp dụng ngưỡng lọc tự ý làm sai lệch số đếm gốc.</li>
               </ul>

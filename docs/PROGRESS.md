@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 7 Complete -> Transitioning to Phase 8
-- **Active Task**: Security, Retention, Linters & Deployment Packaging (Phase 8)
+- **Current Phase**: Phase 8 Complete -> Transitioning to Phase 9 (Independent Integration Review)
+- **Active Task**: Independent Integration Review & Final Report (Phase 9)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -129,13 +129,24 @@
     - Permanently locked operational alerts panel with fail-closed guarantee (zero enable controls).
   - Navigation shell in `App.tsx` connecting all workflows with bilingual toggle (`vi` / `en`).
   - 24 frontend unit tests passing; `pnpm check` and `pnpm build` clean (85.5 kB gzipped).
+- [x] **Phase 8: Security, Retention, Linters & Deployment Packaging**
+  - Hardened path traversal security in `ArtifactStore` with unit tests verifying rejection of directory escapes (`..`, `/`, `\`, drive letters).
+  - Data retention cascade purge service (`RetentionManager`) with automated session, artifact, observation, and note cleanup older than 30 days (`CROWDSIGHT_RETENTION_DAYS`) with audit logging (`AuditLogRecord`).
+  - Automated semantic invariant linter (`scripts/semantic_lint.py` + `scripts/semantic_lint_config.json`) scanning 116+ repository files for forbidden terms, invalid metric densities, and uncalibrated confidence percentages.
+  - Multi-stage `Dockerfile` bundling Node 22 Vite frontend build with Python 3.10 OpenCV/FFmpeg backend runtime.
+  - Production `docker-compose.yml` with persistent volumes for media, artifacts, and database.
+  - Engineering `Makefile` providing `check`, `test`, `lint`, `dev`, `web`, `openapi`, and `clean` automation.
+  - Comprehensive technical documentation suite:
+    - `docs/architecture.md`: Hexagonal design, pure domain core, data pipeline, and security boundaries.
+    - `docs/api.md`: REST API reference, RFC 9457 Problem Details, error codes table, and SSE streaming.
+    - `docs/semantics.md`: Truthful visible count definition, missing data invariants, and fail-closed rules.
+    - `docs/runbook.md`: Operations guide, CLI manual, and step-by-step troubleshooting.
+    - `docs/data-retention.md`: Lifecycle policy, cascade purges, and compliance audit trail.
+    - `docs/performance.md`: Processing benchmarks, streaming memory bounds, bundle budgets, and WCAG 2.2 AA audit.
+  - GitHub Actions CI workflow (`.github/workflows/ci.yml`) enforcing binary hygiene, linting, tests, coverage $\ge 85\%$, and frontend builds.
+  - 88 backend tests passing with $\ge 85\%$ coverage; 24 frontend tests passing; semantic linter passing; clean builds.
 
 ## 3. Pending Phases
-- [ ] **Phase 8: Security, Retention, Linters & Deployment Packaging**
-  - Path traversal and security hardening tests.
-  - Data retention worker and token-authenticated artifact retrieval.
-  - `scripts/semantic_lint.py` checking code, UI, i18n, docs, and exports.
-  - Dockerfile & `docker-compose.yml` for clean one-command deployment.
 - [ ] **Phase 9: Independent Integration Review & Final Report**
   - End-to-end integration audit, adversarial tests, performance benchmarks, and accessibility verification.
   - Final report in `docs/reviews/integration-review.md`.

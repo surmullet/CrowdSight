@@ -1,0 +1,32 @@
+.git
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.mypy_cache
+.coverage
+htmlcov
+dist
+build
+*.egg-info
+
+# Media and weights (Strict Invariant: never commit or build into image)
+*.pt
+*.pth
+*.onnx
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.env
+*.env.*
+!.env.example
+
+# Frontend build cache
+web/node_modules
+web/dist
+web/.vite

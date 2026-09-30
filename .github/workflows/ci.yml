@@ -1,0 +1,81 @@
+name: CrowdSight CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Lint, Test, Semantic Verification, and Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Invariant Check - Ensure No Weights or Videos in Git
+        run: |
+          echo "Verifying no forbidden binaries (.pt, .mp4, .env) are committed..."
+          FORBIDDEN=$(git ls-files | grep -E '\.(pt|pth|onnx|mp4|avi|mov)$|^\.env' || true)
+          if [ -n "$FORBIDDEN" ]; then
+            echo "Error: Forbidden files tracked in git repository:"
+            echo "$FORBIDDEN"
+            exit 1
+          fi
+          echo "Git tree is clean of weights and video sources."
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg libgl1
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install pytest pytest-cov pytest-asyncio hypothesis anyio \
+                      fastapi uvicorn pydantic pydantic-settings sqlalchemy \
+                      opencv-python-headless numpy shapely jsonschema \
+                      structlog ruff mypy httpx httpx2
+
+      - name: Run Ruff Linter
+        run: ruff check src/crowdsight/service tests
+
+      - name: Run Mypy Strict Type Check
+        run: mypy src/crowdsight/service
+
+      - name: Run Semantic Linter
+        run: python scripts/semantic_lint.py
+
+      - name: Run Backend Pytest Suite with Coverage
+        run: pytest --cov=src/crowdsight/service --cov-report=term-missing --cov-fail-under=85
+
+      - name: Set up Node.js 22 & pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - name: Install Frontend Dependencies
+        working-directory: web
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: Frontend Typecheck & Vitest
+        working-directory: web
+        run: pnpm run check
+
+      - name: Frontend Production Bundle Build
+        working-directory: web
+        run: pnpm run build
