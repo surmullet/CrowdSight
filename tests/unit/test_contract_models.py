@@ -33,7 +33,7 @@ def test_all_six_fixtures_parse_into_pydantic_model(
     all_six_fixtures: list[tuple[str, dict[str, Any]]],
 ) -> None:
     """Check that all 6 fixtures parse cleanly into CrowdFrameObservationV1."""
-    for name, fixture in all_six_fixtures:
+    for _name, fixture in all_six_fixtures:
         model = CrowdFrameObservationV1.model_validate(fixture)
         assert model.session_id == fixture["session_id"]
         assert model.quality.value == fixture["quality"]

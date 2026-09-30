@@ -31,8 +31,14 @@ no_implicit_reexport = true
 
 [[tool.mypy.overrides]]
 module = [
-    "shapely.*",
+    "cv2",
     "cv2.*",
+]
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+module = [
+    "shapely.*",
     "ultralytics.*",
     "torch.*",
     "torchvision.*",

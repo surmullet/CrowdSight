@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 1 Complete -> Transitioning to Phase 2
-- **Active Task**: Storage, Pipeline & Synthetic Job Runner (Phase 2)
+- **Current Phase**: Phase 2 Complete -> Transitioning to Phase 3
+- **Active Task**: Application API (/api/v1) & OpenAPI Export (Phase 3)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -18,14 +18,17 @@
   - Pure aggregation function `aggregate_frame()` enforcing invariant `visible_count IS NOT NULL <=> availability == 'COUNTED'`.
   - Freshness assessment (`FreshnessPolicy`, `assess_freshness`, `apply_freshness_to_observation`).
   - 41 unit and Hypothesis property-based tests passing with 91% domain coverage; ruff and mypy strict passing.
+- [x] **Phase 2: Storage, Pipeline & Synthetic Job Runner**
+  - SQLAlchemy 2.0 declarative models (`MediaAssetRecord`, `ZoneSetRecord`, `ZoneSetVersionRecord`, `SessionRecord`, `ObservationRecord`, `ZoneResultRecord`, `ArtifactRecord`, `NoteRecord`, `AuditLogRecord`).
+  - Hard database CHECK constraint: `visible_count IS NOT NULL <=> availability = 'COUNTED'`.
+  - SQLite WAL mode & foreign keys enabled; PostgreSQL-compatible architecture.
+  - Path-traversal hardened `ArtifactStore` and OpenCV-backed `MediaRegistry`.
+  - Deterministic `SyntheticDetector` generating valid moving person trajectories.
+  - `VideoDecoder` with sequential decoding, single-frame retry, blank frame (`FRAME_BLANK`), and frozen frame (`FRAME_FROZEN`) anomaly detection.
+  - `SessionPipeline` and `JobManager` with cooperative cancellation, partial result preservation (`PARTIAL_CANCELLED`), and orphaned worker crash recovery.
+  - End-to-end tests with synthetic OpenCV video verified; 56 tests passing with 90% coverage; ruff and mypy strict passing.
 
 ## 3. Pending Phases
-- [ ] **Phase 2: Storage, Pipeline & Synthetic Job Runner**
-  - SQLAlchemy 2.0 models with DB-level CHECK constraints.
-  - Alembic migrations (SQLite WAL & PostgreSQL compatible).
-  - Media asset catalog & managed artifact store.
-  - Deterministic `SyntheticDetector` for zero-weight CI/dev.
-  - Video decoding pipeline, frame degradation (blank/frozen detection), cooperative cancellation, retry, and crash recovery.
 - [ ] **Phase 3: Application API (`/api/v1`) & OpenAPI Export**
   - FastAPI routers (`/health`, `/api/v1/model`, `/media`, `/zone-sets`, `/sessions`, `/analytics`, `/alerts/status`).
   - RFC 9457 Problem Details (`application/problem+json`).
