@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Film,
   Layers,
@@ -10,6 +10,8 @@ import {
   ShieldAlert,
   Sparkles,
   Info,
+  UploadCloud,
+  Loader2,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
 import { formatMediaTime } from '@/features/player/PlayerControls';
@@ -45,6 +47,7 @@ interface NewSessionWizardProps {
   zoneSets: ZoneSetSummary[];
   modelProfile: ModelProfileInfo;
   onCreateZoneSet?: () => void;
+  onUploadMedia?: (file: File) => Promise<MediaCatalogItem>;
   onSubmit: (params: {
     mediaId: string;
     zoneSetId: string;
@@ -61,6 +64,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
   zoneSets,
   modelProfile,
   onCreateZoneSet,
+  onUploadMedia,
   onSubmit,
   onCancel,
   className = '',
@@ -73,12 +77,44 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [isUploading, setIsUploading] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleProcessFile = async (file: File) => {
+    if (!file) return;
+    setIsUploading(true);
+    setErrorMessage(null);
+    try {
+      if (onUploadMedia) {
+        const newMedia = await onUploadMedia(file);
+        setSelectedMediaId(newMedia.id);
+      } else {
+        const res = await fetch(`/api/v1/media/upload?filename=${encodeURIComponent(file.name)}`, {
+          method: 'POST',
+          body: file,
+        });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.detail || `Tải tệp thất bại: ${res.statusText}`);
+        }
+        const data = await res.json();
+        setSelectedMediaId(data.id);
+      }
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : 'Không thể tải video lên máy chủ');
+    } finally {
+      setIsUploading(false);
+      setIsDragging(false);
+    }
+  };
+
   const selectedMedia = mediaCatalog.find((m) => m.id === selectedMediaId);
   const selectedZoneSet = zoneSets.find((z) => z.id === selectedZoneSetId);
 
   const handleNext = () => {
     if (currentStep === 1 && !selectedMediaId) {
-      setErrorMessage('Vui lòng chọn một video từ danh mục máy chủ.');
+      setErrorMessage('Vui lòng chọn hoặc tải lên một video để phân tích.');
       return;
     }
     if (currentStep === 2 && !selectedZoneSetId) {
@@ -124,7 +160,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
             Khởi tạo phiên phân tích mới
           </h1>
           <p className="text-xs text-brand-text-muted mt-0.5">
-            Cấu hình video từ danh mục, tập vùng quan sát và tham số mô hình
+            Tải video lên hoặc chọn từ danh mục máy chủ để quét mật độ đám đông
           </p>
         </div>
         <button
@@ -186,16 +222,66 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
           </div>
         )}
 
-        {/* STEP 1: Select Media from Server Catalog (Strict: Never client arbitrary path) */}
+        {/* STEP 1: Select or Upload Media */}
         {currentStep === 1 && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div>
               <h2 className="text-base font-semibold text-brand-text-primary">
-                Bước 1: Chọn video nguồn từ danh mục máy chủ
+                Bước 1: Tải video lên hoặc chọn từ danh mục
               </h2>
               <p className="text-xs text-brand-text-muted mt-1">
-                Để đảm bảo an toàn hệ thống, ứng dụng chỉ xử lý các video đã được máy chủ quét và xác thực vào danh mục nội bộ.
+                Tải lên video của bạn từ máy tính hoặc chọn một video có sẵn đã được quét trên máy chủ.
               </p>
+            </div>
+
+            {/* Interactive Upload Dropzone */}
+            <div
+              onDragOver={(e) => {
+                e.preventDefault();
+                setIsDragging(true);
+              }}
+              onDragLeave={() => setIsDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setIsDragging(false);
+                const file = e.dataTransfer.files[0];
+                if (file) handleProcessFile(file);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                isDragging
+                  ? 'border-brand-gold bg-brand-gold/10'
+                  : 'border-brand-border/80 bg-brand-surface/40 hover:border-brand-gold/70 hover:bg-brand-surface/70'
+              }`}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleProcessFile(file);
+                }}
+                accept=".mp4,.webm,.mov,.avi,.mkv,video/*"
+                className="hidden"
+              />
+              {isUploading ? (
+                <div className="flex flex-col items-center gap-2 py-2">
+                  <Loader2 className="w-8 h-8 text-brand-gold animate-spin" />
+                  <span className="text-xs font-medium text-brand-gold">
+                    Đang tải lên và phân tích thông số video bằng OpenCV...
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-1.5 py-1">
+                  <UploadCloud className="w-8 h-8 text-brand-gold" />
+                  <span className="font-semibold text-sm text-brand-text-primary">
+                    Tải video mới lên từ máy tính của bạn
+                  </span>
+                  <span className="text-xs text-brand-text-muted">
+                    Kéo thả tệp video vào đây hoặc bấm để chọn tệp (.mp4, .webm, .mov, .avi, .mkv)
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="space-y-3 pt-2">

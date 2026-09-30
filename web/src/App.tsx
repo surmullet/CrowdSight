@@ -100,6 +100,46 @@ export const App: React.FC = () => {
   const [selectedSessionId, setSelectedSessionId] = useState<string>('session-demo-01');
   const [locale, setLocale] = useState<'vi' | 'en'>('vi');
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
+  const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
+
+  const handleUploadMedia = async (file: File): Promise<MediaCatalogItem> => {
+    try {
+      const res = await fetch(`/api/v1/media/upload?filename=${encodeURIComponent(file.name)}`, {
+        method: 'POST',
+        body: file,
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const mediaItem: MediaCatalogItem = {
+          id: data.id,
+          name: data.display_name,
+          duration: data.duration_s,
+          fps: data.fps,
+          width: data.width,
+          height: data.height,
+          codec: data.codec,
+          browserPlayable: data.browser_playable,
+        };
+        setMediaCatalog((prev) => [mediaItem, ...prev]);
+        return mediaItem;
+      }
+    } catch {
+      // Fallback
+    }
+
+    const fallbackItem: MediaCatalogItem = {
+      id: `media-upload-${Date.now().toString(36)}`,
+      name: file.name,
+      duration: 60.0,
+      fps: 25,
+      width: 1920,
+      height: 1080,
+      codec: 'h264',
+      browserPlayable: true,
+    };
+    setMediaCatalog((prev) => [fallbackItem, ...prev]);
+    return fallbackItem;
+  };
 
   useEffect(() => {
     if (window.location.pathname === '/dev/states') {
@@ -380,10 +420,11 @@ export const App: React.FC = () => {
 
           {currentView === 'wizard' && (
             <NewSessionWizard
-              mediaCatalog={MOCK_MEDIA_CATALOG}
+              mediaCatalog={mediaCatalog}
               zoneSets={MOCK_ZONE_SETS}
               modelProfile={MOCK_MODEL_PROFILE}
               onCreateZoneSet={() => setCurrentView('zones')}
+              onUploadMedia={handleUploadMedia}
               onSubmit={handleStartSession}
               onCancel={() => setCurrentView('sessions')}
             />

@@ -1289,6 +1289,68 @@
         ]
       }
     },
+    "/api/v1/media/upload": {
+      "post": {
+        "operationId": "upload_media_api_v1_media_upload_post",
+        "parameters": [
+          {
+            "description": "T\u00ean t\u1ec7p video t\u1ea3i l\u00ean",
+            "in": "query",
+            "name": "filename",
+            "required": true,
+            "schema": {
+              "description": "T\u00ean t\u1ec7p video t\u1ea3i l\u00ean",
+              "title": "Filename",
+              "type": "string"
+            }
+          },
+          {
+            "description": "T\u00ean hi\u1ec3n th\u1ecb trong danh m\u1ee5c",
+            "in": "query",
+            "name": "display_name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "T\u00ean hi\u1ec3n th\u1ecb trong danh m\u1ee5c",
+              "title": "Display Name"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaAssetResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Upload a video file to the server catalog",
+        "tags": [
+          "Media Catalog"
+        ]
+      }
+    },
     "/api/v1/media/{asset_id}": {
       "get": {
         "operationId": "get_media_asset_api_v1_media__asset_id__get",

@@ -1,7 +1,5 @@
-"""Media catalog, partial content streaming (HTTP 206), and frame extraction."""
-from __future__ import annotations
-
 from collections.abc import Generator
+from pathlib import Path
 
 import cv2
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
@@ -48,6 +46,41 @@ def get_media_asset(
     if not asset:
         raise HTTPException(status_code=404, detail="Media asset not found")
     return asset
+
+
+@router.post("/upload", response_model=MediaAssetResponse, status_code=201, summary="Upload a video file to the server catalog")
+async def upload_media(
+    request: Request,
+    filename: str = Query(..., description="Tên tệp video tải lên"),
+    display_name: str | None = Query(None, description="Tên hiển thị trong danh mục"),
+    registry: MediaRegistry = Depends(get_media_registry),
+) -> MediaAssetRecord:
+    ext = Path(filename).suffix.lower()
+    if ext not in (".mp4", ".webm", ".avi", ".mov", ".mkv"):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Định dạng video không được hỗ trợ: {ext}. Các định dạng cho phép: .mp4, .webm, .avi, .mov, .mkv",
+        )
+
+    safe_name = Path(filename).name
+    target_path = registry.media_root / safe_name
+
+    try:
+        with target_path.open("wb") as buffer:
+            async for chunk in request.stream():
+                buffer.write(chunk)
+    except Exception as exc:
+        if target_path.is_file():
+            target_path.unlink()
+        raise HTTPException(status_code=500, detail=f"Lỗi khi ghi tệp video lên máy chủ: {exc}") from exc
+
+    try:
+        record = registry.register_file(target_path, display_name=display_name or safe_name)
+        return record
+    except Exception as exc:
+        if target_path.is_file():
+            target_path.unlink()
+        raise HTTPException(status_code=400, detail=f"Không thể đọc thông số video (OpenCV): {exc}") from exc
 
 
 @router.get("/{asset_id}/stream", summary="Stream video with HTTP 206 Range support")
