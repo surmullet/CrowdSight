@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-bg-abyssal: #0C1017;
+  --color-bg-deck: #141B26;
+  --color-border-contour: #222D3E;
+  --color-accent-gold: #E69F00;
+  --color-text-primary: #F0F4F8;
+  --color-text-muted: #8A98A8;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-abyssal);
+  color: var(--color-text-primary);
+  font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Custom hatching pattern for unobserved zones in PARTIAL frames */
+.pattern-diagonal-hatching {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(231, 169, 59, 0.15),
+    rgba(231, 169, 59, 0.15) 10px,
+    rgba(20, 27, 38, 0.6) 10px,
+    rgba(20, 27, 38, 0.6) 20px
+  );
+}
+
+/* Custom stipple pattern for UNKNOWN unobserved intervals */
+.pattern-dot-stipple {
+  background-image: radial-gradient(rgba(126, 139, 155, 0.3) 1.5px, transparent 1.5px);
+  background-size: 8px 8px;
+}
+
+/* High contrast accessible focus indicators */
+*:focus-visible {
+  outline: 2px solid var(--color-accent-gold);
+  outline-offset: 2px;
+}

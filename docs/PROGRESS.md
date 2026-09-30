@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 4 Complete -> Transitioning to Phase 5
-- **Active Task**: Frontend Design, Project Setup, Design System & /dev/states (Phase 5)
+- **Current Phase**: Phase 5 Complete -> Transitioning to Phase 6
+- **Active Task**: Frontend Annotated Player & Review Workspace (Phase 6)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -65,9 +65,23 @@
   - Management CLI (`src/crowdsight/cli/main.py`):
     - `crowdsight media scan`, `media register`, `session reprocess`, `session purge`, and `model verify`.
   - 86 backend tests passing; ruff clean; mypy strict passing with 0 errors; OpenAPI contract updated.
+- [x] **Phase 5: Frontend Design, Project Setup, Design System & `/dev/states`**
+  - Completed two-pass design specification in `web/DESIGN.md`:
+    - Pass 1: "Footage Console" cockpit architecture, Okabe-Ito accessible color palette, Vietnamese typography, ASCII wireframe.
+    - Pass 2: Self-critique audit eliminating generic SaaS cards, neon accents, and misleading zeros.
+  - Initialized Vite + React 18 + TypeScript strict (`noUncheckedIndexedAccess`) + Tailwind CSS + pnpm.
+  - Generated fully typed API client via `openapi-typescript` + `openapi-fetch` from `contracts/app-v1/openapi.json`.
+  - Implemented discriminated union `ZoneReading` preventing any accidental count display during unobserved intervals.
+  - Built reusable design system components:
+    - `Banner`: Fixed non-dismissible experimental warning with operational alert gate status and synthetic data indicator.
+    - `QualityBadge`: Triple-encoded badge (color + icon + text + pattern) for all four quality states.
+    - `ZoneCard`: Handles count > 0, affirmative 0 ("0 người được nhìn thấy — vùng đã quan sát đầy đủ"), amber diagonal hatching for unobserved PARTIAL zones, and stipple for UNKNOWN.
+    - `SemanticsModal`: "Về phép đo này" modal explaining measurement definition, undercount risk, and prohibited inferences.
+  - Built `/dev/states` test bench displaying all 6 contract v1 fixtures (`VALID`, `VALID-zero`, `PARTIAL`, `UNKNOWN`, `STALE`, `tracked`) with Vietnamese/English toggle.
+  - `pnpm run check` and `pnpm run build` passing with 0 errors; Vitest unit tests green.
 
 ## 3. Pending Phases
-- [ ] **Phase 5: Frontend Design, Project Setup, Design System & `/dev/states`**
+- [ ] **Phase 6: Frontend Annotated Player & Review Workspace**
   - `web/DESIGN.md` (plan, reflection, custom color palette, typography, visual hierarchy).
   - Vite + React + TypeScript strict + Tailwind (CSS variables) + Radix UI.
   - Self-hosted fonts with full Vietnamese diacritics.
