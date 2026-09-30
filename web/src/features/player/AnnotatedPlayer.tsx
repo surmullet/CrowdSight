@@ -42,6 +42,7 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
   const heatmapImgRef = useRef<HTMLImageElement | null>(null);
 
   const {
+    currentTime,
     isPlaying,
     playbackRate,
     showBoxes,
@@ -74,6 +75,14 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
       heatmapImgRef.current = img;
     };
   }, [heatmapUrl]);
+
+  // Sync seek/scrub from timeline and step controls to video element
+  useEffect(() => {
+    const video = videoRef.current;
+    if (video && Math.abs(video.currentTime - currentTime) > 0.15) {
+      video.currentTime = currentTime;
+    }
+  }, [currentTime]);
 
   // Sync playback play/pause state
   useEffect(() => {

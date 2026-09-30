@@ -15,6 +15,8 @@ import { ReviewWorkspace, type SessionMetadata } from '@/features/review/ReviewW
 import { ZoneEditor } from '@/features/zones/ZoneEditor';
 import { ModelStatusPage } from '@/features/model/ModelStatusPage';
 import { DevStatesPage } from '@/features/dev/DevStatesPage';
+import { usePlaybackStore } from '@/shared/state/playbackStore';
+import type { CrowdFrameObservation, ZoneReading, FrameQuality } from '@/shared/types/domain';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -140,6 +142,81 @@ export const App: React.FC = () => {
     setSessions((prev) => [newSession, ...prev]);
     setSelectedSessionId(newId);
     setCurrentView('progress');
+  };
+
+  const { currentTime } = usePlaybackStore();
+
+  const activeQuality: FrameQuality =
+    currentTime >= 40 && currentTime <= 55 ? 'PARTIAL' : 'VALID';
+
+  const baseCountNorth = Math.max(3, Math.round(14 + Math.sin(currentTime / 4) * 4));
+
+  const activeObservation: CrowdFrameObservation = {
+    source_id: 'media-plaza-01',
+    session_id: selectedSessionId,
+    model_profile_id: 'crowd_best_local_v2',
+    model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
+    frame_index: Math.round(currentTime * 25),
+    media_time_s: +currentTime.toFixed(2),
+    image_width: 1920,
+    image_height: 1080,
+    observation_valid: true,
+    registration_valid: false,
+    fully_observed_zones: ['zone-north', 'zone-south'],
+    confidence_semantics: 'RAW_MODEL_SCORE',
+    quality: activeQuality,
+    detections: [
+      { track_id: 101, x: 0.28, y: 0.42, confidence: 0.92, bbox_xyxy: [510, 390, 560, 480] },
+      { track_id: 102, x: 0.35, y: 0.48, confidence: 0.89, bbox_xyxy: [640, 450, 700, 560] },
+      { track_id: 103, x: 0.41, y: 0.38, confidence: 0.94, bbox_xyxy: [760, 360, 810, 440] },
+      { track_id: 104, x: 0.22, y: 0.52, confidence: 0.86, bbox_xyxy: [390, 490, 450, 600] },
+      { track_id: 105, x: 0.38, y: 0.58, confidence: 0.91, bbox_xyxy: [700, 550, 770, 680] },
+      { track_id: 106, x: 0.31, y: 0.33, confidence: 0.88, bbox_xyxy: [570, 320, 620, 400] },
+      { track_id: 107, x: 0.25, y: 0.40, confidence: 0.90, bbox_xyxy: [460, 380, 510, 470] },
+      { track_id: 108, x: 0.44, y: 0.45, confidence: 0.87, bbox_xyxy: [820, 430, 880, 530] },
+    ],
+  };
+
+  const activeReadings: ZoneReading[] = [
+    {
+      status: 'COUNTED',
+      count: baseCountNorth,
+      zoneId: 'zone-north',
+      zoneName: 'Khu vực Bắc (Quảng trường)',
+    },
+    {
+      status: 'COUNTED',
+      count: 0,
+      zoneId: 'zone-south',
+      zoneName: 'Khu vực Nam (Lối vào)',
+    },
+  ];
+
+  const handleExportCsv = () => {
+    const csvContent =
+      'data:text/csv;charset=utf-8,media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n' +
+      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-north,Khu vực Bắc (Quảng trường),${baseCountNorth},${activeQuality}\n` +
+      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-south,Khu vực Nam (Lối vào),0,${activeQuality}\n`;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', `crowdsight_${selectedSessionId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportJsonl = () => {
+    const jsonlContent =
+      'data:application/json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(activeObservation) + '\n');
+    const link = document.createElement('a');
+    link.setAttribute('href', jsonlContent);
+    link.setAttribute('download', `crowdsight_${selectedSessionId}_v1.jsonl`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const sampleReviewSession: SessionMetadata = {
@@ -325,21 +402,8 @@ export const App: React.FC = () => {
             <ReviewWorkspace
               session={sampleReviewSession}
               zones={sampleZones}
-              activeObservation={null}
-              activeReadings={[
-                {
-                  status: 'COUNTED',
-                  count: 14,
-                  zoneId: 'zone-north',
-                  zoneName: 'Khu vực Bắc (Quảng trường)',
-                },
-                {
-                  status: 'COUNTED',
-                  count: 0,
-                  zoneId: 'zone-south',
-                  zoneName: 'Khu vực Nam (Lối vào)',
-                },
-              ]}
+              activeObservation={activeObservation}
+              activeReadings={activeReadings}
               qualityIntervals={[
                 { startTime: 0, endTime: 40, quality: 'VALID' },
                 { startTime: 40, endTime: 55, quality: 'PARTIAL' },
@@ -367,6 +431,8 @@ export const App: React.FC = () => {
               initialNotes={[
                 { id: 'n1', time: 10, text: 'Bắt đầu có nhóm người di chuyển từ cổng vào.' },
               ]}
+              onExportCsv={handleExportCsv}
+              onExportJsonl={handleExportJsonl}
             />
           )}
 
