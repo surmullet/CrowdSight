@@ -18,6 +18,7 @@
     "image_height",
     "observation_valid",
     "registration_valid",
+    "unavailable_reason",
     "fully_observed_zones",
     "confidence_semantics",
     "quality",
@@ -84,6 +85,23 @@
     },
     "registration_valid": {
       "type": "boolean"
+    },
+    "unavailable_reason": {
+      "oneOf": [
+        {
+          "enum": [
+            "INFERENCE_FAILURE",
+            "NMS_TIME_LIMIT_EXCEEDED",
+            "DETECTION_LIMIT_REACHED",
+            "NO_FULLY_OBSERVED_ZONE",
+            "FRESHNESS_LIMIT_EXCEEDED"
+          ]
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Null on VALID/PARTIAL. UNKNOWN carries the producer-side cause of the unusable frame: detector failure (INFERENCE_FAILURE), incomplete non-max suppression (NMS_TIME_LIMIT_EXCEEDED), a result truncated at the profile detection cap (DETECTION_LIMIT_REACHED), or missing zone-coverage evidence (NO_FULLY_OBSERVED_ZONE). STALE carries FRESHNESS_LIMIT_EXCEEDED, assigned by the consuming service when the observation exceeds its agreed freshness limit; the frame producer never emits STALE."
     },
     "fully_observed_zones": {
       "type": "array",
@@ -210,6 +228,9 @@
           "observation_valid": {
             "const": true
           },
+          "unavailable_reason": {
+            "const": null
+          },
           "fully_observed_zones": {
             "minItems": 1
           }
@@ -259,6 +280,49 @@
           },
           "detections": {
             "maxItems": 0
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "quality": {
+            "const": "UNKNOWN"
+          }
+        },
+        "required": [
+          "quality"
+        ]
+      },
+      "then": {
+        "properties": {
+          "unavailable_reason": {
+            "enum": [
+              "INFERENCE_FAILURE",
+              "NMS_TIME_LIMIT_EXCEEDED",
+              "DETECTION_LIMIT_REACHED",
+              "NO_FULLY_OBSERVED_ZONE"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "quality": {
+            "const": "STALE"
+          }
+        },
+        "required": [
+          "quality"
+        ]
+      },
+      "then": {
+        "properties": {
+          "unavailable_reason": {
+            "const": "FRESHNESS_LIMIT_EXCEEDED"
           }
         }
       }

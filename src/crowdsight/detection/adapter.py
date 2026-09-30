@@ -25,6 +25,7 @@ class PersonDetectorProfile:
     confidence: float = 0.25
     image_size: int = 1280
     device: str = "auto"
+    max_detections: int = 300
 
     def __post_init__(self) -> None:
         if not isinstance(self.profile_id, str) or not self.profile_id.strip():
@@ -41,6 +42,8 @@ class PersonDetectorProfile:
             raise ValueError("confidence must be in (0, 1]")
         if type(self.image_size) is not int or type(self.person_class_id) is not int or self.image_size <= 0 or self.person_class_id < 0:
             raise ValueError("image_size must be positive and class ID nonnegative")
+        if type(self.max_detections) is not int or self.max_detections <= 0:
+            raise ValueError("max_detections must be a positive integer")
         if not isinstance(self.device, str) or not self.device.strip():
             raise ValueError("device must be a nonempty string")
 
@@ -120,9 +123,11 @@ class UltralyticsPersonDetector:
             ),
             "confidence_threshold": profile.confidence,
             "image_size": profile.image_size,
+            "max_detections": profile.max_detections,
             "person_class_id": profile.person_class_id,
         }
         self._model = YOLO(str(checkpoint))
+        self.last_detection_limit_reached = False
 
     @staticmethod
     def sha256_file(path: Path) -> str:
@@ -135,6 +140,7 @@ class UltralyticsPersonDetector:
 
     def predict(self, frame_bgr: np.ndarray) -> tuple[PersonDetection, ...]:
         """Run person-only inference on a single BGR image."""
+        self.last_detection_limit_reached = False
         if not isinstance(frame_bgr, np.ndarray) or frame_bgr.ndim != 3:
             raise ValueError("frame_bgr must be a three-dimensional NumPy image")
         height, width = frame_bgr.shape[:2]
@@ -146,10 +152,16 @@ class UltralyticsPersonDetector:
             imgsz=self._profile.image_size,
             device=self._device,
             classes=[self._profile.person_class_id],
+            max_det=self._profile.max_detections,
             verbose=False,
         )
         if outputs is None or len(outputs) != 1:
             raise RuntimeError("Detector must return exactly one result for one frame")
+        self.last_detection_limit_reached = bool(
+            outputs[0] is not None
+            and outputs[0].boxes is not None
+            and len(outputs[0].boxes) >= self._profile.max_detections
+        )
         return self._decode_result(outputs[0], width, height)
 
     def _decode_result(
@@ -248,6 +260,7 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
         self.tracker_config_sha256 = actual_tracker_hash.lower()
 
     def track(self, frame_bgr: np.ndarray) -> tuple[PersonDetection, ...]:
+        self.last_detection_limit_reached = False
         if not isinstance(frame_bgr, np.ndarray) or frame_bgr.ndim != 3:
             raise ValueError("frame_bgr must be a three-dimensional NumPy image")
         height, width = frame_bgr.shape[:2]
@@ -261,11 +274,13 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
             imgsz=self._profile.image_size,
             device=self._device,
             classes=[self._profile.person_class_id],
+            max_det=self._profile.max_detections,
             verbose=False,
         )
         if outputs is None or len(outputs) != 1 or outputs[0] is None or outputs[0].boxes is None:
             raise RuntimeError("Tracker must return exactly one boxes result for one frame")
         result = outputs[0]
+        self.last_detection_limit_reached = len(result.boxes) >= self._profile.max_detections
         if result.boxes.id is None:
             if len(result.boxes.xyxy) != 0:
                 raise RuntimeError("Tracker returned detections without track IDs")

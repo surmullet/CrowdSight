@@ -56,6 +56,7 @@ def load_person_detector_profile(
     expected_sha256 = config.get("checkpoint_sha256")
     image_size = preprocessing.get("image_size")
     confidence = inference.get("confidence")
+    max_detections = inference.get("max_detections", 300)
     if type(person_class_id) is not int or person_class_id < 0:
         raise ValueError("class_mapping.person must be a nonnegative integer")
     if not isinstance(expected_sha256, str):
@@ -64,6 +65,8 @@ def load_person_detector_profile(
         raise ValueError("preprocessing.image_size must be a positive integer")
     if type(confidence) not in (int, float):
         raise ValueError("inference.confidence must be a number")
+    if type(max_detections) is not int or max_detections <= 0:
+        raise ValueError("inference.max_detections must be a positive integer")
     if preprocessing.get("color_order") != "BGR":
         raise ValueError("The current adapter accepts BGR images; profile must declare BGR")
     device = inference.get("device", "auto")
@@ -78,6 +81,7 @@ def load_person_detector_profile(
         person_class_id=person_class_id,
         confidence=confidence,
         image_size=image_size,
+        max_detections=max_detections,
         device=selected_device,
     )
 

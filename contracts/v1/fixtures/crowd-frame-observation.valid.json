@@ -12,6 +12,7 @@
   "image_height": 1080,
   "observation_valid": true,
   "registration_valid": false,
+  "unavailable_reason": null,
   "fully_observed_zones": [
     "north-gate"
   ],

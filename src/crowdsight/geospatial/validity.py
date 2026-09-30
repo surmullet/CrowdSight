@@ -16,6 +16,7 @@ class DensityStatus(str, Enum):
     UNAVAILABLE_REGISTRATION = "UNAVAILABLE_REGISTRATION"
     UNAVAILABLE_CALIBRATION = "UNAVAILABLE_CALIBRATION"
     UNAVAILABLE_AREA = "UNAVAILABLE_AREA"
+    UNAVAILABLE_AREA_EVIDENCE = "UNAVAILABLE_AREA_EVIDENCE"
     UNAVAILABLE_CALIBRATION_RESIDUAL = "UNAVAILABLE_CALIBRATION_RESIDUAL"
     UNAVAILABLE_CALIBRATION_EVIDENCE = "UNAVAILABLE_CALIBRATION_EVIDENCE"
     UNAVAILABLE_INDEPENDENCE_EVIDENCE = "UNAVAILABLE_INDEPENDENCE_EVIDENCE"
@@ -31,7 +32,7 @@ class DensityValidity:
 
 def assess_density_validity(
     *,
-    people_estimate: float,
+    people_estimate: Optional[float],
     quality: QualityState,
     fully_observed: bool,
     registration_valid: bool,
@@ -39,6 +40,10 @@ def assess_density_validity(
     usable_area_m2: Optional[float],
     heldout_residual_m: Optional[float],
     site_approved_max_residual_m: Optional[float],
+    crs_id: Optional[str] = None,
+    usable_area_measured: bool = False,
+    usable_area_evidence_ref: Optional[str] = None,
+    usable_area_evidence_sha256: Optional[str] = None,
     calibration_evidence_ref: Optional[str] = None,
     calibration_evidence_sha256: Optional[str] = None,
     independence_verified: bool = False,
@@ -51,22 +56,26 @@ def assess_density_validity(
     """Return density only when evidence and site policy support it.
 
     ``site_approved_max_residual_m`` is an explicitly approved calibration
-    criterion, not a universal default. Image-space data alone cannot pass.
+    criterion, not a universal default. ``fully_observed`` describes the
+    requested zone, so a PARTIAL frame can support that one zone when its
+    coverage is complete. Image-space data alone cannot pass.
     Evidence references and hashes are recorded and format-checked here, not
     dereferenced. The caller must verify each artifact's content hash and
     authorization before setting the corresponding verification/approval flag.
     """
-    if type(people_estimate) not in (int, float) or not math.isfinite(people_estimate) or people_estimate < 0:
-        raise ValueError("people_estimate must be finite and nonnegative")
     if not isinstance(quality, QualityState):
         raise ValueError("quality must be a QualityState")
     if type(fully_observed) is not bool or type(registration_valid) is not bool:
         raise ValueError("coverage and registration validity must be booleans")
     if quality in (QualityState.UNKNOWN, QualityState.STALE):
         return DensityValidity(DensityStatus.UNAVAILABLE_OBSERVATION, None)
-    if not fully_observed or quality is QualityState.PARTIAL:
+    if not fully_observed:
         return DensityValidity(DensityStatus.UNAVAILABLE_PARTIAL_COVERAGE, None)
-    if not registration_valid:
+    if people_estimate is None:
+        return DensityValidity(DensityStatus.UNAVAILABLE_OBSERVATION, None)
+    if type(people_estimate) not in (int, float) or not math.isfinite(people_estimate) or people_estimate < 0:
+        raise ValueError("people_estimate must be finite and nonnegative")
+    if not registration_valid or not isinstance(crs_id, str) or not crs_id.strip():
         return DensityValidity(DensityStatus.UNAVAILABLE_REGISTRATION, None)
     if not isinstance(calibration_id, str) or not calibration_id.strip():
         return DensityValidity(DensityStatus.UNAVAILABLE_CALIBRATION, None)
@@ -77,6 +86,15 @@ def assess_density_validity(
         or usable_area_m2 <= 0
     ):
         return DensityValidity(DensityStatus.UNAVAILABLE_AREA, None)
+    if (
+        usable_area_measured is not True
+        or not isinstance(usable_area_evidence_ref, str)
+        or not usable_area_evidence_ref.strip()
+        or not isinstance(usable_area_evidence_sha256, str)
+        or len(usable_area_evidence_sha256) != 64
+        or any(char not in "0123456789abcdefABCDEF" for char in usable_area_evidence_sha256)
+    ):
+        return DensityValidity(DensityStatus.UNAVAILABLE_AREA_EVIDENCE, None)
     if (
         heldout_residual_m is None
         or site_approved_max_residual_m is None

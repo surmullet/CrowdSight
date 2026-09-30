@@ -12,6 +12,7 @@
   "image_height": 1080,
   "observation_valid": false,
   "registration_valid": false,
+  "unavailable_reason": "FRESHNESS_LIMIT_EXCEEDED",
   "fully_observed_zones": [],
   "confidence_semantics": "RAW_MODEL_SCORE",
   "quality": "STALE",

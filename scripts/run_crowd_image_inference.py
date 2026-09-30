@@ -2,21 +2,49 @@
 
 This runner is for ordered image-sequence datasets such as DroneCrowd. It does
 not load labels, and it refuses to infer unless model-evaluation permission is
-present in the manifest. Keep images and output JSON in private artifact storage.
+present in the manifest. Incomplete NMS or capped results are unavailable, not
+valid zero counts. Keep images and output JSON in private artifact storage.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import logging
 from pathlib import Path
 import sys
+import threading
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from crowdsight.detection import UltralyticsPersonDetector, load_person_detector_profile
+
+
+class _NmsTimeoutRecorder(logging.Handler):
+    """Capture incomplete NMS warnings from this inference thread only."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.thread_id = threading.get_ident()
+        self.timed_out = False
+
+    def emit(self, record: logging.LogRecord) -> None:
+        if record.thread == self.thread_id and "nms time limit" in record.getMessage().lower():
+            self.timed_out = True
+
+
+def _predict_with_nms_status(detector: UltralyticsPersonDetector, frame: Any) -> tuple[Any, bool]:
+    from ultralytics.utils import LOGGER
+
+    recorder = _NmsTimeoutRecorder()
+    LOGGER.addHandler(recorder)
+    try:
+        detections = detector.predict(frame)
+        return detections, recorder.timed_out
+    finally:
+        LOGGER.removeHandler(recorder)
 
 
 def sha256_file(path: Path) -> str:
@@ -205,7 +233,20 @@ def run_inference(
             raise ValueError(
                 f"Decoded image dimensions {(frame_width, frame_height)} do not match manifest {(width, height)}"
             )
-        detections = detector.predict(frame)
+        detections, nms_timed_out = _predict_with_nms_status(detector, frame)
+        if nms_timed_out or detector.last_detection_limit_reached:
+            predictions.append({
+                "frame_index": sample_index,
+                "sequence_id": sample["sequence_id"],
+                "frame_id": sample["frame_id"],
+                "image_sha256": image_sha,
+                "valid": False,
+                "count": None,
+                "unavailable_reason": (
+                    "NMS_TIME_LIMIT_EXCEEDED" if nms_timed_out else "DETECTION_LIMIT_REACHED"
+                ),
+            })
+            continue
         boxes = [
             [float(value) for value in detection.bbox_xyxy_px]
             for detection in detections if detection.bbox_xyxy_px is not None

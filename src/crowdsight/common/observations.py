@@ -15,6 +15,31 @@ class QualityState(str, Enum):
     STALE = "STALE"
 
 
+class UnavailableReason(str, Enum):
+    """Machine-readable cause for an unusable observation.
+
+    Producer-side reasons describe why one frame's result is `UNKNOWN`.
+    `FRESHNESS_LIMIT_EXCEEDED` belongs to `STALE` and is assigned by the
+    consuming service's freshness policy, never by the frame producer.
+    """
+
+    INFERENCE_FAILURE = "INFERENCE_FAILURE"
+    NMS_TIME_LIMIT_EXCEEDED = "NMS_TIME_LIMIT_EXCEEDED"
+    DETECTION_LIMIT_REACHED = "DETECTION_LIMIT_REACHED"
+    NO_FULLY_OBSERVED_ZONE = "NO_FULLY_OBSERVED_ZONE"
+    FRESHNESS_LIMIT_EXCEEDED = "FRESHNESS_LIMIT_EXCEEDED"
+
+
+PRODUCER_UNAVAILABLE_REASONS = frozenset(
+    (
+        UnavailableReason.INFERENCE_FAILURE,
+        UnavailableReason.NMS_TIME_LIMIT_EXCEEDED,
+        UnavailableReason.DETECTION_LIMIT_REACHED,
+        UnavailableReason.NO_FULLY_OBSERVED_ZONE,
+    )
+)
+
+
 @dataclass(frozen=True, slots=True)
 class PersonDetection:
     """One observed person anchor, normalized to the source frame.
@@ -71,6 +96,9 @@ class FrameObservation:
 
     Producers must explicitly supply zone coverage. An empty tuple is a
     deliberate statement that no configured zone is fully observable.
+    `unavailable_reason` is null for usable frames, carries the producer
+    cause on UNKNOWN frames, and carries FRESHNESS_LIMIT_EXCEEDED when the
+    consuming service marks the observation STALE.
     """
 
     source_id: str
@@ -88,6 +116,7 @@ class FrameObservation:
     quality: QualityState = QualityState.VALID
     captured_at: Optional[datetime] = None
     registration_valid: bool = False
+    unavailable_reason: Optional[UnavailableReason] = None
 
     def __post_init__(self) -> None:
         for name in ("source_id", "session_id", "model_profile_id"):
@@ -153,6 +182,20 @@ class FrameObservation:
             self.detections or self.fully_observed_zones
         ):
             raise ValueError("UNKNOWN/STALE observations must not carry detections or fully observed zones")
+        if self.unavailable_reason is not None and not isinstance(self.unavailable_reason, UnavailableReason):
+            raise ValueError("unavailable_reason must be an UnavailableReason or null")
+        if self.quality in (QualityState.VALID, QualityState.PARTIAL) and self.unavailable_reason is not None:
+            raise ValueError("VALID/PARTIAL observations must not carry unavailable_reason")
+        if self.quality is QualityState.UNKNOWN and self.unavailable_reason not in PRODUCER_UNAVAILABLE_REASONS:
+            raise ValueError(
+                "UNKNOWN observations require a producer unavailable_reason; "
+                "freshness-based reasons belong to STALE and are assigned downstream"
+            )
+        if self.quality is QualityState.STALE and self.unavailable_reason is not UnavailableReason.FRESHNESS_LIMIT_EXCEEDED:
+            raise ValueError(
+                "STALE observations require unavailable_reason FRESHNESS_LIMIT_EXCEEDED, "
+                "assigned by the consuming service freshness policy"
+            )
 
     def to_contract_dict(self) -> dict[str, object]:
         """Serialize the proposed shared frame-observation schema."""
@@ -177,6 +220,11 @@ class FrameObservation:
                 QualityState.STALE,
             ),
             "registration_valid": self.registration_valid,
+            "unavailable_reason": (
+                self.unavailable_reason.value
+                if self.unavailable_reason is not None
+                else None
+            ),
             "fully_observed_zones": list(self.fully_observed_zones),
             "confidence_semantics": "RAW_MODEL_SCORE",
             "quality": self.quality.value,
