@@ -12,6 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from crowdsight.service.api.deps import get_job_manager, init_service_dependencies
 from crowdsight.service.api.errors import APIProblemException, problem_response
 from crowdsight.service.api.routers import (
+    analytics_router,
     artifacts_router,
     frames_router,
     health_router,
@@ -126,6 +127,7 @@ def create_app() -> FastAPI:
     app.include_router(sessions_router)
     app.include_router(frames_router)
     app.include_router(artifacts_router)
+    app.include_router(analytics_router)
 
     return app
 

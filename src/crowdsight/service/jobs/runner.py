@@ -7,7 +7,6 @@ from sqlalchemy import select
 
 from crowdsight.service.domain.zones import Point2D, ZoneDefinition, ZonePolygon, ZoneSet
 from crowdsight.service.pipeline.runner import SessionPipeline
-from crowdsight.service.pipeline.synthetic import SyntheticDetector
 from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.storage.media_registry import MediaRegistry
 from crowdsight.service.storage.models import (
@@ -112,7 +111,33 @@ class JobManager:
         video_path = self.media_registry.get_media_path(job.media_asset_id)
 
         if detector is None:
-            detector = SyntheticDetector()
+            from crowdsight.service.pipeline.model_boundary import (
+                ModelBoundaryError,
+                ModelBoundaryService,
+            )
+
+            try:
+                boundary = ModelBoundaryService()
+                detector, _ = boundary.create_detector(
+                    synthetic=job.synthetic,
+                    enable_tracker=bool(job.options.get("enable_tracker", False)),
+                )
+            except ModelBoundaryError as mbe:
+                with self.db_manager.get_session() as session:
+                    sess_rec = session.get(SessionRecord, session_id)
+                    if sess_rec:
+                        sess_rec.status = "FAILED"
+                        sess_rec.error_code = mbe.code
+                        sess_rec.user_action_hint = mbe.message
+                return "FAILED"
+            except Exception as exc:
+                with self.db_manager.get_session() as session:
+                    sess_rec = session.get(SessionRecord, session_id)
+                    if sess_rec:
+                        sess_rec.status = "FAILED"
+                        sess_rec.error_code = "DETECTOR_INITIALIZATION_FAILED"
+                        sess_rec.user_action_hint = f"Failed to initialize detector: {exc}"
+                return "FAILED"
 
         pipeline = SessionPipeline(
             session_id=session_id,

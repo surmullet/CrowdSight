@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 3 Complete -> Transitioning to Phase 4
-- **Active Task**: Analytics Engine & Live Model Boundary (Phase 4)
+- **Current Phase**: Phase 4 Complete -> Transitioning to Phase 5
+- **Active Task**: Frontend Design, Project Setup, Design System & /dev/states (Phase 5)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -40,15 +40,33 @@
     - `alerts`: Operational alerts status endpoint returning `operational_alerts_allowed = false` under experimental deployment.
   - Exported canonical OpenAPI 3.1 contract to `contracts/app-v1/openapi.json` and documentation in `contracts/app-v1/README.md`.
   - Comprehensive unit, property, and OpenAPI snapshot tests passing; 65 tests green; ruff and mypy strict passing with 0 errors.
+- [x] **Phase 4: Analytics Engine & Live Model Boundary**
+  - Trend analytics engine (`src/crowdsight/service/analytics/trends.py`):
+    - `TrendAnalyzer` computing bucketed time series (`RAW`, `BUCKETED`, `SMOOTHED`) with statistics (`min`, `mean`, `median`, `p95`, `max`).
+    - Enforced invariant: unobserved/uncounted buckets are strictly `None` / `null`, never `0.0`.
+    - LTTB (Largest Triangle Three Buckets) downsampling algorithm preserving missing intervals without coercion.
+  - Neutral highlight moments (`src/crowdsight/service/analytics/peaks.py`):
+    - Peak visible count detection per zone with temporal suppression; zero forbidden/alarmist terms.
+  - Image-space relative heat map generator (`src/crowdsight/service/analytics/heatmaps.py`):
+    - Bottom-centre Gaussian splatting (`sigma` proportional to image width).
+    - Perceptually uniform viridis colormap, transparent RGBA PNG, ADR-0005 quality weighting.
+    - Strict `IMAGE_SPACE` metadata, `SESSION_MAX`/`WINDOW_MAX` relative normalization.
+  - Quality summary metrics (`src/crowdsight/service/analytics/summary.py`):
+    - Truthful breakdown of `VALID`/`PARTIAL`/`UNKNOWN`/`STALE`, reason codes, and 10-bin raw score histogram.
+  - Invariant-preserving exports (`src/crowdsight/service/analytics/exports.py`):
+    - JSONL archive with manifest provenance and `SEMANTICS.md` disclaimers.
+    - CSV export where uncounted cells are strictly empty string `""` (never `0`!).
+  - Live model boundary & checkpoint verification (`src/crowdsight/service/pipeline/model_boundary.py`):
+    - SHA-256 digest validation for model profiles and checkpoints.
+    - Stable error codes: `MODEL_CHECKPOINT_MISSING` and `MODEL_CHECKPOINT_HASH_MISMATCH`.
+    - Safe fallback to `SyntheticDetector` in zero-weight / test environments.
+  - Web proxy generation (`src/crowdsight/service/storage/proxy.py`):
+    - FFmpeg H.264 MP4 proxy transcoding for non-browser playable codecs.
+  - Management CLI (`src/crowdsight/cli/main.py`):
+    - `crowdsight media scan`, `media register`, `session reprocess`, `session purge`, and `model verify`.
+  - 86 backend tests passing; ruff clean; mypy strict passing with 0 errors; OpenAPI contract updated.
 
 ## 3. Pending Phases
-- [ ] **Phase 4: Analytics Engine & Live Model Boundary**
-  - Trend series (RAW, BUCKETED with statistics, SMOOTHED, LTTB downsampling).
-  - Highlights / peak moments detection (neutral, non-alarmist descriptions).
-  - Gaussian image-space relative heat map (`IMAGE_SPACE`, transparent RGBA PNG).
-  - Real model checkpoint & profile verification against expected SHA-256 digests.
-  - FFmpeg browser-compatible H.264 proxy generator.
-  - CLI tools (`crowdsight media`, `crowdsight session`, `crowdsight model verify`).
 - [ ] **Phase 5: Frontend Design, Project Setup, Design System & `/dev/states`**
   - `web/DESIGN.md` (plan, reflection, custom color palette, typography, visual hierarchy).
   - Vite + React + TypeScript strict + Tailwind (CSS variables) + Radix UI.

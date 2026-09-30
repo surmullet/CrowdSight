@@ -86,6 +86,127 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HeatmapGenerateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "normalization_method": {
+            "default": "SESSION_MAX",
+            "enum": [
+              "SESSION_MAX",
+              "WINDOW_MAX"
+            ],
+            "title": "Normalization Method",
+            "type": "string"
+          },
+          "window_from_t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window From T"
+          },
+          "window_to_t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window To T"
+          }
+        },
+        "title": "HeatmapGenerateRequest",
+        "type": "object"
+      },
+      "HeatmapMetadataModel": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "colormap": {
+            "title": "Colormap",
+            "type": "string"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "frames_discarded": {
+            "title": "Frames Discarded",
+            "type": "integer"
+          },
+          "frames_used": {
+            "title": "Frames Used",
+            "type": "integer"
+          },
+          "image_height": {
+            "title": "Image Height",
+            "type": "integer"
+          },
+          "image_width": {
+            "title": "Image Width",
+            "type": "integer"
+          },
+          "kind": {
+            "default": "IMAGE_SPACE",
+            "title": "Kind",
+            "type": "string"
+          },
+          "normalization_method": {
+            "title": "Normalization Method",
+            "type": "string"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "window_from_t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window From T"
+          },
+          "window_to_t": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window To T"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "image_width",
+          "image_height",
+          "window_from_t",
+          "window_to_t",
+          "frames_used",
+          "frames_discarded",
+          "normalization_method",
+          "colormap",
+          "sha256",
+          "disclaimer"
+        ],
+        "title": "HeatmapMetadataModel",
+        "type": "object"
+      },
       "MediaAssetResponse": {
         "additionalProperties": false,
         "properties": {
@@ -209,6 +330,205 @@
         ],
         "title": "ModelProfileResponse",
         "type": "object"
+      },
+      "NoteCreateModel": {
+        "additionalProperties": false,
+        "properties": {
+          "author": {
+            "default": "operator",
+            "title": "Author",
+            "type": "string"
+          },
+          "media_time_s": {
+            "minimum": 0.0,
+            "title": "Media Time S",
+            "type": "number"
+          },
+          "text": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          }
+        },
+        "required": [
+          "media_time_s",
+          "text"
+        ],
+        "title": "NoteCreateModel",
+        "type": "object"
+      },
+      "NoteResponseModel": {
+        "additionalProperties": false,
+        "properties": {
+          "author": {
+            "title": "Author",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "media_time_s": {
+            "title": "Media Time S",
+            "type": "number"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "media_time_s",
+          "zone_id",
+          "text",
+          "author",
+          "created_at"
+        ],
+        "title": "NoteResponseModel",
+        "type": "object"
+      },
+      "PeakMomentModel": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "description_vi": {
+            "title": "Description Vi",
+            "type": "string"
+          },
+          "frame_index": {
+            "title": "Frame Index",
+            "type": "integer"
+          },
+          "media_time_s": {
+            "title": "Media Time S",
+            "type": "number"
+          },
+          "visible_count": {
+            "title": "Visible Count",
+            "type": "integer"
+          },
+          "zone_id": {
+            "title": "Zone Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "zone_id",
+          "media_time_s",
+          "frame_index",
+          "visible_count",
+          "description",
+          "description_vi"
+        ],
+        "title": "PeakMomentModel",
+        "type": "object"
+      },
+      "PeaksResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "experimental_warning": {
+            "title": "Experimental Warning",
+            "type": "string"
+          },
+          "peaks": {
+            "items": {
+              "$ref": "#/components/schemas/PeakMomentModel"
+            },
+            "title": "Peaks",
+            "type": "array"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "zone_id": {
+            "title": "Zone Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "zone_id",
+          "peaks",
+          "experimental_warning"
+        ],
+        "title": "PeaksResponse",
+        "type": "object"
+      },
+      "RawPointModel": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "title": "Availability",
+            "type": "string"
+          },
+          "media_time_s": {
+            "title": "Media Time S",
+            "type": "number"
+          },
+          "visible_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible Count"
+          }
+        },
+        "required": [
+          "media_time_s",
+          "availability"
+        ],
+        "title": "RawPointModel",
+        "type": "object"
+      },
+      "SeriesMode": {
+        "enum": [
+          "RAW",
+          "BUCKETED",
+          "SMOOTHED"
+        ],
+        "title": "SeriesMode",
+        "type": "string"
       },
       "SessionCreateRequest": {
         "properties": {
@@ -359,6 +679,211 @@
           "updated_at"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SmoothedPointModel": {
+        "additionalProperties": false,
+        "properties": {
+          "is_derived": {
+            "default": true,
+            "title": "Is Derived",
+            "type": "boolean"
+          },
+          "media_time_s": {
+            "title": "Media Time S",
+            "type": "number"
+          },
+          "smoothed_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoothed Value"
+          }
+        },
+        "required": [
+          "media_time_s"
+        ],
+        "title": "SmoothedPointModel",
+        "type": "object"
+      },
+      "TrendBucketModel": {
+        "additionalProperties": false,
+        "properties": {
+          "availability_ratio": {
+            "title": "Availability Ratio",
+            "type": "number"
+          },
+          "bucket_index": {
+            "title": "Bucket Index",
+            "type": "integer"
+          },
+          "from_t": {
+            "title": "From T",
+            "type": "number"
+          },
+          "max": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max"
+          },
+          "mean": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean"
+          },
+          "median": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median"
+          },
+          "min": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min"
+          },
+          "n_counted": {
+            "title": "N Counted",
+            "type": "integer"
+          },
+          "n_frames": {
+            "title": "N Frames",
+            "type": "integer"
+          },
+          "p95": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95"
+          },
+          "to_t": {
+            "title": "To T",
+            "type": "number"
+          }
+        },
+        "required": [
+          "bucket_index",
+          "from_t",
+          "to_t",
+          "n_frames",
+          "n_counted",
+          "availability_ratio"
+        ],
+        "title": "TrendBucketModel",
+        "type": "object"
+      },
+      "TrendsResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "bucket_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bucket S"
+          },
+          "buckets": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TrendBucketModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Buckets"
+          },
+          "experimental_warning": {
+            "title": "Experimental Warning",
+            "type": "string"
+          },
+          "raw_points": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RawPointModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Points"
+          },
+          "series_mode": {
+            "$ref": "#/components/schemas/SeriesMode"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "smoothed_points": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/SmoothedPointModel"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Smoothed Points"
+          },
+          "zone_id": {
+            "title": "Zone Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "zone_id",
+          "series_mode",
+          "experimental_warning"
+        ],
+        "title": "TrendsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -1228,6 +1753,62 @@
         ]
       }
     },
+    "/api/v1/sessions/{session_id}/export": {
+      "get": {
+        "operationId": "export_session_api_v1_sessions__session_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Export format",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "jsonl",
+              "description": "Export format",
+              "enum": [
+                "jsonl",
+                "csv"
+              ],
+              "title": "Format",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export session observation archive or CSV counts",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
     "/api/v1/sessions/{session_id}/frames": {
       "get": {
         "operationId": "get_frames_in_range_api_v1_sessions__session_id__frames_get",
@@ -1372,6 +1953,450 @@
         "summary": "Get nearest frame observation at time t with freshness policy applied",
         "tags": [
           "Frame Observations"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/heatmaps": {
+      "post": {
+        "operationId": "generate_heatmap_api_v1_sessions__session_id__heatmaps_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatmapGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HeatmapMetadataModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate an image-space relative heat map",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/heatmaps/{artifact_id}": {
+      "get": {
+        "operationId": "get_heatmap_artifact_api_v1_sessions__session_id__heatmaps__artifact_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "artifact_id",
+            "required": true,
+            "schema": {
+              "title": "Artifact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download heat map image or metadata",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/notes": {
+      "get": {
+        "operationId": "list_notes_api_v1_sessions__session_id__notes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/NoteResponseModel"
+                  },
+                  "title": "Response List Notes Api V1 Sessions  Session Id  Notes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List operator notes for session",
+        "tags": [
+          "Analytics & Export"
+        ]
+      },
+      "post": {
+        "operationId": "create_note_api_v1_sessions__session_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreateModel"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteResponseModel"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create an operator note",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/notes/{note_id}": {
+      "delete": {
+        "operationId": "delete_note_api_v1_sessions__session_id__notes__note_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "title": "Note Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete an operator note",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/peaks": {
+      "get": {
+        "operationId": "get_peaks_api_v1_sessions__session_id__peaks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Target zone ID",
+            "in": "query",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "description": "Target zone ID",
+              "title": "Zone Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Max highlights",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Max highlights",
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeaksResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get highlight peak visible person moments",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/summary": {
+      "get": {
+        "operationId": "get_quality_summary_api_v1_sessions__session_id__summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Quality Summary Api V1 Sessions  Session Id  Summary Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get comprehensive session quality summary",
+        "tags": [
+          "Analytics & Export"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/trends": {
+      "get": {
+        "operationId": "get_trends_api_v1_sessions__session_id__trends_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Target zone ID",
+            "in": "query",
+            "name": "zone_id",
+            "required": true,
+            "schema": {
+              "description": "Target zone ID",
+              "title": "Zone Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Bucket duration in seconds",
+            "in": "query",
+            "name": "bucket_s",
+            "required": false,
+            "schema": {
+              "default": 1.0,
+              "description": "Bucket duration in seconds",
+              "maximum": 60.0,
+              "minimum": 0.1,
+              "title": "Bucket S",
+              "type": "number"
+            }
+          },
+          {
+            "description": "Series presentation mode",
+            "in": "query",
+            "name": "series",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/SeriesMode",
+              "default": "BUCKETED",
+              "description": "Series presentation mode"
+            }
+          },
+          {
+            "description": "Max downsample points",
+            "in": "query",
+            "name": "max_points",
+            "required": false,
+            "schema": {
+              "default": 1000,
+              "description": "Max downsample points",
+              "maximum": 10000,
+              "minimum": 10,
+              "title": "Max Points",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrendsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query visible person time trends for a zone",
+        "tags": [
+          "Analytics & Export"
         ]
       }
     },
