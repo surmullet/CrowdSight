@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 2 Complete -> Transitioning to Phase 3
-- **Active Task**: Application API (/api/v1) & OpenAPI Export (Phase 3)
+- **Current Phase**: Phase 3 Complete -> Transitioning to Phase 4
+- **Active Task**: Analytics Engine & Live Model Boundary (Phase 4)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -27,14 +27,21 @@
   - `VideoDecoder` with sequential decoding, single-frame retry, blank frame (`FRAME_BLANK`), and frozen frame (`FRAME_FROZEN`) anomaly detection.
   - `SessionPipeline` and `JobManager` with cooperative cancellation, partial result preservation (`PARTIAL_CANCELLED`), and orphaned worker crash recovery.
   - End-to-end tests with synthetic OpenCV video verified; 56 tests passing with 90% coverage; ruff and mypy strict passing.
+- [x] **Phase 3: Application API (`/api/v1`) & OpenAPI Export**
+  - FastAPI application in `src/crowdsight/service/api/app.py` with RFC 9457 Problem Details (`application/problem+json`) and stable error codes (`MEDIA_NOT_FOUND`, `MEDIA_UNREADABLE`, `ZONE_SET_INVALID`, `MODEL_CHECKPOINT_MISSING`, etc.).
+  - Complete REST routers in `src/crowdsight/service/api/routers/`:
+    - `health`: Liveness and readiness endpoints with database ping and configuration status.
+    - `model`: Inspection of active model profile, SHA-256 digests, and `assess_crowd_operating_use` applicability status.
+    - `media`: Catalog retrieval, HTTP 206 partial Range streaming, and single-frame extraction (`/frame?frame_index=`).
+    - `zone_sets`: Creation, versioning, list, retrieval, and real-time geometry validation (`POST /zone-sets/validate`).
+    - `sessions`: Creation with idempotent options, status polling, Server-Sent Events (SSE) progress streaming (`/events`), cooperative cancellation (`/cancel`), and cascaded deletion (`DELETE /sessions/{id}`).
+    - `frames`: Playback queries (`/frames?from_t=&to_t=&limit=`) and point-in-time lookup (`/frames/at?t=`) with strict freshness policy enforcement.
+    - `artifacts`: Secure token-checked file retrieval with path-traversal prevention.
+    - `alerts`: Operational alerts status endpoint returning `operational_alerts_allowed = false` under experimental deployment.
+  - Exported canonical OpenAPI 3.1 contract to `contracts/app-v1/openapi.json` and documentation in `contracts/app-v1/README.md`.
+  - Comprehensive unit, property, and OpenAPI snapshot tests passing; 65 tests green; ruff and mypy strict passing with 0 errors.
 
 ## 3. Pending Phases
-- [ ] **Phase 3: Application API (`/api/v1`) & OpenAPI Export**
-  - FastAPI routers (`/health`, `/api/v1/model`, `/media`, `/zone-sets`, `/sessions`, `/analytics`, `/alerts/status`).
-  - RFC 9457 Problem Details (`application/problem+json`).
-  - SSE progress streaming with polling fallback.
-  - HTTP Range / 206 partial streaming for media assets.
-  - Export OpenAPI specification to `contracts/app-v1/openapi.json`.
 - [ ] **Phase 4: Analytics Engine & Live Model Boundary**
   - Trend series (RAW, BUCKETED with statistics, SMOOTHED, LTTB downsampling).
   - Highlights / peak moments detection (neutral, non-alarmist descriptions).
