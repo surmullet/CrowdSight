@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   crowdsight:
     build:
@@ -7,7 +5,7 @@ services:
       dockerfile: Dockerfile
     container_name: crowdsight-app
     ports:
-      - "8000:8000"
+      - "8080:8000"
     environment:
       - CROWDSIGHT_ENVIRONMENT=production
       - CROWDSIGHT_DATABASE_URL=sqlite:////app/data/db/crowdsight.db

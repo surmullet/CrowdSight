@@ -6,11 +6,11 @@
 FROM node:22-alpine AS web-builder
 WORKDIR /app/web
 
-# Install pnpm
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# Install pnpm 9 LTS for stable container builds
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 # Copy package manifests and install dependencies
-COPY web/package.json web/pnpm-lock.yaml* ./
+COPY web/package.json web/pnpm-lock.yaml* web/pnpm-workspace.yaml* ./
 RUN pnpm install --frozen-lockfile || pnpm install
 
 # Copy web source and build production bundle
@@ -44,7 +44,7 @@ COPY pyproject.toml ./
 RUN pip install --no-cache-dir \
     fastapi uvicorn pydantic pydantic-settings sqlalchemy \
     opencv-python-headless numpy shapely jsonschema \
-    structlog pyyaml httpx httpx2
+    structlog pyyaml httpx
 
 # Copy backend source code and contracts
 COPY src/ ./src/
