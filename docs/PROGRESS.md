@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 0 Complete -> Transitioning to Phase 1
-- **Active Task**: Preparing Contract & Domain Layer (Phase 1)
+- **Current Phase**: Phase 1 Complete -> Transitioning to Phase 2
+- **Active Task**: Storage, Pipeline & Synthetic Job Runner (Phase 2)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -11,13 +11,15 @@
   - Formulated 25-line understanding summary capturing key invariants and discrepancies.
   - Published 6 Proposed ADRs (`ADR-0001` through `ADR-0006`) awaiting human review.
   - Initialized `docs/PROGRESS.md` for self-recovery across sessions.
+- [x] **Phase 1: Contract Layer & Domain Core**
+  - Pydantic v2 schemas (`CrowdFrameObservationV1`, `DetectionV1`) matching `contracts/v1/crowd-frame-observation.schema.json`.
+  - Two-stage validator (`TwoStageObservationValidator`): Draft 2020-12 JSON Schema + cross-checks (box bounds, bottom-centre anchor, tracker hash pairing, zone-set coverage).
+  - Pure domain zone geometry with Shapely 2 (`ZonePolygon`, `ZoneDefinition`, `ZoneSet`, `validate_zone_set`).
+  - Pure aggregation function `aggregate_frame()` enforcing invariant `visible_count IS NOT NULL <=> availability == 'COUNTED'`.
+  - Freshness assessment (`FreshnessPolicy`, `assess_freshness`, `apply_freshness_to_observation`).
+  - 41 unit and Hypothesis property-based tests passing with 91% domain coverage; ruff and mypy strict passing.
 
 ## 3. Pending Phases
-- [ ] **Phase 1: Contract Layer & Domain Core**
-  - Pydantic v2 schemas for v1 observations (`contracts/v1/crowd-frame-observation.schema.json`).
-  - Two-stage validator: JSON Schema structure + domain consistency (box bounds, bottom-centre anchor match, tracker hash pairing, zone coverage).
-  - Pure domain zone geometry (Shapely 2), `aggregate_frame()` function, and freshness policy.
-  - Unit tests validating all 6 fixtures + Hypothesis property-based tests for invariants.
 - [ ] **Phase 2: Storage, Pipeline & Synthetic Job Runner**
   - SQLAlchemy 2.0 models with DB-level CHECK constraints.
   - Alembic migrations (SQLite WAL & PostgreSQL compatible).
