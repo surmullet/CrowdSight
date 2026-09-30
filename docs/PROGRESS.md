@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 6 Complete -> Transitioning to Phase 7
-- **Active Task**: Frontend Operational Workflows (Phase 7)
+- **Current Phase**: Phase 7 Complete -> Transitioning to Phase 8
+- **Active Task**: Security, Retention, Linters & Deployment Packaging (Phase 8)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -101,15 +101,36 @@
     - Combines video player, transport controls, timeline scrubber, and active frame metadata.
     - Contextual tabs for active zone readings, peak highlights with jump-to-time actions, operator notes with instant creation, and cryptographic provenance verification.
     - Non-dismissible experimental banner, synthetic tag, and export actions (CSV / JSONL).
-  - 16 frontend unit tests passing; `pnpm check` and `pnpm build` clean (62.8 kB gzipped).
+- [x] **Phase 7: Frontend Operational Workflows**
+  - Session library (`SessionLibrary`):
+    - Multi-mode grid/list view with responsive card layout.
+    - Status filtering (`ALL`, `COMPLETED`, `ACTIVE`, `FAILED`, `CANCELLED`) and real-time substring search.
+    - Quality breakdown micro-ribbons on each session card.
+    - Permanent deletion confirmation modal with explicit cascade artifact purge warning.
+  - New analysis wizard (`NewSessionWizard`):
+    - Strict server-catalog media picker (prevents arbitrary client filesystem path inputs).
+    - Zone-set selector with direct link to zone editor.
+    - Read-only model identity and cryptographic verification preview with fail-closed warning.
+    - Execution options: configurable `frame_stride` and deterministic synthetic detector mode toggle.
+  - Live job progress view (`JobProgressView`):
+    - Real-time Server-Sent Events (SSE) stream with automated polling fallback.
+    - Live quality counters (`VALID`, `PARTIAL`, `UNKNOWN`, `STALE`), processing FPS, and calculated ETA.
+    - Cooperative cancellation action with partial results viewer for cancelled jobs.
+    - RFC 9457 actionable error explanations with `user_action_hint`.
+  - Interactive SVG zone polygon editor (`ZoneEditor`):
+    - Real-time drawing and editing over original sample video frame.
+    - Drag-and-drop vertex manipulation, right-click vertex deletion, and optional 20px grid snapping.
+    - Undo/redo historical action stack.
+    - Instant geometry validation (checks for minimum 3 vertices, self-intersection, and frame bounds).
+    - Immutable version save with change notes.
+  - Model & locked alerts status page (`ModelStatusPage`):
+    - Full cryptographic provenance display (YOLO11s architecture, SHA-256 digests with copy actions).
+    - Clear plain-language explanation of permitted vs prohibited operating uses.
+    - Permanently locked operational alerts panel with fail-closed guarantee (zero enable controls).
+  - Navigation shell in `App.tsx` connecting all workflows with bilingual toggle (`vi` / `en`).
+  - 24 frontend unit tests passing; `pnpm check` and `pnpm build` clean (85.5 kB gzipped).
 
 ## 3. Pending Phases
-- [ ] **Phase 7: Frontend Operational Workflows**
-  - Session library with status filters, search, and confirmed deletion (including artifacts).
-  - New analysis wizard with catalog selection, zone-set picker, and model identity display.
-  - Real-time job progress with SSE and cancel actions.
-  - Interactive SVG zone polygon editor with real-time `/zone-sets/validate` feedback.
-  - Model & applicability inspection page + explicitly disabled alerts status.
 - [ ] **Phase 8: Security, Retention, Linters & Deployment Packaging**
   - Path traversal and security hardening tests.
   - Data retention worker and token-authenticated artifact retrieval.
