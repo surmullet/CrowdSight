@@ -1,8 +1,8 @@
 # CrowdSight Implementation Progress Log
 
 ## 1. Overview & Current Status
-- **Current Phase**: Phase 5 Complete -> Transitioning to Phase 6
-- **Active Task**: Frontend Annotated Player & Review Workspace (Phase 6)
+- **Current Phase**: Phase 6 Complete -> Transitioning to Phase 7
+- **Active Task**: Frontend Operational Workflows (Phase 7)
 - **Target Completion**: Full Stack (Backend + Frontend) Production Grade
 
 ## 2. Completed Phases
@@ -79,23 +79,33 @@
     - `SemanticsModal`: "Về phép đo này" modal explaining measurement definition, undercount risk, and prohibited inferences.
   - Built `/dev/states` test bench displaying all 6 contract v1 fixtures (`VALID`, `VALID-zero`, `PARTIAL`, `UNKNOWN`, `STALE`, `tracked`) with Vietnamese/English toggle.
   - `pnpm run check` and `pnpm run build` passing with 0 errors; Vitest unit tests green.
+- [x] **Phase 6: Frontend Annotated Player & Review Workspace**
+  - Pure subpixel letterbox coordinate transformation (`computeLetterbox`, `normalizedToCanvasCoords`, `sourceBoxToCanvasCoords`) resilient to resizing, zooming, and display scaling.
+  - High-performance playback store (`usePlaybackStore`) using Zustand with layer toggles (boxes, zones, heatmap, opacity slider).
+  - Canvas + Video overlay player (`AnnotatedPlayer`):
+    - Real-time synchronous video rendering via requestAnimationFrame loop.
+    - Bounding boxes drawn only during `VALID` or `PARTIAL` frames with corner brackets and bottom-centre anchor dots.
+    - Zone polygons with alpha fill, stroke, and zone name labels.
+    - Image-space relative heatmap rendering with configurable opacity slider.
+  - Transport controls (`PlayerControls`):
+    - Frame-by-frame single-step forward/backward navigation (+/-0.04s).
+    - Variable playback speeds (0.5x, 1.0x, 2.0x).
+    - Media-time-only timestamp display (`mm:ss.SS` format labeled strictly as media elapsed time).
+    - Layer visibility toggles and keyboard shortcut help dialog.
+  - Unified multi-tier scrubber (`UnifiedTimeline`):
+    - Tier 1: Quality ribbon showing `VALID`, `PARTIAL` (hatching), `UNKNOWN` (stipple), and `STALE` intervals.
+    - Tier 2: Multi-zone SVG sparklines with strict physical gaps for missing data (never drawing to 0).
+    - Tier 3: Peak visible count markers and operator note pins.
+    - Missing frames warning badge with count and screen-reader accessible data table.
+  - Integrated operator review workspace (`ReviewWorkspace`):
+    - Combines video player, transport controls, timeline scrubber, and active frame metadata.
+    - Contextual tabs for active zone readings, peak highlights with jump-to-time actions, operator notes with instant creation, and cryptographic provenance verification.
+    - Non-dismissible experimental banner, synthetic tag, and export actions (CSV / JSONL).
+  - 16 frontend unit tests passing; `pnpm check` and `pnpm build` clean (62.8 kB gzipped).
 
 ## 3. Pending Phases
-- [ ] **Phase 6: Frontend Annotated Player & Review Workspace**
-  - `web/DESIGN.md` (plan, reflection, custom color palette, typography, visual hierarchy).
-  - Vite + React + TypeScript strict + Tailwind (CSS variables) + Radix UI.
-  - Self-hosted fonts with full Vietnamese diacritics.
-  - Internationalization (`vi` default + `en`) via i18next.
-  - OpenAPI client generation via `openapi-typescript` + `openapi-fetch`.
-  - Discriminated union `ZoneReading` (Counted, NotFullyObserved, Unknown, Stale).
-  - `/dev/states` page rendering all 6 contract fixtures.
-- [ ] **Phase 6: Frontend Annotated Player & Review Workspace**
-  - Synchronized `<video>` + `<canvas>` player with sub-pixel alignment under letterboxing/resize.
-  - Dynamic overlay: bounding boxes, zone polygons, relative heat map overlay with opacity slider.
-  - Interactive timeline showing quality strips, trend lines with gaps for unobserved intervals, note pins.
-  - Zone cards, provenance drawer, and persistent experimental warning banner.
 - [ ] **Phase 7: Frontend Operational Workflows**
-  - Session library with status filters, search, and confirmed deletion.
+  - Session library with status filters, search, and confirmed deletion (including artifacts).
   - New analysis wizard with catalog selection, zone-set picker, and model identity display.
   - Real-time job progress with SSE and cancel actions.
   - Interactive SVG zone polygon editor with real-time `/zone-sets/validate` feedback.
