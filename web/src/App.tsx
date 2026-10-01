@@ -30,6 +30,21 @@ const queryClient = new QueryClient({
 
 type AppView = 'sessions' | 'wizard' | 'progress' | 'review' | 'zones' | 'model' | 'dev-states';
 
+function isPointInPolygon(point: [number, number], vs: [number, number][]): boolean {
+  const x = point[0], y = point[1];
+  let inside = false;
+  for (let i = 0, j = vs.length - 1; i < vs.length; j = i++) {
+    const p1 = vs[i];
+    const p2 = vs[j];
+    if (!p1 || !p2) continue;
+    const xi = p1[0], yi = p1[1];
+    const xj = p2[0], yj = p2[1];
+    const intersect = ((yi > y) !== (yj > y)) && (x < ((xj - xi) * (y - yi)) / (yj - yi) + xi);
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
 const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
     id: 'media-150',
@@ -383,22 +398,36 @@ const AppContent: React.FC = () => {
         ],
       };
 
-  const activeReadings: ZoneReading[] = (!isSynthetic && realFrameObs?.zone_readings)
-    ? realFrameObs.zone_readings
-    : [
-        {
-          status: 'COUNTED',
-          count: baseCountNorth,
-          zoneId: 'zone-north',
-          zoneName: 'Khu vực Bắc (Quảng trường)',
-        },
-        {
-          status: 'COUNTED',
-          count: 0,
-          zoneId: 'zone-south',
-          zoneName: 'Khu vực Nam (Lối vào)',
-        },
-      ];
+  const activeReadings: ZoneReading[] = (!isSynthetic && activeDataset?.zones && realFrameObs)
+    ? activeDataset.zones.map((z: any) => {
+        const count = (realFrameObs.detections || []).filter((d: any) => {
+          const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || 1920);
+          const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || 1440);
+          return isPointInPolygon([px, py], z.vertices);
+        }).length;
+        return {
+          status: 'COUNTED' as const,
+          count,
+          zoneId: z.zone_id,
+          zoneName: z.name,
+        };
+      })
+    : (!isSynthetic && realFrameObs?.zone_readings)
+      ? realFrameObs.zone_readings
+      : [
+          {
+            status: 'COUNTED',
+            count: baseCountNorth,
+            zoneId: 'zone-north',
+            zoneName: 'Khu vực Bắc (Quảng trường)',
+          },
+          {
+            status: 'COUNTED',
+            count: 0,
+            zoneId: 'zone-south',
+            zoneName: 'Khu vực Nam (Lối vào)',
+          },
+        ];
 
   const handleExportCsv = () => {
     let rows = 'media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n';
@@ -727,18 +756,38 @@ const AppContent: React.FC = () => {
               onExportJsonl={handleExportJsonl}
               useRealAI={useRealAI}
               onToggleRealAI={() => setUseRealAI((prev) => !prev)}
+              onEditZones={() => setCurrentView('zones')}
             />
           )}
 
           {currentView === 'zones' && (
             <ZoneEditor
-              imageWidth={1920}
-              imageHeight={1080}
-              sampleFrameUrl="/sample-frame.png"
-              onSave={async () => {
-                setCurrentView('wizard');
+              key={`zone-editor-${currentSession.id}-${sampleZones.length}`}
+              initialZoneSetName={currentSession.zoneSetName || (is150 ? 'Khu vực Giám sát A & B (150.mp4)' : 'Khu vực quan sát')}
+              initialZones={sampleZones.map((z: any) => ({
+                zoneId: z.zone_id,
+                name: z.name,
+                color: z.color,
+                vertices: z.vertices,
+              }))}
+              imageWidth={is150 ? 1920 : 1920}
+              imageHeight={is150 ? 1440 : 1080}
+              sampleFrameUrl={is150 ? '/media_150_frame.png' : '/sample-frame.png'}
+              onSave={async (data) => {
+                const updatedZones = data.zones.map((z) => ({
+                  zone_id: z.zoneId,
+                  name: z.name,
+                  color: z.color,
+                  vertices: z.vertices,
+                }));
+                if (is150) {
+                  setDataset150((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
+                } else {
+                  setDatasetSample((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
+                }
+                setCurrentView('review');
               }}
-              onCancel={() => setCurrentView('sessions')}
+              onCancel={() => setCurrentView('review')}
             />
           )}
 

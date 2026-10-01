@@ -8,6 +8,7 @@ import {
   FileCode,
   Plus,
   Info,
+  Layers,
 } from 'lucide-react';
 import type { CrowdFrameObservation, ZoneReading } from '@/shared/types/domain';
 import { Banner } from '@/shared/ui/Banner';
@@ -60,6 +61,7 @@ interface ReviewWorkspaceProps {
   onExportJsonl?: () => void;
   useRealAI?: boolean;
   onToggleRealAI?: () => void;
+  onEditZones?: () => void;
   className?: string;
 }
 
@@ -78,6 +80,7 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   onExportJsonl,
   useRealAI = false,
   onToggleRealAI,
+  onEditZones,
   className = '',
 }) => {
   const { currentTime, setCurrentTime } = usePlaybackStore();
@@ -151,6 +154,18 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             >
               <span className="w-2 h-2 rounded-full animate-ping bg-emerald-400" />
               <span className="font-semibold">{useRealAI ? '🤖 AI Quét Thật (YOLO11)' : '🧪 Mẫu Giả Lập (Mock)'}</span>
+            </button>
+          )}
+
+          {onEditZones && (
+            <button
+              type="button"
+              onClick={onEditZones}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-abyssal hover:bg-brand-border border border-brand-border text-brand-text-primary transition-colors cursor-pointer"
+              title="Chỉnh sửa hoặc vẽ lại các khu vực quan sát (Zone Editor)"
+            >
+              <Layers className="w-3.5 h-3.5 text-brand-gold" />
+              <span>Chỉnh sửa khu vực</span>
             </button>
           )}
 
@@ -303,6 +318,20 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             {/* TAB 1: Zones list */}
             {activeTab === 'zones' && (
               <div className="space-y-3">
+                {onEditZones && (
+                  <div className="flex justify-between items-center px-1">
+                    <span className="text-[11px] text-brand-text-muted">Đang theo dõi {zones.length} khu vực</span>
+                    <button
+                      type="button"
+                      onClick={onEditZones}
+                      className="text-xs text-brand-gold hover:text-brand-gold-bright flex items-center gap-1 cursor-pointer transition-colors"
+                      title="Chỉnh sửa các đỉnh đa giác hoặc vẽ vùng mới"
+                    >
+                      <Layers className="w-3 h-3" />
+                      <span>Chỉnh sửa các vùng này</span>
+                    </button>
+                  </div>
+                )}
                 {activeReadings.length === 0 ? (
                   <div className="p-4 bg-brand-surface/40 border border-brand-border rounded text-center text-xs text-brand-text-muted">
                     Chưa có số liệu vùng cho khung hình này.
