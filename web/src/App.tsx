@@ -17,6 +17,7 @@ import { ModelStatusPage } from '@/features/model/ModelStatusPage';
 import { DevStatesPage } from '@/features/dev/DevStatesPage';
 import { usePlaybackStore } from '@/shared/state/playbackStore';
 import type { CrowdFrameObservation, ZoneReading, FrameQuality } from '@/shared/types/domain';
+import { LanguageProvider, useLanguage } from '@/shared/i18n/LanguageContext';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,10 +96,10 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [
   },
 ];
 
-export const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('sessions');
   const [selectedSessionId, setSelectedSessionId] = useState<string>('session-demo-01');
-  const [locale, setLocale] = useState<'vi' | 'en'>('vi');
+  const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
 
@@ -318,7 +319,7 @@ export const App: React.FC = () => {
                   CrowdSight
                 </span>
                 <span className="text-[10px] text-brand-text-muted hidden sm:inline">
-                  Giám sát đám đông video
+                  {t.appSubtitle}
                 </span>
               </div>
             </button>
@@ -335,7 +336,7 @@ export const App: React.FC = () => {
                 }`}
               >
                 <Film className="w-3.5 h-3.5" />
-                <span>Thư viện</span>
+                <span>{t.nav.sessions}</span>
               </button>
 
               <button
@@ -348,7 +349,7 @@ export const App: React.FC = () => {
                 }`}
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Tạo phiên</span>
+                <span>{t.nav.wizard}</span>
               </button>
 
               <button
@@ -361,7 +362,7 @@ export const App: React.FC = () => {
                 }`}
               >
                 <Layers className="w-3.5 h-3.5" />
-                <span>Soạn vùng</span>
+                <span>{t.nav.zones}</span>
               </button>
 
               <button
@@ -374,7 +375,7 @@ export const App: React.FC = () => {
                 }`}
               >
                 <Cpu className="w-3.5 h-3.5" />
-                <span>Mô hình</span>
+                <span>{t.nav.model}</span>
               </button>
 
               <button
@@ -397,12 +398,12 @@ export const App: React.FC = () => {
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setLocale(locale === 'vi' ? 'en' : 'vi')}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface transition-colors"
-              title="Đổi ngôn ngữ giao diện"
+              onClick={toggleLocale}
+              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface border border-brand-border/50 hover:border-brand-gold/50 transition-colors cursor-pointer"
+              title={t.nav.switchLanguage}
             >
-              <Languages className="w-3.5 h-3.5" />
-              <span className="font-mono text-[10px] uppercase font-medium">{locale}</span>
+              <Languages className="w-3.5 h-3.5 text-brand-gold" />
+              <span className="font-mono text-[10px] uppercase font-bold text-brand-text-primary">{locale}</span>
             </button>
           </div>
         </nav>
@@ -503,6 +504,14 @@ export const App: React.FC = () => {
         </div>
       </div>
     </QueryClientProvider>
+  );
+};
+
+export const App: React.FC = () => {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 };
 

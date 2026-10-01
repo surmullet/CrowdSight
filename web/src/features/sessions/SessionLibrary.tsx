@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
 import { formatMediaTime } from '@/features/player/PlayerControls';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 export interface SessionSummaryItem {
   id: string;
@@ -50,6 +51,7 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
   isLoading = false,
   className = '',
 }) => {
+  const { locale, t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -86,16 +88,16 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
   const getStatusBadge = (status: SessionSummaryItem['status']) => {
     switch (status) {
       case 'COMPLETED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Hoàn tất</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">{locale === 'vi' ? 'Hoàn tất' : 'Completed'}</span>;
       case 'RUNNING':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/30 animate-pulse">Đang chạy</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/30 animate-pulse">{locale === 'vi' ? 'Đang chạy' : 'Running'}</span>;
       case 'QUEUED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/30">Chờ xử lý</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-500/10 text-slate-400 border border-slate-500/30">{locale === 'vi' ? 'Chờ xử lý' : 'Queued'}</span>;
       case 'FAILED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/30">Thất bại</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-red-500/10 text-red-400 border border-red-500/30">{locale === 'vi' ? 'Thất bại' : 'Failed'}</span>;
       case 'CANCELLED':
       case 'CANCELLING':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30">Đã hủy</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/30">{locale === 'vi' ? 'Đã hủy' : 'Cancelled'}</span>;
     }
   };
 
@@ -108,10 +110,10 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
       <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
-            Thư viện phiên phân tích
+            {t.sessions.title}
           </h1>
           <p className="text-xs text-brand-text-muted mt-0.5">
-            Quản lý các bản ghi video giám sát đám đông đã phân tích và lưu trữ
+            {t.sessions.subtitle}
           </p>
         </div>
 
@@ -121,7 +123,7 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
           className="flex items-center gap-2 px-4 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal font-semibold text-xs rounded-lg transition-colors shadow"
         >
           <Plus className="w-4 h-4" />
-          <span>Bắt đầu phân tích mới</span>
+          <span>{t.sessions.newSession}</span>
         </button>
       </header>
 
@@ -134,7 +136,7 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Tìm theo tên video, mã phiên, tập vùng..."
+            placeholder={t.sessions.searchPlaceholder}
             className="w-full pl-9 pr-4 py-1.5 bg-brand-surface border border-brand-border rounded-lg text-brand-text-primary placeholder:text-brand-text-muted/60 focus:border-brand-gold outline-none"
           />
         </div>
@@ -142,11 +144,11 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
         {/* Status Filter Pills */}
         <div className="flex items-center gap-1.5 bg-brand-surface p-1 rounded-lg border border-brand-border">
           {[
-            { key: 'ALL', label: 'Tất cả' },
-            { key: 'COMPLETED', label: 'Hoàn tất' },
-            { key: 'ACTIVE', label: 'Đang xử lý' },
-            { key: 'FAILED', label: 'Thất bại' },
-            { key: 'CANCELLED', label: 'Đã hủy' },
+            { key: 'ALL', label: t.sessions.filters.all },
+            { key: 'COMPLETED', label: t.sessions.filters.completed },
+            { key: 'ACTIVE', label: t.sessions.filters.active },
+            { key: 'FAILED', label: t.sessions.filters.failed },
+            { key: 'CANCELLED', label: t.sessions.filters.cancelled },
           ].map((pill) => (
             <button
               key={pill.key}

@@ -8,6 +8,15 @@ export type Locale = 'vi' | 'en';
 export const translations = {
   vi: {
     appTitle: 'CrowdSight — Giám Sát Đám Đông Trên Video',
+    appSubtitle: 'Giám sát đám đông video',
+    nav: {
+      sessions: 'Thư viện',
+      wizard: 'Tạo phiên',
+      zones: 'Soạn vùng',
+      model: 'Mô hình',
+      devStates: '/dev/states',
+      switchLanguage: 'Đổi sang English',
+    },
     experimentalBanner: 'Thử nghiệm — chưa được duyệt cho vận hành thực tế. Cảnh báo vận hành đang tắt.',
     syntheticBadge: 'Dữ liệu mô phỏng',
     measurementSemanticsLabel: 'Về phép đo này',
@@ -44,9 +53,37 @@ export const translations = {
       viewStates: 'Kiểm tra trạng thái mẫu',
       languageToggle: 'English',
     },
+    sessions: {
+      title: 'Thư viện phiên phân tích',
+      subtitle: 'Quản lý các bản ghi video giám sát đám đông đã phân tích và lưu trữ',
+      newSession: 'Bắt đầu phân tích mới',
+      searchPlaceholder: 'Tìm theo tên video, mã phiên, tập vùng...',
+      filters: {
+        all: 'Tất cả',
+        completed: 'Hoàn tất',
+        active: 'Đang xử lý',
+        failed: 'Thất bại',
+        cancelled: 'Đã hủy',
+      },
+      emptyTitle: 'Không tìm thấy phiên phân tích nào',
+      emptySubtitle: 'Hãy tạo phiên mới hoặc điều chỉnh bộ lọc tìm kiếm.',
+      deleteConfirmTitle: 'Xác nhận xóa phiên phân tích',
+      deleteConfirmWarning: 'Cảnh báo: Hành động này sẽ xóa vĩnh viễn toàn bộ tệp kết quả quan sát và dữ liệu suy luận liên kết.',
+      cancel: 'Hủy bỏ',
+      delete: 'Xóa vĩnh viễn',
+    },
   },
   en: {
     appTitle: 'CrowdSight — Recorded Video Crowd Monitoring',
+    appSubtitle: 'Recorded video crowd monitoring',
+    nav: {
+      sessions: 'Library',
+      wizard: 'New Session',
+      zones: 'Zone Editor',
+      model: 'Model Status',
+      devStates: '/dev/states',
+      switchLanguage: 'Đổi sang Tiếng Việt',
+    },
     experimentalBanner: 'Experimental — not approved for operational use. Operational alerts are disabled.',
     syntheticBadge: 'Simulated Data',
     measurementSemanticsLabel: 'About this measurement',
@@ -83,7 +120,32 @@ export const translations = {
       viewStates: 'Inspect Sample States',
       languageToggle: 'Tiếng Việt',
     },
+    sessions: {
+      title: 'Analysis Session Library',
+      subtitle: 'Manage analyzed and archived crowd surveillance video records',
+      newSession: 'Start New Analysis',
+      searchPlaceholder: 'Search by video name, session ID, zone set...',
+      filters: {
+        all: 'All',
+        completed: 'Completed',
+        active: 'Active',
+        failed: 'Failed',
+        cancelled: 'Cancelled',
+      },
+      emptyTitle: 'No analysis sessions found',
+      emptySubtitle: 'Create a new session or adjust your search filter.',
+      deleteConfirmTitle: 'Confirm session deletion',
+      deleteConfirmWarning: 'Warning: This will permanently delete all observation result artifacts and associated inference data.',
+      cancel: 'Cancel',
+      delete: 'Delete Permanently',
+    },
   },
 } as const;
 
 export type TranslationKey = keyof typeof translations.vi;
+
+type DeepStringRecord<T> = {
+  [K in keyof T]: T[K] extends object ? DeepStringRecord<T[K]> : string;
+};
+
+export type TranslationDictionary = DeepStringRecord<typeof translations.vi>;

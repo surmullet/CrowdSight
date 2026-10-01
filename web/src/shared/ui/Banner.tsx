@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertTriangle, Info, Cpu } from 'lucide-react';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface BannerProps {
   isSynthetic?: boolean;
@@ -9,9 +10,11 @@ interface BannerProps {
 
 export const Banner: React.FC<BannerProps> = ({
   isSynthetic = false,
-  locale = 'vi',
+  locale: propLocale,
   onOpenSemantics,
 }) => {
+  const { locale: contextLocale } = useLanguage();
+  const locale = propLocale ?? contextLocale;
   return (
     <div
       role="banner"

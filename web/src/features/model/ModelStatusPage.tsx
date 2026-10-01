@@ -9,6 +9,7 @@ import {
   Lock,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface ModelStatusPageProps {
   modelProfileId: string;
@@ -27,6 +28,7 @@ export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
   operationalAlertsAllowed = false,
   className = '',
 }) => {
+  const { locale } = useLanguage();
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const handleCopy = (text: string, key: string) => {
@@ -43,10 +45,12 @@ export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
       {/* 2. Page Header */}
       <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40">
         <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
-          Mô hình & Tình trạng sử dụng
+          {locale === 'vi' ? 'Mô hình & Tình trạng sử dụng' : 'Model & Applicability Status'}
         </h1>
         <p className="text-xs text-brand-text-muted mt-0.5">
-          Minh bạch danh tính thuật toán, mã băm mật mã và ranh giới an toàn vận hành
+          {locale === 'vi'
+            ? 'Minh bạch danh tính thuật toán, mã băm mật mã và ranh giới an toàn vận hành'
+            : 'Algorithmic provenance, cryptographic hashes, and operational safety boundaries'}
         </p>
       </header>
 

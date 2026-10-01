@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, ShieldAlert, AlertCircle, FileText } from 'lucide-react';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface SemanticsModalProps {
   isOpen: boolean;
@@ -10,8 +11,10 @@ interface SemanticsModalProps {
 export const SemanticsModal: React.FC<SemanticsModalProps> = ({
   isOpen,
   onClose,
-  locale = 'vi',
+  locale: propLocale,
 }) => {
+  const { locale: contextLocale } = useLanguage();
+  const locale = propLocale ?? contextLocale;
   if (!isOpen) return null;
 
   return (

@@ -227,7 +227,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
           <div className="space-y-6">
             <div>
               <h2 className="text-base font-semibold text-brand-text-primary">
-                Bước 1: Tải video lên hoặc chọn từ danh mục
+                Bước 1: Chọn video (Tải lên hoặc chọn từ danh mục)
               </h2>
               <p className="text-xs text-brand-text-muted mt-1">
                 Tải lên video của bạn từ máy tính hoặc chọn một video có sẵn đã được quét trên máy chủ.

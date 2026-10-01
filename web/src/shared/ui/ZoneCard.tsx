@@ -1,5 +1,6 @@
 import type { ZoneReading } from '@/shared/types/domain';
 import { AlertTriangle, EyeOff, Clock, ShieldCheck } from 'lucide-react';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface ZoneCardProps {
   reading: ZoneReading;
@@ -11,9 +12,11 @@ interface ZoneCardProps {
 export const ZoneCard: React.FC<ZoneCardProps> = ({
   reading,
   colorHex = '#56B4E9',
-  locale = 'vi',
+  locale: propLocale,
   className = '',
 }) => {
+  const { locale: contextLocale } = useLanguage();
+  const locale = propLocale ?? contextLocale;
   return (
     <div
       className={`relative p-4 rounded-md border border-contour bg-deck overflow-hidden flex flex-col justify-between ${className}`}

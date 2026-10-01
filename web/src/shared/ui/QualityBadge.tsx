@@ -1,6 +1,7 @@
 import React from 'react';
 import type { FrameQuality } from '@/shared/types/domain';
 import { CheckCircle2, AlertCircle, HelpCircle, Clock } from 'lucide-react';
+import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface QualityBadgeProps {
   quality: FrameQuality;
@@ -10,9 +11,11 @@ interface QualityBadgeProps {
 
 export const QualityBadge: React.FC<QualityBadgeProps> = ({
   quality,
-  locale = 'vi',
+  locale: propLocale,
   className = '',
 }) => {
+  const { locale: contextLocale } = useLanguage();
+  const locale = propLocale ?? contextLocale;
   const configs = {
     VALID: {
       labelVi: 'Đầy đủ (VALID)',

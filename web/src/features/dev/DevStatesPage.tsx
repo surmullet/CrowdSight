@@ -5,6 +5,7 @@ import { QualityBadge } from '@/shared/ui/QualityBadge';
 import { ZoneCard } from '@/shared/ui/ZoneCard';
 import { SemanticsModal } from '@/shared/ui/SemanticsModal';
 import { Languages } from 'lucide-react';
+import { useLanguage, LanguageWrapper } from '@/shared/i18n/LanguageContext';
 
 interface FixtureScenario {
   id: string;
@@ -17,8 +18,8 @@ interface FixtureScenario {
   isSynthetic?: boolean;
 }
 
-export const DevStatesPage: React.FC = () => {
-  const [locale, setLocale] = useState<'vi' | 'en'>('vi');
+const DevStatesPageContent: React.FC = () => {
+  const { locale, toggleLocale } = useLanguage();
   const [showSemantics, setShowSemantics] = useState<boolean>(false);
 
   const fixtures: FixtureScenario[] = [
@@ -151,7 +152,7 @@ export const DevStatesPage: React.FC = () => {
 
         <button
           type="button"
-          onClick={() => setLocale(locale === 'vi' ? 'en' : 'vi')}
+          onClick={toggleLocale}
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-contour bg-abyssal hover:bg-contour/60 text-xs font-medium cursor-pointer transition-colors"
         >
           <Languages className="w-4 h-4 text-signal-gold" />
@@ -209,5 +210,13 @@ export const DevStatesPage: React.FC = () => {
         locale={locale}
       />
     </div>
+  );
+};
+
+export const DevStatesPage: React.FC = () => {
+  return (
+    <LanguageWrapper>
+      <DevStatesPageContent />
+    </LanguageWrapper>
   );
 };
