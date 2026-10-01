@@ -78,9 +78,26 @@ const MOCK_MODEL_PROFILE: ModelProfileInfo = {
 
 const INITIAL_SESSIONS: SessionSummaryItem[] = [
   {
+    id: 'session-yolo-real-01',
+    sourceId: 'sample.mp4',
+    mediaName: 'sample.mp4 (Quét AI YOLO11 Thật)',
+    duration: 49.7,
+    status: 'COMPLETED',
+    progress: 1.0,
+    synthetic: false,
+    createdAt: '2026-10-01 09:25:00',
+    zoneSetName: 'Khu vực Sảnh chính & Hành lang',
+    qualityBreakdown: {
+      validPct: 100,
+      partialPct: 0,
+      unknownPct: 0,
+      stalePct: 0,
+    },
+  },
+  {
     id: 'session-demo-01',
     sourceId: 'media-plaza-01',
-    mediaName: 'plaza_pedestrian_cross_1080p.mp4',
+    mediaName: 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
     duration: 64.5,
     status: 'COMPLETED',
     progress: 1.0,
@@ -98,10 +115,24 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('sessions');
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('session-demo-01');
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('session-yolo-real-01');
+  const [useRealAI, setUseRealAI] = useState<boolean>(true);
+  const [realDataset, setRealDataset] = useState<any>(null);
   const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
+
+  useEffect(() => {
+    fetch('/sample_real_observations.json')
+      .then((res) => {
+        if (res.ok) return res.json();
+        throw new Error('Not found');
+      })
+      .then((data) => {
+        setRealDataset(data);
+      })
+      .catch((err) => console.log('Loaded mock fallback:', err));
+  }, []);
 
   const handleUploadMedia = async (file: File): Promise<MediaCatalogItem> => {
     try {
@@ -187,58 +218,95 @@ const AppContent: React.FC = () => {
 
   const { currentTime } = usePlaybackStore();
 
-  const activeQuality: FrameQuality =
-    currentTime >= 40 && currentTime <= 55 ? 'PARTIAL' : 'VALID';
+  const isRealActive = Boolean(
+    useRealAI &&
+    realDataset &&
+    (selectedSessionId === 'session-yolo-real-01' || selectedSessionId === 'session-demo-01')
+  );
+
+  const currentFrameIdx = Math.min(
+    Math.max(0, Math.round(currentTime * (realDataset?.metadata?.fps || 25))),
+    (realDataset?.metadata?.totalFrames || 1242) - 1
+  );
+  const realFrameObs = isRealActive && realDataset?.frames ? realDataset.frames[currentFrameIdx] : null;
+
+  const activeQuality: FrameQuality = isRealActive
+    ? 'VALID'
+    : currentTime >= 40 && currentTime <= 55
+      ? 'PARTIAL'
+      : 'VALID';
 
   const baseCountNorth = Math.max(3, Math.round(14 + Math.sin(currentTime / 4) * 4));
 
-  const activeObservation: CrowdFrameObservation = {
-    source_id: 'media-plaza-01',
-    session_id: selectedSessionId,
-    model_profile_id: 'crowd_best_local_v2',
-    model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
-    frame_index: Math.round(currentTime * 25),
-    media_time_s: +currentTime.toFixed(2),
-    image_width: 1920,
-    image_height: 1080,
-    observation_valid: true,
-    registration_valid: false,
-    fully_observed_zones: ['zone-north', 'zone-south'],
-    confidence_semantics: 'RAW_MODEL_SCORE',
-    quality: activeQuality,
-    detections: [
-      { track_id: 101, x: 0.28, y: 0.42, confidence: 0.92, bbox_xyxy: [510, 390, 560, 480] },
-      { track_id: 102, x: 0.35, y: 0.48, confidence: 0.89, bbox_xyxy: [640, 450, 700, 560] },
-      { track_id: 103, x: 0.41, y: 0.38, confidence: 0.94, bbox_xyxy: [760, 360, 810, 440] },
-      { track_id: 104, x: 0.22, y: 0.52, confidence: 0.86, bbox_xyxy: [390, 490, 450, 600] },
-      { track_id: 105, x: 0.38, y: 0.58, confidence: 0.91, bbox_xyxy: [700, 550, 770, 680] },
-      { track_id: 106, x: 0.31, y: 0.33, confidence: 0.88, bbox_xyxy: [570, 320, 620, 400] },
-      { track_id: 107, x: 0.25, y: 0.40, confidence: 0.90, bbox_xyxy: [460, 380, 510, 470] },
-      { track_id: 108, x: 0.44, y: 0.45, confidence: 0.87, bbox_xyxy: [820, 430, 880, 530] },
-    ],
-  };
+  const activeObservation: CrowdFrameObservation = isRealActive && realFrameObs
+    ? {
+        source_id: 'sample.mp4',
+        session_id: selectedSessionId,
+        model_profile_id: 'yolo11n_person_detector',
+        model_profile_sha256: 'yolo11n_official_weights',
+        checkpoint_sha256: 'yolo11n_ultralytics_v840',
+        frame_index: realFrameObs.frame_index,
+        media_time_s: realFrameObs.media_time_s,
+        image_width: realDataset.metadata.width,
+        image_height: realDataset.metadata.height,
+        observation_valid: true,
+        registration_valid: false,
+        fully_observed_zones: ['zone-north', 'zone-south'],
+        confidence_semantics: 'RAW_MODEL_SCORE',
+        quality: 'VALID',
+        detections: realFrameObs.detections || [],
+      }
+    : {
+        source_id: 'media-plaza-01',
+        session_id: selectedSessionId,
+        model_profile_id: 'crowd_best_local_v2',
+        model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
+        frame_index: Math.round(currentTime * 25),
+        media_time_s: +currentTime.toFixed(2),
+        image_width: 1920,
+        image_height: 1080,
+        observation_valid: true,
+        registration_valid: false,
+        fully_observed_zones: ['zone-north', 'zone-south'],
+        confidence_semantics: 'RAW_MODEL_SCORE',
+        quality: activeQuality,
+        detections: [
+          { track_id: 101, x: 0.28, y: 0.42, confidence: 0.92, bbox_xyxy: [510, 390, 560, 480] },
+          { track_id: 102, x: 0.35, y: 0.48, confidence: 0.89, bbox_xyxy: [640, 450, 700, 560] },
+          { track_id: 103, x: 0.41, y: 0.38, confidence: 0.94, bbox_xyxy: [760, 360, 810, 440] },
+          { track_id: 104, x: 0.22, y: 0.52, confidence: 0.86, bbox_xyxy: [390, 490, 450, 600] },
+          { track_id: 105, x: 0.38, y: 0.58, confidence: 0.91, bbox_xyxy: [700, 550, 770, 680] },
+          { track_id: 106, x: 0.31, y: 0.33, confidence: 0.88, bbox_xyxy: [570, 320, 620, 400] },
+          { track_id: 107, x: 0.25, y: 0.40, confidence: 0.90, bbox_xyxy: [460, 380, 510, 470] },
+          { track_id: 108, x: 0.44, y: 0.45, confidence: 0.87, bbox_xyxy: [820, 430, 880, 530] },
+        ],
+      };
 
-  const activeReadings: ZoneReading[] = [
-    {
-      status: 'COUNTED',
-      count: baseCountNorth,
-      zoneId: 'zone-north',
-      zoneName: 'Khu vực Bắc (Quảng trường)',
-    },
-    {
-      status: 'COUNTED',
-      count: 0,
-      zoneId: 'zone-south',
-      zoneName: 'Khu vực Nam (Lối vào)',
-    },
-  ];
+  const activeReadings: ZoneReading[] = isRealActive && realFrameObs?.zone_readings
+    ? realFrameObs.zone_readings
+    : [
+        {
+          status: 'COUNTED',
+          count: baseCountNorth,
+          zoneId: 'zone-north',
+          zoneName: 'Khu vực Bắc (Quảng trường)',
+        },
+        {
+          status: 'COUNTED',
+          count: 0,
+          zoneId: 'zone-south',
+          zoneName: 'Khu vực Nam (Lối vào)',
+        },
+      ];
 
   const handleExportCsv = () => {
+    const countNorth = activeReadings[0]?.status === 'COUNTED' ? activeReadings[0].count : 0;
+    const countSouth = activeReadings[1]?.status === 'COUNTED' ? activeReadings[1].count : 0;
     const csvContent =
       'data:text/csv;charset=utf-8,media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n' +
-      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-north,Khu vực Bắc (Quảng trường),${baseCountNorth},${activeQuality}\n` +
-      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-south,Khu vực Nam (Lối vào),0,${activeQuality}\n`;
+      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-north,Khu vực Bắc (Quảng trường),${countNorth},${activeQuality}\n` +
+      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-south,Khu vực Nam (Lối vào),${countSouth},${activeQuality}\n`;
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
@@ -260,44 +328,61 @@ const AppContent: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const sampleReviewSession: SessionMetadata = {
-    sessionId: selectedSessionId,
-    sourceId: 'media-plaza-01',
-    mediaName: 'plaza_pedestrian_cross_1080p.mp4',
-    duration: 64.5,
-    imageWidth: 1920,
-    imageHeight: 1080,
-    synthetic: true,
-    modelProfileId: 'crowd_best_local_v2',
-    modelProfileSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-    checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
-    videoSrc: '/sample.mp4',
-  };
+  const sampleReviewSession: SessionMetadata = isRealActive
+    ? {
+        sessionId: selectedSessionId,
+        sourceId: 'sample.mp4',
+        mediaName: 'sample.mp4 (Quét AI YOLO11 Thật)',
+        duration: realDataset?.metadata?.duration || 49.7,
+        imageWidth: realDataset?.metadata?.width || 1920,
+        imageHeight: realDataset?.metadata?.height || 1080,
+        synthetic: false,
+        modelProfileId: 'yolo11n_person_detector',
+        modelProfileSha256: 'yolo11n_official_weights',
+        checkpointSha256: 'yolo11n_ultralytics_v840',
+        videoSrc: '/sample.mp4',
+        heatmapUrl: '/sample_real_heatmap.png',
+      }
+    : {
+        sessionId: selectedSessionId,
+        sourceId: 'media-plaza-01',
+        mediaName: 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
+        duration: 64.5,
+        imageWidth: 1920,
+        imageHeight: 1080,
+        synthetic: true,
+        modelProfileId: 'crowd_best_local_v2',
+        modelProfileSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+        checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
+        videoSrc: '/sample.mp4',
+      };
 
-  const sampleZones = [
-    {
-      zone_id: 'zone-north',
-      name: 'Khu vực Bắc (Quảng trường)',
-      color: '#0072B2',
-      vertices: [
-        [300, 200] as [number, number],
-        [900, 200] as [number, number],
-        [850, 700] as [number, number],
-        [250, 700] as [number, number],
-      ],
-    },
-    {
-      zone_id: 'zone-south',
-      name: 'Khu vực Nam (Lối vào)',
-      color: '#009E73',
-      vertices: [
-        [1000, 300] as [number, number],
-        [1600, 300] as [number, number],
-        [1550, 800] as [number, number],
-        [950, 800] as [number, number],
-      ],
-    },
-  ];
+  const sampleZones = isRealActive && realDataset?.zones
+    ? realDataset.zones
+    : [
+        {
+          zone_id: 'zone-north',
+          name: 'Khu vực Bắc (Quảng trường)',
+          color: '#0072B2',
+          vertices: [
+            [300, 200] as [number, number],
+            [900, 200] as [number, number],
+            [850, 700] as [number, number],
+            [250, 700] as [number, number],
+          ],
+        },
+        {
+          zone_id: 'zone-south',
+          name: 'Khu vực Nam (Lối vào)',
+          color: '#009E73',
+          vertices: [
+            [1000, 300] as [number, number],
+            [1600, 300] as [number, number],
+            [1550, 800] as [number, number],
+            [950, 800] as [number, number],
+          ],
+        },
+      ];
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -475,6 +560,8 @@ const AppContent: React.FC = () => {
               ]}
               onExportCsv={handleExportCsv}
               onExportJsonl={handleExportJsonl}
+              useRealAI={useRealAI}
+              onToggleRealAI={() => setUseRealAI((prev) => !prev)}
             />
           )}
 

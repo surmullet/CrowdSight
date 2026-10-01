@@ -58,6 +58,8 @@ interface ReviewWorkspaceProps {
   onSeek?: (time: number) => void;
   onExportCsv?: () => void;
   onExportJsonl?: () => void;
+  useRealAI?: boolean;
+  onToggleRealAI?: () => void;
   className?: string;
 }
 
@@ -74,6 +76,8 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   onSeek,
   onExportCsv,
   onExportJsonl,
+  useRealAI = false,
+  onToggleRealAI,
   className = '',
 }) => {
   const { currentTime, setCurrentTime } = usePlaybackStore();
@@ -132,8 +136,24 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
           </div>
         </div>
 
-        {/* Action buttons: Semantics modal, Export */}
+        {/* Action buttons: AI Toggle, Semantics modal, Export */}
         <div className="flex items-center gap-2">
+          {onToggleRealAI && (
+            <button
+              type="button"
+              onClick={onToggleRealAI}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-all shadow-sm cursor-pointer ${
+                useRealAI
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
+              }`}
+              title="Chuyển đổi giữa Chế độ AI Quét Thật và Dữ liệu Mẫu Giả Lập"
+            >
+              <span className="w-2 h-2 rounded-full animate-ping bg-emerald-400" />
+              <span className="font-semibold">{useRealAI ? '🤖 AI Quét Thật (YOLO11)' : '🧪 Mẫu Giả Lập (Mock)'}</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => setIsSemanticsOpen(true)}
