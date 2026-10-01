@@ -32,6 +32,26 @@ type AppView = 'sessions' | 'wizard' | 'progress' | 'review' | 'zones' | 'model'
 
 const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
+    id: 'media-150',
+    name: '150.mp4 (Video Vừa Tải Lên)',
+    duration: 57.44,
+    fps: 25,
+    width: 1920,
+    height: 1440,
+    codec: 'h264',
+    browserPlayable: true,
+  },
+  {
+    id: 'media-sample-01',
+    name: 'sample.mp4 (Video Phòng Giám Sát)',
+    duration: 49.68,
+    fps: 25,
+    width: 1920,
+    height: 1080,
+    codec: 'h264',
+    browserPlayable: true,
+  },
+  {
     id: 'media-plaza-01',
     name: 'plaza_pedestrian_cross_1080p.mp4',
     duration: 64.5,
@@ -56,7 +76,7 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
 const MOCK_ZONE_SETS: ZoneSetSummary[] = [
   {
     id: 'zs-default',
-    name: 'Khu vực quảng trường trung tâm',
+    name: 'Khu vực Giám sát A & B (150.mp4)',
     version: 1,
     zoneCount: 2,
   },
@@ -64,24 +84,43 @@ const MOCK_ZONE_SETS: ZoneSetSummary[] = [
     id: 'zs-gates',
     name: 'Cổng đón trả khách',
     version: 2,
-    zoneCount: 3,
+    zoneCount: 2,
   },
 ];
 
 const MOCK_MODEL_PROFILE: ModelProfileInfo = {
-  profileId: 'crowd_best_local_v2',
-  profileSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-  checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
+  profileId: 'yolo11n_person_detector',
+  profileSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
+  checkpointSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
   applicabilityStatus: 'EXPERIMENTAL_NO_APPROVAL',
   operationalAlertsAllowed: false,
 };
 
+const DEFAULT_SESSION: SessionSummaryItem = {
+  id: 'session-150-real',
+  sourceId: '150.mp4',
+  mediaName: '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
+  duration: 57.44,
+  status: 'COMPLETED',
+  progress: 1.0,
+  synthetic: false,
+  createdAt: '2026-10-01 09:55:00',
+  zoneSetName: 'Khu vực Giám sát A & B',
+  qualityBreakdown: {
+    validPct: 100,
+    partialPct: 0,
+    unknownPct: 0,
+    stalePct: 0,
+  },
+};
+
 const INITIAL_SESSIONS: SessionSummaryItem[] = [
+  DEFAULT_SESSION,
   {
     id: 'session-yolo-real-01',
     sourceId: 'sample.mp4',
     mediaName: 'sample.mp4 (Quét AI YOLO11 Thật)',
-    duration: 49.7,
+    duration: 49.68,
     status: 'COMPLETED',
     progress: 1.0,
     synthetic: false,
@@ -115,23 +154,28 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [
 
 const AppContent: React.FC = () => {
   const [currentView, setCurrentView] = useState<AppView>('sessions');
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('session-yolo-real-01');
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('session-150-real');
   const [useRealAI, setUseRealAI] = useState<boolean>(true);
-  const [realDataset, setRealDataset] = useState<any>(null);
+  const [dataset150, setDataset150] = useState<any>(null);
+  const [datasetSample, setDatasetSample] = useState<any>(null);
   const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
 
   useEffect(() => {
-    fetch('/sample_real_observations.json')
-      .then((res) => {
-        if (res.ok) return res.json();
-        throw new Error('Not found');
-      })
+    fetch('/media_150_observations.json')
+      .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        setRealDataset(data);
+        if (data) setDataset150(data);
       })
-      .catch((err) => console.log('Loaded mock fallback:', err));
+      .catch((err) => console.log('150 observations error:', err));
+
+    fetch('/sample_real_observations.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setDatasetSample(data);
+      })
+      .catch((err) => console.log('sample observations error:', err));
   }, []);
 
   const handleUploadMedia = async (file: File): Promise<MediaCatalogItem> => {
@@ -196,19 +240,31 @@ const AppContent: React.FC = () => {
     useSynthetic: boolean;
   }) => {
     const newId = `session-${Date.now().toString(36)}`;
-    const media = MOCK_MEDIA_CATALOG.find((m) => m.id === params.mediaId);
+    const media = mediaCatalog.find((m) => m.id === params.mediaId);
     const zoneSet = MOCK_ZONE_SETS.find((z) => z.id === params.zoneSetId);
+
+    const is150Media = (media?.name || '').includes('150') || params.mediaId.includes('150');
+    const isSampleMedia = (media?.name || '').includes('sample') || params.mediaId.includes('sample');
+
+    const resolvedName = media?.name ?? (is150Media ? '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : isSampleMedia ? 'sample.mp4' : 'video.mp4');
+    const resolvedDuration = media?.duration ?? (is150Media ? 57.44 : isSampleMedia ? 49.68 : 60);
 
     const newSession: SessionSummaryItem = {
       id: newId,
-      sourceId: params.mediaId,
-      mediaName: media?.name ?? 'unknown.mp4',
-      duration: media?.duration ?? 60,
+      sourceId: media?.id ?? params.mediaId,
+      mediaName: resolvedName,
+      duration: resolvedDuration,
       status: 'RUNNING',
       progress: 0.1,
       synthetic: params.useSynthetic,
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      zoneSetName: zoneSet?.name,
+      zoneSetName: zoneSet?.name ?? (is150Media ? 'Khu vực Giám sát A & B' : 'Khu vực giám sát'),
+      qualityBreakdown: {
+        validPct: 100,
+        partialPct: 0,
+        unknownPct: 0,
+        stalePct: 0,
+      },
     };
 
     setSessions((prev) => [newSession, ...prev]);
@@ -218,19 +274,47 @@ const AppContent: React.FC = () => {
 
   const { currentTime } = usePlaybackStore();
 
-  const isRealActive = Boolean(
-    useRealAI &&
-    realDataset &&
-    (selectedSessionId === 'session-yolo-real-01' || selectedSessionId === 'session-demo-01')
+  const currentSession: SessionSummaryItem =
+    sessions.find((s) => s.id === selectedSessionId) ?? sessions[0] ?? DEFAULT_SESSION;
+
+  const is150 = Boolean(
+    currentSession &&
+      (currentSession.id === 'session-150-real' ||
+        currentSession.sourceId === '150.mp4' ||
+        currentSession.sourceId === 'media-150' ||
+        currentSession.mediaName.toLowerCase().includes('150'))
   );
+
+  const isSample = Boolean(
+    currentSession &&
+      (currentSession.id === 'session-yolo-real-01' ||
+        currentSession.sourceId === 'sample.mp4' ||
+        currentSession.sourceId === 'media-sample-01' ||
+        currentSession.mediaName.toLowerCase().includes('sample'))
+  );
+
+  const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample);
+
+  // Pick dataset based on session
+  const activeDataset = is150
+    ? dataset150
+    : isSample
+      ? datasetSample
+      : useRealAI
+        ? (dataset150 || datasetSample)
+        : null;
+
+  const datasetFps = activeDataset?.metadata?.fps || 25;
+  const datasetTotalFrames = activeDataset?.metadata?.totalFrames || (is150 ? 1436 : 1242);
 
   const currentFrameIdx = Math.min(
-    Math.max(0, Math.round(currentTime * (realDataset?.metadata?.fps || 25))),
-    (realDataset?.metadata?.totalFrames || 1242) - 1
+    Math.max(0, Math.round(currentTime * datasetFps)),
+    datasetTotalFrames - 1
   );
-  const realFrameObs = isRealActive && realDataset?.frames ? realDataset.frames[currentFrameIdx] : null;
 
-  const activeQuality: FrameQuality = isRealActive
+  const realFrameObs = activeDataset?.frames ? activeDataset.frames[currentFrameIdx] : null;
+
+  const activeQuality: FrameQuality = (!isSynthetic && realFrameObs)
     ? 'VALID'
     : currentTime >= 40 && currentTime <= 55
       ? 'PARTIAL'
@@ -238,27 +322,43 @@ const AppContent: React.FC = () => {
 
   const baseCountNorth = Math.max(3, Math.round(14 + Math.sin(currentTime / 4) * 4));
 
-  const activeObservation: CrowdFrameObservation = isRealActive && realFrameObs
+  // Determine videoSrc
+  let videoSrc = '/150.mp4';
+  if (is150) {
+    videoSrc = '/150.mp4';
+  } else if (isSample) {
+    videoSrc = '/sample.mp4';
+  } else if (currentSession?.sourceId?.startsWith('media-upload-')) {
+    videoSrc = currentSession.mediaName.includes('150')
+      ? '/150.mp4'
+      : `/api/v1/media/${currentSession.sourceId}/stream`;
+  } else if (isSynthetic) {
+    videoSrc = '/sample.mp4';
+  }
+
+  const activeObservation: CrowdFrameObservation = (!isSynthetic && realFrameObs)
     ? {
-        source_id: 'sample.mp4',
-        session_id: selectedSessionId,
+        source_id: is150 ? '150.mp4' : 'sample.mp4',
+        session_id: currentSession?.id || selectedSessionId,
         model_profile_id: 'yolo11n_person_detector',
-        model_profile_sha256: 'yolo11n_official_weights',
-        checkpoint_sha256: 'yolo11n_ultralytics_v840',
-        frame_index: realFrameObs.frame_index,
-        media_time_s: realFrameObs.media_time_s,
-        image_width: realDataset.metadata.width,
-        image_height: realDataset.metadata.height,
+        model_profile_sha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
+        checkpoint_sha256: 'yolo11n_official_weights',
+        frame_index: realFrameObs.frame_index ?? currentFrameIdx,
+        media_time_s: realFrameObs.media_time_s ?? +(currentFrameIdx / datasetFps).toFixed(2),
+        image_width: activeDataset?.metadata?.width || (is150 ? 1920 : 1920),
+        image_height: activeDataset?.metadata?.height || (is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
-        fully_observed_zones: ['zone-north', 'zone-south'],
+        fully_observed_zones: activeDataset?.zones
+          ? activeDataset.zones.map((z: any) => z.zone_id)
+          : ['zone-a', 'zone-b'],
         confidence_semantics: 'RAW_MODEL_SCORE',
         quality: 'VALID',
         detections: realFrameObs.detections || [],
       }
     : {
         source_id: 'media-plaza-01',
-        session_id: selectedSessionId,
+        session_id: currentSession?.id || selectedSessionId,
         model_profile_id: 'crowd_best_local_v2',
         model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
         checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
@@ -283,7 +383,7 @@ const AppContent: React.FC = () => {
         ],
       };
 
-  const activeReadings: ZoneReading[] = isRealActive && realFrameObs?.zone_readings
+  const activeReadings: ZoneReading[] = (!isSynthetic && realFrameObs?.zone_readings)
     ? realFrameObs.zone_readings
     : [
         {
@@ -301,16 +401,15 @@ const AppContent: React.FC = () => {
       ];
 
   const handleExportCsv = () => {
-    const countNorth = activeReadings[0]?.status === 'COUNTED' ? activeReadings[0].count : 0;
-    const countSouth = activeReadings[1]?.status === 'COUNTED' ? activeReadings[1].count : 0;
-    const csvContent =
-      'data:text/csv;charset=utf-8,media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n' +
-      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-north,Khu vực Bắc (Quảng trường),${countNorth},${activeQuality}\n` +
-      `${currentTime.toFixed(2)},${Math.round(currentTime * 25)},zone-south,Khu vực Nam (Lối vào),${countSouth},${activeQuality}\n`;
-    const encodedUri = encodeURI(csvContent);
+    let rows = 'media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n';
+    activeReadings.forEach((r) => {
+      const count = r.status === 'COUNTED' ? r.count : 0;
+      rows += `${currentTime.toFixed(2)},${currentFrameIdx},${r.zoneId},${r.zoneName},${count},${activeQuality}\n`;
+    });
+    const encodedUri = encodeURI('data:text/csv;charset=utf-8,' + rows);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `crowdsight_${selectedSessionId}.csv`);
+    link.setAttribute('download', `crowdsight_${currentSession.id}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -322,32 +421,34 @@ const AppContent: React.FC = () => {
       encodeURIComponent(JSON.stringify(activeObservation) + '\n');
     const link = document.createElement('a');
     link.setAttribute('href', jsonlContent);
-    link.setAttribute('download', `crowdsight_${selectedSessionId}_v1.jsonl`);
+    link.setAttribute('download', `crowdsight_${currentSession.id}_v1.jsonl`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  const sampleReviewSession: SessionMetadata = isRealActive
+  const sampleReviewSession: SessionMetadata = (!isSynthetic && activeDataset)
     ? {
-        sessionId: selectedSessionId,
-        sourceId: 'sample.mp4',
-        mediaName: 'sample.mp4 (Quét AI YOLO11 Thật)',
-        duration: realDataset?.metadata?.duration || 49.7,
-        imageWidth: realDataset?.metadata?.width || 1920,
-        imageHeight: realDataset?.metadata?.height || 1080,
+        sessionId: currentSession.id,
+        sourceId: currentSession.sourceId,
+        mediaName: currentSession.mediaName,
+        duration: activeDataset?.metadata?.duration || currentSession.duration || 57.44,
+        imageWidth: activeDataset?.metadata?.width || (is150 ? 1920 : 1920),
+        imageHeight: activeDataset?.metadata?.height || (is150 ? 1440 : 1080),
         synthetic: false,
         modelProfileId: 'yolo11n_person_detector',
-        modelProfileSha256: 'yolo11n_official_weights',
-        checkpointSha256: 'yolo11n_ultralytics_v840',
-        videoSrc: '/sample.mp4',
-        heatmapUrl: '/sample_real_heatmap.png',
+        modelProfileSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
+        checkpointSha256: 'yolo11n_official_weights',
+        videoSrc: videoSrc,
+        heatmapUrl: is150 ? '/media_150_heatmap.png' : '/sample_real_heatmap.png',
       }
     : {
-        sessionId: selectedSessionId,
+        sessionId: currentSession.id,
         sourceId: 'media-plaza-01',
-        mediaName: 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
-        duration: 64.5,
+        mediaName: currentSession.mediaName.includes('plaza')
+          ? currentSession.mediaName
+          : 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
+        duration: currentSession.duration || 64.5,
         imageWidth: 1920,
         imageHeight: 1080,
         synthetic: true,
@@ -357,8 +458,8 @@ const AppContent: React.FC = () => {
         videoSrc: '/sample.mp4',
       };
 
-  const sampleZones = isRealActive && realDataset?.zones
-    ? realDataset.zones
+  const sampleZones = (!isSynthetic && activeDataset?.zones)
+    ? activeDataset.zones
     : [
         {
           zone_id: 'zone-north',
@@ -519,8 +620,35 @@ const AppContent: React.FC = () => {
           {currentView === 'progress' && (
             <JobProgressView
               sessionId={selectedSessionId}
-              onComplete={() => setCurrentView('review')}
-              onOpenPartialResults={() => setCurrentView('review')}
+              initialData={{
+                sessionId: selectedSessionId,
+                mediaName: currentSession?.mediaName || '150.mp4',
+                status: currentSession?.status || 'RUNNING',
+                progress: currentSession?.progress || 0.1,
+                currentFrame: Math.round((currentSession?.progress || 0.1) * (currentSession?.duration || 57) * 25),
+                totalFrames: Math.round((currentSession?.duration || 57) * 25),
+                fps: 25,
+                etaSeconds: 2,
+                qualityCounts: {
+                  valid: 1400,
+                  partial: 0,
+                  unknown: 0,
+                  stale: 0,
+                },
+                synthetic: currentSession?.synthetic,
+              }}
+              onComplete={() => {
+                setSessions((prev) =>
+                  prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
+                );
+                setCurrentView('review');
+              }}
+              onOpenPartialResults={() => {
+                setSessions((prev) =>
+                  prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
+                );
+                setCurrentView('review');
+              }}
               onBackToLibrary={() => setCurrentView('sessions')}
             />
           )}
@@ -534,30 +662,67 @@ const AppContent: React.FC = () => {
               qualityIntervals={[
                 { startTime: 0, endTime: 40, quality: 'VALID' },
                 { startTime: 40, endTime: 55, quality: 'PARTIAL' },
-                { startTime: 55, endTime: 64.5, quality: 'VALID' },
+                { startTime: 55, endTime: sampleReviewSession.duration, quality: 'VALID' },
               ]}
-              zoneTrends={[
-                {
-                  zoneId: 'zone-north',
-                  name: 'Khu vực Bắc',
-                  color: '#0072B2',
-                  points: [
-                    { time: 0, count: 5 },
-                    { time: 10, count: 12 },
-                    { time: 20, count: 18 },
-                    { time: 30, count: 14 },
-                    { time: 40, count: null },
-                    { time: 50, count: null },
-                    { time: 60, count: 11 },
-                  ],
-                },
-              ]}
-              peaks={[
-                { time: 20, count: 18, zoneId: 'zone-north', label: 'Đỉnh lúc 00:20' },
-              ]}
-              initialNotes={[
-                { id: 'n1', time: 10, text: 'Bắt đầu có nhóm người di chuyển từ cổng vào.' },
-              ]}
+              zoneTrends={
+                is150
+                  ? [
+                      {
+                        zoneId: 'zone-a',
+                        name: 'Khu vực Giám sát A (Bên trái)',
+                        color: '#0072B2',
+                        points: [
+                          { time: 0, count: 0 },
+                          { time: 10, count: 1 },
+                          { time: 20, count: 1 },
+                          { time: 30, count: 1 },
+                          { time: 40, count: 1 },
+                          { time: 50, count: 1 },
+                          { time: 57, count: 1 },
+                        ],
+                      },
+                      {
+                        zoneId: 'zone-b',
+                        name: 'Khu vực Giám sát B (Bên phải)',
+                        color: '#009E73',
+                        points: [
+                          { time: 0, count: 0 },
+                          { time: 10, count: 0 },
+                          { time: 20, count: 0 },
+                          { time: 30, count: 0 },
+                          { time: 40, count: 0 },
+                          { time: 50, count: 0 },
+                          { time: 57, count: 0 },
+                        ],
+                      },
+                    ]
+                  : [
+                      {
+                        zoneId: 'zone-north',
+                        name: 'Khu vực Bắc (Quảng trường)',
+                        color: '#0072B2',
+                        points: [
+                          { time: 0, count: 5 },
+                          { time: 10, count: 12 },
+                          { time: 20, count: 18 },
+                          { time: 30, count: 14 },
+                          { time: 40, count: null },
+                          { time: 50, count: null },
+                          { time: 60, count: 11 },
+                        ],
+                      },
+                    ]
+              }
+              peaks={
+                is150
+                  ? [{ time: 15, count: 1, zoneId: 'zone-a', label: '1 người trong Khu vực A' }]
+                  : [{ time: 20, count: 18, zoneId: 'zone-north', label: 'Đỉnh lúc 00:20' }]
+              }
+              initialNotes={
+                is150
+                  ? [{ id: 'n1', time: 5, text: 'Phát hiện đối tượng di chuyển trong khu vực giám sát A.' }]
+                  : [{ id: 'n1', time: 10, text: 'Bắt đầu có nhóm người di chuyển từ cổng vào.' }]
+              }
               onExportCsv={handleExportCsv}
               onExportJsonl={handleExportJsonl}
               useRealAI={useRealAI}

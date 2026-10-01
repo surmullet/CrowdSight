@@ -1,0 +1,14 @@
+profile_id: yolo11n_local
+task: person_detection
+model_family: yolo11n
+checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
+checkpoint_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+source_artifact: yolo11n.pt
+class_mapping:
+  person: 0
+preprocessing:
+  color_order: BGR
+  image_size: 1280
+inference:
+  confidence: 0.25
+  device: auto
