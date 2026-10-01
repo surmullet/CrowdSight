@@ -25,6 +25,7 @@ export interface MediaCatalogItem {
   height: number;
   codec: string;
   browserPlayable: boolean;
+  videoSrc?: string;
 }
 
 export interface ZoneSetSummary {
@@ -46,7 +47,7 @@ interface NewSessionWizardProps {
   mediaCatalog: MediaCatalogItem[];
   zoneSets: ZoneSetSummary[];
   modelProfile: ModelProfileInfo;
-  onCreateZoneSet?: () => void;
+  onCreateZoneSet?: (selectedMediaId?: string) => void;
   onUploadMedia?: (file: File) => Promise<MediaCatalogItem>;
   onSubmit: (params: {
     mediaId: string;
@@ -349,8 +350,8 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
               {onCreateZoneSet && (
                 <button
                   type="button"
-                  onClick={onCreateZoneSet}
-                  className="px-3 py-1.5 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded text-xs text-brand-gold transition-colors"
+                  onClick={() => onCreateZoneSet(selectedMediaId)}
+                  className="px-3 py-1.5 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded text-xs text-brand-gold transition-colors cursor-pointer"
                 >
                   + Vẽ tập vùng mới
                 </button>

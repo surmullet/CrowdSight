@@ -26,6 +26,7 @@ export interface SessionSummaryItem {
   synthetic: boolean;
   createdAt: string;
   zoneSetName?: string;
+  videoSrc?: string;
   qualityBreakdown?: {
     validPct: number;
     partialPct: number;

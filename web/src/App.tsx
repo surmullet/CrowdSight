@@ -47,6 +47,17 @@ function isPointInPolygon(point: [number, number], vs: [number, number][]): bool
 
 const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
+    id: '5cc6461b-1cb0-4700-8305-b01c78780785',
+    name: 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
+    duration: 25.12,
+    fps: 25,
+    width: 1280,
+    height: 720,
+    codec: 'h264',
+    browserPlayable: true,
+    videoSrc: '/crowd6.mp4',
+  },
+  {
     id: 'media-150',
     name: '150.mp4 (Video Vừa Tải Lên)',
     duration: 57.44,
@@ -55,6 +66,7 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
     height: 1440,
     codec: 'h264',
     browserPlayable: true,
+    videoSrc: '/150.mp4',
   },
   {
     id: 'media-sample-01',
@@ -130,6 +142,24 @@ const DEFAULT_SESSION: SessionSummaryItem = {
 };
 
 const INITIAL_SESSIONS: SessionSummaryItem[] = [
+  {
+    id: 'session-crowd6-real',
+    sourceId: '5cc6461b-1cb0-4700-8305-b01c78780785',
+    mediaName: 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
+    duration: 25.12,
+    status: 'COMPLETED',
+    progress: 1.0,
+    synthetic: false,
+    createdAt: '2026-10-01 15:55:00',
+    zoneSetName: 'Khu vực Giám sát A & B (crowd6)',
+    videoSrc: '/crowd6.mp4',
+    qualityBreakdown: {
+      validPct: 100,
+      partialPct: 0,
+      unknownPct: 0,
+      stalePct: 0,
+    },
+  },
   DEFAULT_SESSION,
   {
     id: 'session-yolo-real-01',
@@ -168,14 +198,20 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [
 ];
 
 const AppContent: React.FC = () => {
-  const [currentView, setCurrentView] = useState<AppView>('sessions');
-  const [selectedSessionId, setSelectedSessionId] = useState<string>('session-150-real');
+  const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+  const initialView = (urlParams?.get('view') as AppView) || 'sessions';
+  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || 'session-crowd6-real';
+
+  const [currentView, setCurrentView] = useState<AppView>(initialView);
+  const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSession);
   const [useRealAI, setUseRealAI] = useState<boolean>(true);
   const [dataset150, setDataset150] = useState<any>(null);
   const [datasetSample, setDatasetSample] = useState<any>(null);
+  const [datasetCrowd6, setDatasetCrowd6] = useState<any>(null);
   const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
+  const [activeMediaForZoneEditor, setActiveMediaForZoneEditor] = useState<MediaCatalogItem | null>(null);
 
   useEffect(() => {
     fetch('/media_150_observations.json')
@@ -191,9 +227,17 @@ const AppContent: React.FC = () => {
         if (data) setDatasetSample(data);
       })
       .catch((err) => console.log('sample observations error:', err));
+
+    fetch('/media_crowd6_observations.json')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) setDatasetCrowd6(data);
+      })
+      .catch((err) => console.log('crowd6 observations error:', err));
   }, []);
 
   const handleUploadMedia = async (file: File): Promise<MediaCatalogItem> => {
+    const localBlobUrl = URL.createObjectURL(file);
     try {
       const res = await fetch(`/api/v1/media/upload?filename=${encodeURIComponent(file.name)}`, {
         method: 'POST',
@@ -210,6 +254,7 @@ const AppContent: React.FC = () => {
           height: data.height,
           codec: data.codec,
           browserPlayable: data.browser_playable,
+          videoSrc: localBlobUrl,
         };
         setMediaCatalog((prev) => [mediaItem, ...prev]);
         return mediaItem;
@@ -227,6 +272,7 @@ const AppContent: React.FC = () => {
       height: 1080,
       codec: 'h264',
       browserPlayable: true,
+      videoSrc: localBlobUrl,
     };
     setMediaCatalog((prev) => [fallbackItem, ...prev]);
     return fallbackItem;
@@ -258,11 +304,25 @@ const AppContent: React.FC = () => {
     const media = mediaCatalog.find((m) => m.id === params.mediaId);
     const zoneSet = MOCK_ZONE_SETS.find((z) => z.id === params.zoneSetId);
 
-    const is150Media = (media?.name || '').includes('150') || params.mediaId.includes('150');
-    const isSampleMedia = (media?.name || '').includes('sample') || params.mediaId.includes('sample');
+    const mediaNameLower = (media?.name || '').toLowerCase();
+    const is150Media = mediaNameLower.includes('150') || params.mediaId.includes('150');
+    const isCrowd6Media = mediaNameLower.includes('crowd6') || params.mediaId.includes('crowd6');
+    const isSampleMedia = mediaNameLower.includes('sample') || params.mediaId.includes('sample');
 
-    const resolvedName = media?.name ?? (is150Media ? '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : isSampleMedia ? 'sample.mp4' : 'video.mp4');
-    const resolvedDuration = media?.duration ?? (is150Media ? 57.44 : isSampleMedia ? 49.68 : 60);
+    const resolvedName = media?.name ?? (isCrowd6Media ? 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : is150Media ? '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : isSampleMedia ? 'sample.mp4' : 'video.mp4');
+    const resolvedDuration = media?.duration ?? (isCrowd6Media ? 25.12 : is150Media ? 57.44 : isSampleMedia ? 49.68 : 60);
+
+    const resolvedVideoSrc = media?.videoSrc || (
+      isCrowd6Media
+        ? '/crowd6.mp4'
+        : is150Media
+          ? '/150.mp4'
+          : isSampleMedia
+            ? '/sample.mp4'
+            : media?.id
+              ? `/api/v1/media/${media.id}/stream`
+              : '/crowd6.mp4'
+    );
 
     const newSession: SessionSummaryItem = {
       id: newId,
@@ -273,7 +333,8 @@ const AppContent: React.FC = () => {
       progress: 0.1,
       synthetic: params.useSynthetic,
       createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      zoneSetName: zoneSet?.name ?? (is150Media ? 'Khu vực Giám sát A & B' : 'Khu vực giám sát'),
+      zoneSetName: zoneSet?.name ?? (isCrowd6Media ? 'Khu vực Giám sát A & B (crowd6)' : is150Media ? 'Khu vực Giám sát A & B' : 'Khu vực giám sát'),
+      videoSrc: resolvedVideoSrc,
       qualityBreakdown: {
         validPct: 100,
         partialPct: 0,
@@ -292,35 +353,28 @@ const AppContent: React.FC = () => {
   const currentSession: SessionSummaryItem =
     sessions.find((s) => s.id === selectedSessionId) ?? sessions[0] ?? DEFAULT_SESSION;
 
-  const is150 = Boolean(
-    currentSession &&
-      (currentSession.id === 'session-150-real' ||
-        currentSession.sourceId === '150.mp4' ||
-        currentSession.sourceId === 'media-150' ||
-        currentSession.mediaName.toLowerCase().includes('150'))
-  );
+  const sessionNameLower = (currentSession?.mediaName || '').toLowerCase();
+  const sessionSourceLower = (currentSession?.sourceId || '').toLowerCase();
 
-  const isSample = Boolean(
-    currentSession &&
-      (currentSession.id === 'session-yolo-real-01' ||
-        currentSession.sourceId === 'sample.mp4' ||
-        currentSession.sourceId === 'media-sample-01' ||
-        currentSession.mediaName.toLowerCase().includes('sample'))
-  );
+  const isCrowd6 = sessionNameLower.includes('crowd6') || sessionSourceLower.includes('crowd6');
+  const is150 = !isCrowd6 && (sessionNameLower.includes('150') || sessionSourceLower.includes('150') || currentSession?.id === 'session-150-real');
+  const isSample = !isCrowd6 && !is150 && (sessionNameLower.includes('sample') || sessionSourceLower.includes('sample') || currentSession?.id === 'session-yolo-real-01');
 
-  const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample);
+  const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample && !isCrowd6);
 
   // Pick dataset based on session
-  const activeDataset = is150
-    ? dataset150
-    : isSample
-      ? datasetSample
-      : useRealAI
-        ? (dataset150 || datasetSample)
-        : null;
+  const activeDataset = isCrowd6
+    ? datasetCrowd6
+    : is150
+      ? dataset150
+      : isSample
+        ? datasetSample
+        : useRealAI
+          ? (datasetCrowd6 || dataset150 || datasetSample)
+          : null;
 
   const datasetFps = activeDataset?.metadata?.fps || 25;
-  const datasetTotalFrames = activeDataset?.metadata?.totalFrames || (is150 ? 1436 : 1242);
+  const datasetTotalFrames = activeDataset?.metadata?.totalFrames || (isCrowd6 ? 628 : is150 ? 1436 : 1242);
 
   const currentFrameIdx = Math.min(
     Math.max(0, Math.round(currentTime * datasetFps)),
@@ -337,31 +391,37 @@ const AppContent: React.FC = () => {
 
   const baseCountNorth = Math.max(3, Math.round(14 + Math.sin(currentTime / 4) * 4));
 
-  // Determine videoSrc
-  let videoSrc = '/150.mp4';
-  if (is150) {
-    videoSrc = '/150.mp4';
-  } else if (isSample) {
-    videoSrc = '/sample.mp4';
-  } else if (currentSession?.sourceId?.startsWith('media-upload-')) {
-    videoSrc = currentSession.mediaName.includes('150')
-      ? '/150.mp4'
-      : `/api/v1/media/${currentSession.sourceId}/stream`;
-  } else if (isSynthetic) {
-    videoSrc = '/sample.mp4';
+  // Determine videoSrc accurately
+  const matchedMedia = mediaCatalog.find(
+    (m) => m.id === currentSession.sourceId || currentSession.mediaName.includes(m.name)
+  );
+
+  let videoSrc = currentSession.videoSrc || matchedMedia?.videoSrc;
+  if (!videoSrc) {
+    if (isCrowd6) {
+      videoSrc = '/crowd6.mp4';
+    } else if (is150) {
+      videoSrc = '/150.mp4';
+    } else if (isSample) {
+      videoSrc = '/sample.mp4';
+    } else if (currentSession.sourceId && !currentSession.sourceId.startsWith('session-')) {
+      videoSrc = `/api/v1/media/${currentSession.sourceId}/stream`;
+    } else {
+      videoSrc = '/crowd6.mp4';
+    }
   }
 
   const activeObservation: CrowdFrameObservation = (!isSynthetic && realFrameObs)
     ? {
-        source_id: is150 ? '150.mp4' : 'sample.mp4',
+        source_id: isCrowd6 ? 'crowd6.mp4' : is150 ? '150.mp4' : 'sample.mp4',
         session_id: currentSession?.id || selectedSessionId,
         model_profile_id: 'yolo11n_person_detector',
         model_profile_sha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
         checkpoint_sha256: 'yolo11n_official_weights',
         frame_index: realFrameObs.frame_index ?? currentFrameIdx,
         media_time_s: realFrameObs.media_time_s ?? +(currentFrameIdx / datasetFps).toFixed(2),
-        image_width: activeDataset?.metadata?.width || (is150 ? 1920 : 1920),
-        image_height: activeDataset?.metadata?.height || (is150 ? 1440 : 1080),
+        image_width: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
+        image_height: activeDataset?.metadata?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
         fully_observed_zones: activeDataset?.zones
@@ -372,15 +432,15 @@ const AppContent: React.FC = () => {
         detections: realFrameObs.detections || [],
       }
     : {
-        source_id: 'media-plaza-01',
+        source_id: currentSession?.sourceId || (isCrowd6 ? 'crowd6.mp4' : is150 ? '150.mp4' : 'media-plaza-01'),
         session_id: currentSession?.id || selectedSessionId,
         model_profile_id: 'crowd_best_local_v2',
         model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
         checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
         frame_index: Math.round(currentTime * 25),
         media_time_s: +currentTime.toFixed(2),
-        image_width: 1920,
-        image_height: 1080,
+        image_width: matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
+        image_height: matchedMedia?.height || (isCrowd6 ? 720 : 1080),
         observation_valid: true,
         registration_valid: false,
         fully_observed_zones: ['zone-north', 'zone-south'],
@@ -401,8 +461,8 @@ const AppContent: React.FC = () => {
   const activeReadings: ZoneReading[] = (!isSynthetic && activeDataset?.zones && realFrameObs)
     ? activeDataset.zones.map((z: any) => {
         const count = (realFrameObs.detections || []).filter((d: any) => {
-          const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || 1920);
-          const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || 1440);
+          const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || (isCrowd6 ? 1280 : 1920));
+          const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || (isCrowd6 ? 720 : 1440));
           return isPointInPolygon([px, py], z.vertices);
         }).length;
         return {
@@ -461,58 +521,71 @@ const AppContent: React.FC = () => {
         sessionId: currentSession.id,
         sourceId: currentSession.sourceId,
         mediaName: currentSession.mediaName,
-        duration: activeDataset?.metadata?.duration || currentSession.duration || 57.44,
-        imageWidth: activeDataset?.metadata?.width || (is150 ? 1920 : 1920),
-        imageHeight: activeDataset?.metadata?.height || (is150 ? 1440 : 1080),
+        duration: activeDataset?.metadata?.duration || currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 49.68),
+        imageWidth: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
+        imageHeight: activeDataset?.metadata?.height || (isCrowd6 ? 720 : (is150 ? 1440 : 1080)),
         synthetic: false,
         modelProfileId: 'yolo11n_person_detector',
         modelProfileSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
         checkpointSha256: 'yolo11n_official_weights',
         videoSrc: videoSrc,
-        heatmapUrl: is150 ? '/media_150_heatmap.png' : '/sample_real_heatmap.png',
+        heatmapUrl: isCrowd6 ? null : (is150 ? '/media_150_heatmap.png' : '/sample_real_heatmap.png'),
       }
     : {
         sessionId: currentSession.id,
-        sourceId: 'media-plaza-01',
-        mediaName: currentSession.mediaName.includes('plaza')
-          ? currentSession.mediaName
-          : 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
-        duration: currentSession.duration || 64.5,
-        imageWidth: 1920,
-        imageHeight: 1080,
-        synthetic: true,
+        sourceId: currentSession.sourceId || 'media-plaza-01',
+        mediaName: currentSession.mediaName,
+        duration: currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 64.5),
+        imageWidth: matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
+        imageHeight: matchedMedia?.height || (isCrowd6 ? 720 : 1080),
+        synthetic: Boolean(currentSession.synthetic),
         modelProfileId: 'crowd_best_local_v2',
         modelProfileSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
         checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
-        videoSrc: '/sample.mp4',
+        videoSrc: videoSrc,
       };
 
   const sampleZones = (!isSynthetic && activeDataset?.zones)
     ? activeDataset.zones
-    : [
-        {
-          zone_id: 'zone-north',
-          name: 'Khu vực Bắc (Quảng trường)',
-          color: '#0072B2',
-          vertices: [
-            [300, 200] as [number, number],
-            [900, 200] as [number, number],
-            [850, 700] as [number, number],
-            [250, 700] as [number, number],
-          ],
-        },
-        {
-          zone_id: 'zone-south',
-          name: 'Khu vực Nam (Lối vào)',
-          color: '#009E73',
-          vertices: [
-            [1000, 300] as [number, number],
-            [1600, 300] as [number, number],
-            [1550, 800] as [number, number],
-            [950, 800] as [number, number],
-          ],
-        },
-      ];
+    : isCrowd6
+      ? [
+          {
+            zone_id: 'zone-a',
+            name: 'Khu vực A (crowd6)',
+            color: '#0072B2',
+            vertices: [[100, 150], [600, 150], [550, 680], [80, 680]],
+          },
+          {
+            zone_id: 'zone-b',
+            name: 'Khu vực B (crowd6)',
+            color: '#009E73',
+            vertices: [[650, 150], [1200, 150], [1150, 680], [620, 680]],
+          },
+        ]
+      : [
+          {
+            zone_id: 'zone-north',
+            name: 'Khu vực Bắc (Quảng trường)',
+            color: '#0072B2',
+            vertices: [
+              [300, 200] as [number, number],
+              [900, 200] as [number, number],
+              [850, 700] as [number, number],
+              [250, 700] as [number, number],
+            ],
+          },
+          {
+            zone_id: 'zone-south',
+            name: 'Khu vực Nam (Lối vào)',
+            color: '#009E73',
+            vertices: [
+              [1000, 300] as [number, number],
+              [1600, 300] as [number, number],
+              [1550, 800] as [number, number],
+              [950, 800] as [number, number],
+            ],
+          },
+        ];
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -639,7 +712,11 @@ const AppContent: React.FC = () => {
               mediaCatalog={mediaCatalog}
               zoneSets={MOCK_ZONE_SETS}
               modelProfile={MOCK_MODEL_PROFILE}
-              onCreateZoneSet={() => setCurrentView('zones')}
+              onCreateZoneSet={(mediaId) => {
+                const found = mediaCatalog.find((m) => m.id === mediaId) || mediaCatalog[0];
+                setActiveMediaForZoneEditor(found || null);
+                setCurrentView('zones');
+              }}
               onUploadMedia={handleUploadMedia}
               onSubmit={handleStartSession}
               onCancel={() => setCurrentView('sessions')}
@@ -756,77 +833,123 @@ const AppContent: React.FC = () => {
               onExportJsonl={handleExportJsonl}
               useRealAI={useRealAI}
               onToggleRealAI={() => setUseRealAI((prev) => !prev)}
-              onEditZones={() => setCurrentView('zones')}
+              onEditZones={() => {
+                const found = mediaCatalog.find((m) => m.id === currentSession.sourceId || currentSession.mediaName.includes(m.name)) || mediaCatalog[0];
+                setActiveMediaForZoneEditor(found || null);
+                setCurrentView('zones');
+              }}
             />
           )}
 
-          {currentView === 'zones' && (
-            <ZoneEditor
-              key={`zone-editor-${currentSession.id}-${sampleZones.length}`}
-              initialZoneSetName={currentSession.zoneSetName || (is150 ? 'Khu vực Giám sát A & B (150.mp4)' : 'Khu vực quan sát')}
-              initialZones={sampleZones.map((z: any) => ({
-                zoneId: z.zone_id,
-                name: z.name,
-                color: z.color,
-                vertices: z.vertices,
-              }))}
-              imageWidth={is150 ? 1920 : 1920}
-              imageHeight={is150 ? 1440 : 1080}
-              sampleFrameUrl={is150 ? '/media_150_frame.png' : '/sample-frame.png'}
-              onSave={async (data) => {
-                const updatedZones = data.zones.map((z) => ({
-                  zone_id: z.zoneId,
+          {currentView === 'zones' && (() => {
+            const targetMedia = activeMediaForZoneEditor || mediaCatalog.find((m) => m.id === currentSession?.sourceId || currentSession?.mediaName?.includes(m.name)) || mediaCatalog[0];
+            const targetName = targetMedia?.name?.toLowerCase() || '';
+            const isTarget150 = targetName.includes('150');
+            const isTargetSample = targetName.includes('sample');
+            const isTargetRealPeople = targetName.includes('real_people');
+
+            const resolvedFrameUrl = isTarget150
+              ? '/media_150_frame.png'
+              : isTargetSample
+                ? '/sample-frame.png'
+                : isTargetRealPeople
+                  ? '/real_people_frame.png'
+                  : targetMedia?.id && !targetMedia.id.startsWith('media-upload')
+                    ? `/api/v1/media/${targetMedia.id}/frame?frame_index=0`
+                    : undefined;
+
+            const resolvedVideoSrc = targetMedia?.videoSrc || (
+              isTarget150
+                ? '/150.mp4'
+                : isTargetSample
+                  ? '/sample.mp4'
+                  : isTargetRealPeople
+                    ? '/real_people.mp4'
+                    : targetMedia?.id && !targetMedia.id.startsWith('media-upload')
+                      ? `/api/v1/media/${targetMedia.id}/stream`
+                      : '/150.mp4'
+            );
+
+            const width = targetMedia?.width || 1920;
+            const height = targetMedia?.height || (isTarget150 ? 1440 : 1080);
+
+            return (
+              <ZoneEditor
+                key={`zone-editor-${targetMedia?.id || currentSession.id}-${sampleZones.length}`}
+                initialZoneSetName={targetMedia?.name ? `Khu vực giám sát (${targetMedia.name.split(' ')[0]})` : (currentSession.zoneSetName || 'Khu vực quan sát')}
+                initialZones={sampleZones.map((z: any) => ({
+                  zoneId: z.zone_id,
                   name: z.name,
                   color: z.color,
                   vertices: z.vertices,
-                }));
-                if (is150) {
-                  setDataset150((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
-                } else {
-                  setDatasetSample((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
-                }
+                }))}
+                imageWidth={width}
+                imageHeight={height}
+                sampleFrameUrl={resolvedFrameUrl}
+                videoSrc={resolvedVideoSrc}
+                onSave={async (data) => {
+                  const updatedZones = data.zones.map((z) => ({
+                    zone_id: z.zoneId,
+                    name: z.name,
+                    color: z.color,
+                    vertices: z.vertices,
+                  }));
+                  if (isTarget150) {
+                    setDataset150((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
+                  } else {
+                    setDatasetSample((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
+                  }
 
-                // Persist new zone set version to SQLite backend database (data/crowdsight.db)
-                try {
-                  const zoneSetId = is150 ? 'zones-150-real' : 'zones-sample-real';
-                  const imgWidth = is150 ? 1920 : 1920;
-                  const imgHeight = is150 ? 1440 : 1080;
-                  const payload = {
-                    image_width: imgWidth,
-                    image_height: imgHeight,
-                    zones: data.zones.map((z) => ({
-                      zone_id: z.zoneId,
-                      name: z.name,
-                      vertices: z.vertices,
-                      blind_regions: [],
-                    })),
-                  };
+                  // Persist new zone set version to SQLite backend database (data/crowdsight.db)
+                  try {
+                    const zoneSetId = isTarget150 ? 'zones-150-real' : `zones-${targetMedia?.id || 'custom'}`;
+                    const payload = {
+                      image_width: width,
+                      image_height: height,
+                      zones: data.zones.map((z) => ({
+                        zone_id: z.zoneId,
+                        name: z.name,
+                        vertices: z.vertices,
+                        blind_regions: [],
+                      })),
+                    };
 
-                  const res = await fetch(`/api/v1/zone-sets/${zoneSetId}/versions`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                  });
-                  if (res.status === 404) {
-                    await fetch('/api/v1/zone-sets', {
+                    const res = await fetch(`/api/v1/zone-sets/${zoneSetId}/versions`, {
                       method: 'POST',
                       headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        id: zoneSetId,
-                        name: data.name || (is150 ? 'Khu vực Giám sát A & B' : 'Khu vực quan sát'),
-                        ...payload,
-                      }),
+                      body: JSON.stringify(payload),
                     });
+                    if (res.status === 404) {
+                      await fetch('/api/v1/zone-sets', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          id: zoneSetId,
+                          name: data.name || (isTarget150 ? 'Khu vực Giám sát A & B' : 'Khu vực quan sát'),
+                          ...payload,
+                        }),
+                      });
+                    }
+                  } catch (err) {
+                    console.warn('Could not persist zone set to backend database:', err);
                   }
-                } catch (err) {
-                  console.warn('Could not persist zone set to backend database:', err);
-                }
 
-                setCurrentView('review');
-              }}
-              onCancel={() => setCurrentView('review')}
-            />
-          )}
+                  if (activeMediaForZoneEditor) {
+                    setCurrentView('wizard');
+                  } else {
+                    setCurrentView('review');
+                  }
+                }}
+                onCancel={() => {
+                  if (activeMediaForZoneEditor) {
+                    setCurrentView('wizard');
+                  } else {
+                    setCurrentView('review');
+                  }
+                }}
+              />
+            );
+          })()}
 
           {currentView === 'model' && (
             <ModelStatusPage

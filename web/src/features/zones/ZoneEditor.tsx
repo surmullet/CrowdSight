@@ -31,7 +31,8 @@ interface ZoneEditorProps {
   initialZones?: EditableZone[];
   imageWidth: number;
   imageHeight: number;
-  sampleFrameUrl: string;
+  sampleFrameUrl?: string;
+  videoSrc?: string;
   onSave: (data: { name: string; zones: EditableZone[]; note: string }) => Promise<void>;
   onCancel: () => void;
   className?: string;
@@ -52,12 +53,14 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
   imageWidth,
   imageHeight,
   sampleFrameUrl,
+  videoSrc,
   onSave,
   onCancel,
   className = '',
 }) => {
   const [zoneSetName, setZoneSetName] = useState(initialZoneSetName);
   const [versionNote, setVersionNote] = useState('Khởi tạo cấu hình ban đầu');
+  const [imgError, setImgError] = useState(false);
   const [zones, setZones] = useState<EditableZone[]>(
     initialZones.length > 0
       ? initialZones
@@ -401,11 +404,32 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
         <div className="lg:col-span-8 flex flex-col gap-2">
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-brand-border select-none shadow-xl">
             {/* Background Sample Image */}
-            <img
-              src={sampleFrameUrl}
-              alt="Khung hình tham chiếu để vẽ vùng"
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            />
+            {sampleFrameUrl && !imgError && (
+              <img
+                src={sampleFrameUrl}
+                alt="Khung hình tham chiếu để vẽ vùng"
+                onError={() => setImgError(true)}
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              />
+            )}
+
+            {/* Video element fallback: decodes and displays first frame directly from video stream/file */}
+            {videoSrc && (
+              <video
+                src={videoSrc}
+                crossOrigin="anonymous"
+                preload="auto"
+                muted
+                playsInline
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  v.currentTime = 0.1;
+                }}
+                className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${
+                  sampleFrameUrl && !imgError ? 'hidden' : ''
+                }`}
+              />
+            )}
 
             {/* Interactive SVG Drawing Canvas */}
             <svg
