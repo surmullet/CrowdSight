@@ -785,6 +785,43 @@ const AppContent: React.FC = () => {
                 } else {
                   setDatasetSample((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
                 }
+
+                // Persist new zone set version to SQLite backend database (data/crowdsight.db)
+                try {
+                  const zoneSetId = is150 ? 'zones-150-real' : 'zones-sample-real';
+                  const imgWidth = is150 ? 1920 : 1920;
+                  const imgHeight = is150 ? 1440 : 1080;
+                  const payload = {
+                    image_width: imgWidth,
+                    image_height: imgHeight,
+                    zones: data.zones.map((z) => ({
+                      zone_id: z.zoneId,
+                      name: z.name,
+                      vertices: z.vertices,
+                      blind_regions: [],
+                    })),
+                  };
+
+                  const res = await fetch(`/api/v1/zone-sets/${zoneSetId}/versions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload),
+                  });
+                  if (res.status === 404) {
+                    await fetch('/api/v1/zone-sets', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        id: zoneSetId,
+                        name: data.name || (is150 ? 'Khu vực Giám sát A & B' : 'Khu vực quan sát'),
+                        ...payload,
+                      }),
+                    });
+                  }
+                } catch (err) {
+                  console.warn('Could not persist zone set to backend database:', err);
+                }
+
                 setCurrentView('review');
               }}
               onCancel={() => setCurrentView('review')}
