@@ -1,20 +1,78 @@
+# ==============================================================================
+# CrowdSight .gitignore
+# ==============================================================================
+
+# --- Python & Build Artifacts ---
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- Virtual Environments ---
 .venv/
 venv/
-.env
-.env.*
-!.env.example
+ENV/
+env/
+
+# --- Testing & Quality Assurance ---
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
 .coverage
+.coverage.*
 htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+
+# --- Node & Frontend ---
+node_modules/
+web/node_modules/
+web/dist/
+web/dist-ssr/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# --- Environment & Credentials ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Databases & Local Storage ---
+*.db
+*.sqlite
+*.sqlite3
+artifacts/**
+!artifacts/README.md
 outputs/**
 !outputs/README.md
 # Private data, annotation exports, and derived evaluation artifacts stay out of Git.
 data/**
 !data/README.md
+
+# --- Machine Learning Models & Weights (Strict Invariant) ---
 models/**
 !models/README.md
 *.pt
@@ -31,6 +89,8 @@ models/**
 *.hdf5
 *.mlmodel
 *.mlpackage
+
+# --- Video Files & Raw Footage (Strict Invariant) ---
 *.mp4
 *.avi
 *.mov
@@ -41,19 +101,37 @@ models/**
 *.mpg
 *.wmv
 *.flv
+
+# --- Compressed Archives ---
 *.zip
 *.7z
 *.tar
 *.tgz
-.DS_Store
-Thumbs.db
+*.gz
+*.rar
 
-# Local agent instructions and kickoff prompt are not shared repository assets.
+# --- Operating System & Editor Files ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# --- Private Agent & Handoff Prompts ---
 /AGENT.md
 /AGENTS.md
 /docs/AI_ML_KICKOFF_PROMPT.md
 
-# Parking work is private until its model and contract are ready to publish.
+# --- Private / Unreleased Workstreams ---
 /configs/models/parking_occupancy_template.yaml
 /contracts/v1/parking-frame-observation.schema.json
 /contracts/v1/fixtures/parking-frame-observation.*.json

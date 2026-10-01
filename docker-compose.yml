@@ -1,0 +1,31 @@
+services:
+  crowdsight:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crowdsight-app
+    ports:
+      - "8080:8000"
+    environment:
+      - CROWDSIGHT_ENVIRONMENT=production
+      - CROWDSIGHT_DATABASE_URL=sqlite:////app/data/db/crowdsight.db
+      - CROWDSIGHT_MEDIA_ROOT=/app/data/media
+      - CROWDSIGHT_ARTIFACT_ROOT=/app/data/artifacts
+      - CROWDSIGHT_RETENTION_DAYS=30
+      # Optional: set when mounting custom YOLO11s checkpoint
+      # - CROWDSIGHT_CROWD_CHECKPOINT=/app/weights/best.pt
+    volumes:
+      - crowdsight-media:/app/data/media
+      - crowdsight-artifacts:/app/data/artifacts
+      - crowdsight-db:/app/data/db
+      # Optional: mount external weights directory
+      # - ./weights:/app/weights:ro
+    restart: unless-stopped
+
+volumes:
+  crowdsight-media:
+    driver: local
+  crowdsight-artifacts:
+    driver: local
+  crowdsight-db:
+    driver: local

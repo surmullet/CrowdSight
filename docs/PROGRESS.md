@@ -1,0 +1,184 @@
+# CrowdSight Implementation Progress Log
+
+## 1. Overview & Current Status
+- **Current Phase**: All Phases Complete (Phases 0 – 9)
+- **Active Task**: Verification & Delivery Complete
+- **Target Completion**: Full Stack (Backend + Frontend) Production Grade Achieved
+
+## 2. Completed Phases
+- [x] **Phase 0: Repository Discovery, Invariant Baseline, Initial ADRs, and Plan**
+  - Read and cross-verified all initial documents: `README.md`, `TEAMMATE_HANDOFF.md`, `contracts/v1/` schema and 6 fixtures, model profiles, detector/tracker adapters, observation contracts, applicability gates, pyproject, and evaluation scripts.
+  - Formulated 25-line understanding summary capturing key invariants and discrepancies.
+  - Published 6 Proposed ADRs (`ADR-0001` through `ADR-0006`) awaiting human review.
+  - Initialized `docs/PROGRESS.md` for self-recovery across sessions.
+- [x] **Phase 1: Contract Layer & Domain Core**
+  - Pydantic v2 schemas (`CrowdFrameObservationV1`, `DetectionV1`) matching `contracts/v1/crowd-frame-observation.schema.json`.
+  - Two-stage validator (`TwoStageObservationValidator`): Draft 2020-12 JSON Schema + cross-checks (box bounds, bottom-centre anchor, tracker hash pairing, zone-set coverage).
+  - Pure domain zone geometry with Shapely 2 (`ZonePolygon`, `ZoneDefinition`, `ZoneSet`, `validate_zone_set`).
+  - Pure aggregation function `aggregate_frame()` enforcing invariant `visible_count IS NOT NULL <=> availability == 'COUNTED'`.
+  - Freshness assessment (`FreshnessPolicy`, `assess_freshness`, `apply_freshness_to_observation`).
+  - 41 unit and Hypothesis property-based tests passing with 91% domain coverage; ruff and mypy strict passing.
+- [x] **Phase 2: Storage, Pipeline & Synthetic Job Runner**
+  - SQLAlchemy 2.0 declarative models (`MediaAssetRecord`, `ZoneSetRecord`, `ZoneSetVersionRecord`, `SessionRecord`, `ObservationRecord`, `ZoneResultRecord`, `ArtifactRecord`, `NoteRecord`, `AuditLogRecord`).
+  - Hard database CHECK constraint: `visible_count IS NOT NULL <=> availability = 'COUNTED'`.
+  - SQLite WAL mode & foreign keys enabled; PostgreSQL-compatible architecture.
+  - Path-traversal hardened `ArtifactStore` and OpenCV-backed `MediaRegistry`.
+  - Deterministic `SyntheticDetector` generating valid moving person trajectories.
+  - `VideoDecoder` with sequential decoding, single-frame retry, blank frame (`FRAME_BLANK`), and frozen frame (`FRAME_FROZEN`) anomaly detection.
+  - `SessionPipeline` and `JobManager` with cooperative cancellation, partial result preservation (`PARTIAL_CANCELLED`), and orphaned worker crash recovery.
+  - End-to-end tests with synthetic OpenCV video verified; 56 tests passing with 90% coverage; ruff and mypy strict passing.
+- [x] **Phase 3: Application API (`/api/v1`) & OpenAPI Export**
+  - FastAPI application in `src/crowdsight/service/api/app.py` with RFC 9457 Problem Details (`application/problem+json`) and stable error codes (`MEDIA_NOT_FOUND`, `MEDIA_UNREADABLE`, `ZONE_SET_INVALID`, `MODEL_CHECKPOINT_MISSING`, etc.).
+  - Complete REST routers in `src/crowdsight/service/api/routers/`:
+    - `health`: Liveness and readiness endpoints with database ping and configuration status.
+    - `model`: Inspection of active model profile, SHA-256 digests, and `assess_crowd_operating_use` applicability status.
+    - `media`: Catalog retrieval, HTTP 206 partial Range streaming, and single-frame extraction (`/frame?frame_index=`).
+    - `zone_sets`: Creation, versioning, list, retrieval, and real-time geometry validation (`POST /zone-sets/validate`).
+    - `sessions`: Creation with idempotent options, status polling, Server-Sent Events (SSE) progress streaming (`/events`), cooperative cancellation (`/cancel`), and cascaded deletion (`DELETE /sessions/{id}`).
+    - `frames`: Playback queries (`/frames?from_t=&to_t=&limit=`) and point-in-time lookup (`/frames/at?t=`) with strict freshness policy enforcement.
+    - `artifacts`: Secure token-checked file retrieval with path-traversal prevention.
+    - `alerts`: Operational alerts status endpoint returning `operational_alerts_allowed = false` under experimental deployment.
+  - Exported canonical OpenAPI 3.1 contract to `contracts/app-v1/openapi.json` and documentation in `contracts/app-v1/README.md`.
+  - Comprehensive unit, property, and OpenAPI snapshot tests passing; 65 tests green; ruff and mypy strict passing with 0 errors.
+- [x] **Phase 4: Analytics Engine & Live Model Boundary**
+  - Trend analytics engine (`src/crowdsight/service/analytics/trends.py`):
+    - `TrendAnalyzer` computing bucketed time series (`RAW`, `BUCKETED`, `SMOOTHED`) with statistics (`min`, `mean`, `median`, `p95`, `max`).
+    - Enforced invariant: unobserved/uncounted buckets are strictly `None` / `null`, never `0.0`.
+    - LTTB (Largest Triangle Three Buckets) downsampling algorithm preserving missing intervals without coercion.
+  - Neutral highlight moments (`src/crowdsight/service/analytics/peaks.py`):
+    - Peak visible count detection per zone with temporal suppression; zero forbidden/alarmist terms.
+  - Image-space relative heat map generator (`src/crowdsight/service/analytics/heatmaps.py`):
+    - Bottom-centre Gaussian splatting (`sigma` proportional to image width).
+    - Perceptually uniform viridis colormap, transparent RGBA PNG, ADR-0005 quality weighting.
+    - Strict `IMAGE_SPACE` metadata, `SESSION_MAX`/`WINDOW_MAX` relative normalization.
+  - Quality summary metrics (`src/crowdsight/service/analytics/summary.py`):
+    - Truthful breakdown of `VALID`/`PARTIAL`/`UNKNOWN`/`STALE`, reason codes, and 10-bin raw score histogram.
+  - Invariant-preserving exports (`src/crowdsight/service/analytics/exports.py`):
+    - JSONL archive with manifest provenance and `SEMANTICS.md` disclaimers.
+    - CSV export where uncounted cells are strictly empty string `""` (never `0`!).
+  - Live model boundary & checkpoint verification (`src/crowdsight/service/pipeline/model_boundary.py`):
+    - SHA-256 digest validation for model profiles and checkpoints.
+    - Stable error codes: `MODEL_CHECKPOINT_MISSING` and `MODEL_CHECKPOINT_HASH_MISMATCH`.
+    - Safe fallback to `SyntheticDetector` in zero-weight / test environments.
+  - Web proxy generation (`src/crowdsight/service/storage/proxy.py`):
+    - FFmpeg H.264 MP4 proxy transcoding for non-browser playable codecs.
+  - Management CLI (`src/crowdsight/cli/main.py`):
+    - `crowdsight media scan`, `media register`, `session reprocess`, `session purge`, and `model verify`.
+  - 86 backend tests passing; ruff clean; mypy strict passing with 0 errors; OpenAPI contract updated.
+- [x] **Phase 5: Frontend Design, Project Setup, Design System & `/dev/states`**
+  - Completed two-pass design specification in `web/DESIGN.md`:
+    - Pass 1: "Footage Console" cockpit architecture, Okabe-Ito accessible color palette, Vietnamese typography, ASCII wireframe.
+    - Pass 2: Self-critique audit eliminating generic SaaS cards, neon accents, and misleading zeros.
+  - Initialized Vite + React 18 + TypeScript strict (`noUncheckedIndexedAccess`) + Tailwind CSS + pnpm.
+  - Generated fully typed API client via `openapi-typescript` + `openapi-fetch` from `contracts/app-v1/openapi.json`.
+  - Implemented discriminated union `ZoneReading` preventing any accidental count display during unobserved intervals.
+  - Built reusable design system components:
+    - `Banner`: Fixed non-dismissible experimental warning with operational alert gate status and synthetic data indicator.
+    - `QualityBadge`: Triple-encoded badge (color + icon + text + pattern) for all four quality states.
+    - `ZoneCard`: Handles count > 0, affirmative 0 ("0 người được nhìn thấy — vùng đã quan sát đầy đủ"), amber diagonal hatching for unobserved PARTIAL zones, and stipple for UNKNOWN.
+    - `SemanticsModal`: "Về phép đo này" modal explaining measurement definition, undercount risk, and prohibited inferences.
+  - Built `/dev/states` test bench displaying all 6 contract v1 fixtures (`VALID`, `VALID-zero`, `PARTIAL`, `UNKNOWN`, `STALE`, `tracked`) with Vietnamese/English toggle.
+  - `pnpm run check` and `pnpm run build` passing with 0 errors; Vitest unit tests green.
+- [x] **Phase 6: Frontend Annotated Player & Review Workspace**
+  - Pure subpixel letterbox coordinate transformation (`computeLetterbox`, `normalizedToCanvasCoords`, `sourceBoxToCanvasCoords`) resilient to resizing, zooming, and display scaling.
+  - High-performance playback store (`usePlaybackStore`) using Zustand with layer toggles (boxes, zones, heatmap, opacity slider).
+  - Canvas + Video overlay player (`AnnotatedPlayer`):
+    - Real-time synchronous video rendering via requestAnimationFrame loop.
+    - Bounding boxes drawn only during `VALID` or `PARTIAL` frames with corner brackets and bottom-centre anchor dots.
+    - Zone polygons with alpha fill, stroke, and zone name labels.
+    - Image-space relative heatmap rendering with configurable opacity slider.
+  - Transport controls (`PlayerControls`):
+    - Frame-by-frame single-step forward/backward navigation (+/-0.04s).
+    - Variable playback speeds (0.5x, 1.0x, 2.0x).
+    - Media-time-only timestamp display (`mm:ss.SS` format labeled strictly as media elapsed time).
+    - Layer visibility toggles and keyboard shortcut help dialog.
+  - Unified multi-tier scrubber (`UnifiedTimeline`):
+    - Tier 1: Quality ribbon showing `VALID`, `PARTIAL` (hatching), `UNKNOWN` (stipple), and `STALE` intervals.
+    - Tier 2: Multi-zone SVG sparklines with strict physical gaps for missing data (never drawing to 0).
+    - Tier 3: Peak visible count markers and operator note pins.
+    - Missing frames warning badge with count and screen-reader accessible data table.
+  - Integrated operator review workspace (`ReviewWorkspace`):
+    - Combines video player, transport controls, timeline scrubber, and active frame metadata.
+    - Contextual tabs for active zone readings, peak highlights with jump-to-time actions, operator notes with instant creation, and cryptographic provenance verification.
+    - Non-dismissible experimental banner, synthetic tag, and export actions (CSV / JSONL).
+- [x] **Phase 7: Frontend Operational Workflows**
+  - Session library (`SessionLibrary`):
+    - Multi-mode grid/list view with responsive card layout.
+    - Status filtering (`ALL`, `COMPLETED`, `ACTIVE`, `FAILED`, `CANCELLED`) and real-time substring search.
+    - Quality breakdown micro-ribbons on each session card.
+    - Permanent deletion confirmation modal with explicit cascade artifact purge warning.
+  - New analysis wizard (`NewSessionWizard`):
+    - Strict server-catalog media picker (prevents arbitrary client filesystem path inputs).
+    - Zone-set selector with direct link to zone editor.
+    - Read-only model identity and cryptographic verification preview with fail-closed warning.
+    - Execution options: configurable `frame_stride` and deterministic synthetic detector mode toggle.
+  - Live job progress view (`JobProgressView`):
+    - Real-time Server-Sent Events (SSE) stream with automated polling fallback.
+    - Live quality counters (`VALID`, `PARTIAL`, `UNKNOWN`, `STALE`), processing FPS, and calculated ETA.
+    - Cooperative cancellation action with partial results viewer for cancelled jobs.
+    - RFC 9457 actionable error explanations with `user_action_hint`.
+  - Interactive SVG zone polygon editor (`ZoneEditor`):
+    - Real-time drawing and editing over original sample video frame.
+    - Drag-and-drop vertex manipulation, right-click vertex deletion, and optional 20px grid snapping.
+    - Undo/redo historical action stack.
+    - Instant geometry validation (checks for minimum 3 vertices, self-intersection, and frame bounds).
+    - Immutable version save with change notes.
+  - Model & locked alerts status page (`ModelStatusPage`):
+    - Full cryptographic provenance display (YOLO11s architecture, SHA-256 digests with copy actions).
+    - Clear plain-language explanation of permitted vs prohibited operating uses.
+    - Permanently locked operational alerts panel with fail-closed guarantee (zero enable controls).
+  - Navigation shell in `App.tsx` connecting all workflows with bilingual toggle (`vi` / `en`).
+  - 24 frontend unit tests passing; `pnpm check` and `pnpm build` clean (85.5 kB gzipped).
+- [x] **Phase 8: Security, Retention, Linters & Deployment Packaging**
+  - Hardened path traversal security in `ArtifactStore` with unit tests verifying rejection of directory escapes (`..`, `/`, `\`, drive letters).
+  - Data retention cascade purge service (`RetentionManager`) with automated session, artifact, observation, and note cleanup older than 30 days (`CROWDSIGHT_RETENTION_DAYS`) with audit logging (`AuditLogRecord`).
+  - Automated semantic invariant linter (`scripts/semantic_lint.py` + `scripts/semantic_lint_config.json`) scanning 116+ repository files for forbidden terms, invalid metric densities, and uncalibrated confidence percentages.
+  - Multi-stage `Dockerfile` bundling Node 22 Vite frontend build with Python 3.10 OpenCV/FFmpeg backend runtime.
+  - Production `docker-compose.yml` with persistent volumes for media, artifacts, and database.
+  - Engineering `Makefile` providing `check`, `test`, `lint`, `dev`, `web`, `openapi`, and `clean` automation.
+  - Comprehensive technical documentation suite:
+    - `docs/architecture.md`: Hexagonal design, pure domain core, data pipeline, and security boundaries.
+    - `docs/api.md`: REST API reference, RFC 9457 Problem Details, error codes table, and SSE streaming.
+    - `docs/semantics.md`: Truthful visible count definition, missing data invariants, and fail-closed rules.
+    - `docs/runbook.md`: Operations guide, CLI manual, and step-by-step troubleshooting.
+    - `docs/data-retention.md`: Lifecycle policy, cascade purges, and compliance audit trail.
+    - `docs/performance.md`: Processing benchmarks, streaming memory bounds, bundle budgets, and WCAG 2.2 AA audit.
+  - GitHub Actions CI workflow (`.github/workflows/ci.yml`) enforcing binary hygiene, linting, tests, coverage $\ge 85\%$, and frontend builds.
+  - 88 backend tests passing with $\ge 85\%$ coverage; 24 frontend tests passing; semantic linter passing; clean builds.
+
+- [x] **Phase 9: Independent Integration Review & Final Report**
+  - Conducted full independent integration audit matching `contracts/app-v1/openapi.json` with generated client and mock states.
+  - Verified synthetic E2E pipeline across all 6 contract quality states (`VALID`, `VALID-zero`, `PARTIAL`, `UNKNOWN`, `STALE`, `tracked`), mid-stream cooperative cancellation, checkpoint hash mismatch rejection, corrupted video handling, and session cascade deletion.
+  - Comprehensive 15-point invariant audit fully mapped to enforcing code and protecting tests with 100% pass rate.
+  - Completed adversarial injection testing (out-of-bounds boxes, anchor drift, tracker decoupling, self-intersecting polygons, path traversal, range attacks); verified fail-closed degradation without data corruption.
+  - Documented benchmarks, memory limits, bundle sizes, and accessibility compliance.
+  - Published comprehensive final report at `docs/reviews/integration-review.md`.
+
+## 3. Pending Phases
+- None (All Phases 0 through 9 successfully completed and verified).
+
+## 4. Key Architectural Decisions (ADRs)
+- `ADR-0001`: Standalone `/api/v1` REST API decoupling from legacy UAV references.
+- `ADR-0002`: SQLAlchemy 2.0 with SQLite WAL (dev) / PostgreSQL (prod) and strict CHECK constraints.
+- `ADR-0003`: Fail-closed video degradation, explicit reason codes, and freshness gap limits.
+- `ADR-0004`: Application-managed zone coverage, bottom-centre anchor point, and multi-zone membership.
+- `ADR-0005`: Relative image-space heat maps (`IMAGE_SPACE`) with perceptual colormaps and disclaimer.
+- `ADR-0006`: Managed artifact storage, 30-day default retention, and signed access tokens.
+
+## 5. Working Assumptions & Noted Discrepancies
+- **No external UAV API code**: The repo does not contain UAV backend code; CrowdSight application operates as a standalone service.
+- **Model Checkpoint**: YOLO11s `best.pt` (`12824a97...`) resides outside Git. `SyntheticDetector` enables complete testing without external weights.
+- **Quality vs Applicability**: Technically valid frames (`VALID`) never imply operational approval (`EXPERIMENTAL_NO_APPROVAL` is maintained).
+- **Zero vs Unavailable**: Missing data is strictly represented as `null` / unavailable, never zero.
+- **Density**: `density_people_per_m2` is always `null` and `density_status` is `UNAVAILABLE_NO_CALIBRATION`.
+
+## 6. Open Items (Awaiting Real Human Review)
+- Formal review and approval of the decision table in `contracts/v1/README.md`.
+- Formal approval of ADR-0001 through ADR-0006.
+- Site-specific camera calibration and evaluation for Vietnam target footage.
+
+## 7. Standard Test & Validation Commands
+- Backend lint & types: `ruff check src/ tests/` && `mypy src/`
+- Backend tests: `pytest`
+- Semantic linter: `python scripts/semantic_lint.py`
+- Frontend checks: `pnpm --dir web check`

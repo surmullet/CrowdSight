@@ -1,0 +1,125 @@
+{
+  "file_extensions": [".py", ".ts", ".tsx", ".md", ".json", ".csv", ".jsonl"],
+  "ignore_dirs": [
+    ".git",
+    ".venv",
+    "node_modules",
+    "dist",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".mypy_cache"
+  ],
+  "ignore_files": [
+    "scripts/semantic_lint.py",
+    "scripts/semantic_lint_config.json",
+    "package-lock.json",
+    "pnpm-lock.yaml"
+  ],
+  "ignore_globs": [
+    "tests/**",
+    "**/*.test.ts",
+    "**/*.test.tsx"
+  ],
+  "forbidden_terms": [
+    {
+      "term": "occupancy",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "no occupancy",
+        "never interpret as occupancy",
+        "không gọi là occupancy",
+        "without occupancy",
+        "occupancy is not",
+        "occupancy,",
+        "not attendance or",
+        "not a calibrated site occupancy",
+        "not occupancy",
+        "not an occupancy"
+      ]
+    },
+    {
+      "term": "attendance",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "no attendance",
+        "never interpret as attendance",
+        "không gọi là attendance",
+        "without attendance",
+        "attendance is not",
+        "attendance,",
+        "not attendance",
+        "never attendance",
+        "not capacity or attendance",
+        "không coi là attendance",
+        "tuyệt đối không coi là attendance"
+      ]
+    },
+    {
+      "term": "sức chứa",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "không coi là sức chứa",
+        "không gọi là sức chứa",
+        "không phải sức chứa",
+        "tuyệt đối không coi là sức chứa",
+        "tuyệt đối không",
+        "không được coi là",
+        "không bao giờ coi là",
+        "sức chứa/độ đông",
+        "không gọi là \"sức chứa",
+        "nghiêm cấm"
+      ]
+    },
+    {
+      "term": "độ đông",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "không coi là độ đông",
+        "không gọi là độ đông",
+        "không phải độ đông",
+        "tuyệt đối không coi là độ đông",
+        "sức chứa/độ đông",
+        "sức chứa/độ đông/thời gian chờ",
+        "tuyệt đối không",
+        "nghiêm cấm"
+      ]
+    },
+    {
+      "term": "thời gian chờ",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "không coi là thời gian chờ",
+        "không phải thời gian chờ",
+        "tuyệt đối không coi là thời gian chờ",
+        "sức chứa/độ đông/thời gian chờ",
+        "thời gian chờ ở bất kỳ đâu",
+        "tuyệt đối không",
+        "nghiêm cấm"
+      ]
+    },
+    {
+      "term": "bản đồ địa lý",
+      "case_sensitive": false,
+      "allowed_phrases": [
+        "không phải bản đồ địa lý",
+        "không gọi là bản đồ địa lý",
+        "hay bản đồ địa lý",
+        "hoặc bản đồ địa lý",
+        "không là bản đồ địa lý"
+      ]
+    }
+  ],
+  "forbidden_patterns": [
+    {
+      "name": "confidence_percent",
+      "pattern": "confidence\\s*[:=]?\\s*\\d+(\\.\\d+)?\\s*%",
+      "description": "Confidence must never be formatted with a percentage sign (%)"
+    },
+    {
+      "name": "confidence_degree_vn",
+      "pattern": "độ\\s+tin\\s+cậy\\s*\\d*\\s*%",
+      "description": "Confidence must never be referred to as calibrated reliability or %"
+    }
+  ]
+}

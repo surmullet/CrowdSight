@@ -1,0 +1,47 @@
+{
+  "name": "crowdsight-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "check": "tsc --noEmit && vitest run",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "codegen:api": "openapi-typescript ../contracts/app-v1/openapi.json -o src/contracts/api.ts"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.67.1",
+    "ajv": "^8.17.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.16.0",
+    "openapi-fetch": "^0.13.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^3.0.2",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.2.0",
+    "@types/node": "^22.13.9",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^26.0.0",
+    "openapi-typescript": "^7.6.1",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0",
+    "vitest": "^3.0.8"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}
