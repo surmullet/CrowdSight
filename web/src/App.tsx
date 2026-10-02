@@ -100,25 +100,25 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   },
 ];
 
-const MOCK_ZONE_SETS: ZoneSetSummary[] = [
+const INITIAL_ZONE_SETS: ZoneSetSummary[] = [
   {
-    id: 'zs-default',
-    name: 'Khu vực Giám sát A & B (150.mp4)',
-    version: 1,
+    id: 'a874db06-a600-4d64-803a-c4ce693f7925',
+    name: 'Khu vực giám sát (crowd6.mp4)',
+    version: 2,
     zoneCount: 2,
   },
   {
-    id: 'zs-gates',
-    name: 'Cổng đón trả khách',
-    version: 2,
+    id: '8658e0b9-f3b0-47ea-9a00-33fd947f6fd9',
+    name: 'Khu vực Giám sát A & B (150.mp4)',
+    version: 3,
     zoneCount: 2,
   },
 ];
 
 const MOCK_MODEL_PROFILE: ModelProfileInfo = {
-  profileId: 'yolo11n_person_detector',
-  profileSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
-  checkpointSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
+  profileId: 'crowd_best_local_v2',
+  profileSha256: '83f5287f340ee77b4ba71f3014389146dfd2806283b9cf79427b3ecab6e7a2b2',
+  checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
   applicabilityStatus: 'EXPERIMENTAL_NO_APPROVAL',
   operationalAlertsAllowed: false,
 };
@@ -211,9 +211,94 @@ const AppContent: React.FC = () => {
   const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
+  const [zoneSets, setZoneSets] = useState<ZoneSetSummary[]>(INITIAL_ZONE_SETS);
   const [activeMediaForZoneEditor, setActiveMediaForZoneEditor] = useState<MediaCatalogItem | null>(null);
+  const [sessionDatasetMap, setSessionDatasetMap] = useState<Record<string, any>>({});
 
   useEffect(() => {
+    // 1. Fetch real sessions from SQLite backend
+    fetch('/api/v1/sessions')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (data && data.length > 0) {
+          const backendSessions: SessionSummaryItem[] = data.map((item) => ({
+            id: item.id,
+            sourceId: item.media_asset_id,
+            mediaName: item.media_name || 'Video phân tích',
+            duration: item.duration_s || 25.12,
+            status: item.status,
+            progress: item.progress ?? 1.0,
+            synthetic: item.synthetic,
+            createdAt: item.created_at ? item.created_at.replace('T', ' ').slice(0, 19) : '',
+            zoneSetName: item.zone_set_name || 'Khu vực giám sát',
+            videoSrc: item.video_src,
+            qualityBreakdown: {
+              validPct: 100,
+              partialPct: 0,
+              unknownPct: 0,
+              stalePct: 0,
+            },
+          }));
+          setSessions((prev) => {
+            const backendIds = new Set(backendSessions.map((b) => b.id));
+            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
+            return [...backendSessions, ...keepPrev];
+          });
+        }
+      })
+      .catch((err) => console.log('Error fetching sessions:', err));
+
+    // 2. Fetch real media assets from backend
+    fetch('/api/v1/media')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (data && data.length > 0) {
+          const backendMedia: MediaCatalogItem[] = data.map((m) => ({
+            id: m.id,
+            name: m.display_name,
+            duration: m.duration_s,
+            fps: m.fps,
+            width: m.width,
+            height: m.height,
+            codec: m.codec,
+            browserPlayable: m.browser_playable,
+            videoSrc: m.display_name === 'crowd6.mp4' ? '/crowd6.mp4' : m.display_name === '150.mp4' ? '/150.mp4' : `/api/v1/media/${m.id}/stream`,
+          }));
+          setMediaCatalog((prev) => {
+            const backendIds = new Set(backendMedia.map((b) => b.id));
+            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
+            return [...backendMedia, ...keepPrev];
+          });
+        }
+      })
+      .catch((err) => console.log('Error fetching media:', err));
+
+    // 3. Fetch real zone-sets from backend
+    fetch('/api/v1/zone-sets')
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (data && data.length > 0) {
+          const backendZoneSets: ZoneSetSummary[] = data.map((zs) => {
+            const latestVersion = zs.versions && zs.versions.length > 0
+              ? zs.versions[zs.versions.length - 1]
+              : null;
+            return {
+              id: latestVersion ? latestVersion.id : zs.id,
+              name: zs.name,
+              version: latestVersion ? latestVersion.version : 1,
+              zoneCount: latestVersion?.polygon_data?.zones?.length || 2,
+            };
+          });
+          setZoneSets((prev) => {
+            const backendIds = new Set(backendZoneSets.map((b) => b.id));
+            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
+            return [...backendZoneSets, ...keepPrev];
+          });
+        }
+      })
+      .catch((err) => console.log('Error fetching zone sets:', err));
+
+    // Fallback fixtures
     fetch('/media_150_observations.json')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -290,6 +375,11 @@ const AppContent: React.FC = () => {
   };
 
   const handleDeleteSession = async (id: string) => {
+    try {
+      await fetch(`/api/v1/sessions/${id}`, { method: 'DELETE' });
+    } catch {
+      // Ignore
+    }
     setSessions((prev) => prev.filter((s) => s.id !== id));
   };
 
@@ -300,53 +390,79 @@ const AppContent: React.FC = () => {
     frameStride: number;
     useSynthetic: boolean;
   }) => {
-    const newId = `session-${Date.now().toString(36)}`;
-    const media = mediaCatalog.find((m) => m.id === params.mediaId);
-    const zoneSet = MOCK_ZONE_SETS.find((z) => z.id === params.zoneSetId);
+    try {
+      const res = await fetch('/api/v1/sessions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          media_asset_id: params.mediaId,
+          zone_set_version_id: params.zoneSetId,
+          options: {
+            enable_tracker: true,
+            frame_stride: params.frameStride || 1,
+          },
+          use_synthetic: params.useSynthetic,
+        }),
+      });
 
-    const mediaNameLower = (media?.name || '').toLowerCase();
-    const is150Media = mediaNameLower.includes('150') || params.mediaId.includes('150');
-    const isCrowd6Media = mediaNameLower.includes('crowd6') || params.mediaId.includes('crowd6');
-    const isSampleMedia = mediaNameLower.includes('sample') || params.mediaId.includes('sample');
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.detail || `Khởi tạo phiên thất bại: ${res.statusText}`);
+      }
 
-    const resolvedName = media?.name ?? (isCrowd6Media ? 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : is150Media ? '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)' : isSampleMedia ? 'sample.mp4' : 'video.mp4');
-    const resolvedDuration = media?.duration ?? (isCrowd6Media ? 25.12 : is150Media ? 57.44 : isSampleMedia ? 49.68 : 60);
+      const created = await res.json();
+      const newSession: SessionSummaryItem = {
+        id: created.id,
+        sourceId: created.media_asset_id,
+        mediaName: created.media_name || 'Video phân tích',
+        duration: created.duration_s || 25.12,
+        status: created.status,
+        progress: created.progress || 0.0,
+        synthetic: created.synthetic,
+        createdAt: created.created_at ? created.created_at.replace('T', ' ').slice(0, 19) : new Date().toISOString(),
+        zoneSetName: created.zone_set_name || 'Khu vực giám sát',
+        videoSrc: created.video_src,
+        qualityBreakdown: {
+          validPct: 100,
+          partialPct: 0,
+          unknownPct: 0,
+          stalePct: 0,
+        },
+      };
 
-    const resolvedVideoSrc = media?.videoSrc || (
-      isCrowd6Media
-        ? '/crowd6.mp4'
-        : is150Media
-          ? '/150.mp4'
-          : isSampleMedia
-            ? '/sample.mp4'
-            : media?.id
-              ? `/api/v1/media/${media.id}/stream`
-              : '/crowd6.mp4'
-    );
-
-    const newSession: SessionSummaryItem = {
-      id: newId,
-      sourceId: media?.id ?? params.mediaId,
-      mediaName: resolvedName,
-      duration: resolvedDuration,
-      status: 'RUNNING',
-      progress: 0.1,
-      synthetic: params.useSynthetic,
-      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 19),
-      zoneSetName: zoneSet?.name ?? (isCrowd6Media ? 'Khu vực Giám sát A & B (crowd6)' : is150Media ? 'Khu vực Giám sát A & B' : 'Khu vực giám sát'),
-      videoSrc: resolvedVideoSrc,
-      qualityBreakdown: {
-        validPct: 100,
-        partialPct: 0,
-        unknownPct: 0,
-        stalePct: 0,
-      },
-    };
-
-    setSessions((prev) => [newSession, ...prev]);
-    setSelectedSessionId(newId);
-    setCurrentView('progress');
+      setSessions((prev) => [newSession, ...prev.filter((s) => s.id !== created.id)]);
+      setSelectedSessionId(created.id);
+      setCurrentView('progress');
+    } catch (err) {
+      console.error('Failed to create session:', err);
+      throw err;
+    }
   };
+
+  // Load dataset for selected session if not already in memory
+  useEffect(() => {
+    if (!selectedSessionId) return;
+    if (sessionDatasetMap[selectedSessionId]) return;
+    if (
+      selectedSessionId === 'session-crowd6-real' ||
+      selectedSessionId === 'session-150-real' ||
+      selectedSessionId === 'session-yolo-real-01' ||
+      selectedSessionId === 'session-demo-01'
+    ) {
+      return;
+    }
+
+    fetch(`/api/v1/sessions/${selectedSessionId}/dataset`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setSessionDatasetMap((prev) => ({ ...prev, [selectedSessionId]: data }));
+        }
+      })
+      .catch((err) => console.log('Dataset fetch error:', err));
+  }, [selectedSessionId, sessionDatasetMap]);
 
   const { currentTime } = usePlaybackStore();
 
@@ -362,19 +478,22 @@ const AppContent: React.FC = () => {
 
   const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample && !isCrowd6);
 
-  // Pick dataset based on session
-  const activeDataset = isCrowd6
-    ? datasetCrowd6
-    : is150
-      ? dataset150
-      : isSample
-        ? datasetSample
-        : useRealAI
-          ? (datasetCrowd6 || dataset150 || datasetSample)
-          : null;
+  // Pick dataset based on session: prefer real session dataset from backend if available
+  const loadedSessionDataset = sessionDatasetMap[currentSession?.id];
+  const activeDataset = loadedSessionDataset || (
+    isCrowd6
+      ? datasetCrowd6
+      : is150
+        ? dataset150
+        : isSample
+          ? datasetSample
+          : useRealAI
+            ? (datasetCrowd6 || dataset150 || datasetSample)
+            : null
+  );
 
   const datasetFps = activeDataset?.metadata?.fps || 25;
-  const datasetTotalFrames = activeDataset?.metadata?.totalFrames || (isCrowd6 ? 628 : is150 ? 1436 : 1242);
+  const datasetTotalFrames = activeDataset?.metadata?.totalFrames || activeDataset?.frames?.length || (isCrowd6 ? 628 : is150 ? 1436 : 1242);
 
   const currentFrameIdx = Math.min(
     Math.max(0, Math.round(currentTime * datasetFps)),
@@ -384,7 +503,7 @@ const AppContent: React.FC = () => {
   const realFrameObs = activeDataset?.frames ? activeDataset.frames[currentFrameIdx] : null;
 
   const activeQuality: FrameQuality = (!isSynthetic && realFrameObs)
-    ? 'VALID'
+    ? (realFrameObs.quality || 'VALID')
     : currentTime >= 40 && currentTime <= 55
       ? 'PARTIAL'
       : 'VALID';
@@ -411,13 +530,13 @@ const AppContent: React.FC = () => {
     }
   }
 
-  const activeObservation: CrowdFrameObservation = (!isSynthetic && realFrameObs)
+  const activeObservation: CrowdFrameObservation = (realFrameObs)
     ? {
-        source_id: isCrowd6 ? 'crowd6.mp4' : is150 ? '150.mp4' : 'sample.mp4',
+        source_id: activeDataset?.metadata?.sourceId || currentSession.sourceId,
         session_id: currentSession?.id || selectedSessionId,
-        model_profile_id: 'yolo11n_person_detector',
-        model_profile_sha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
-        checkpoint_sha256: 'yolo11n_official_weights',
+        model_profile_id: activeDataset?.metadata?.model || 'models/best.pt',
+        model_profile_sha256: 'crowd_best_local_v2',
+        checkpoint_sha256: 'best.pt',
         frame_index: realFrameObs.frame_index ?? currentFrameIdx,
         media_time_s: realFrameObs.media_time_s ?? +(currentFrameIdx / datasetFps).toFixed(2),
         image_width: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
@@ -428,7 +547,7 @@ const AppContent: React.FC = () => {
           ? activeDataset.zones.map((z: any) => z.zone_id)
           : ['zone-a', 'zone-b'],
         confidence_semantics: 'RAW_MODEL_SCORE',
-        quality: 'VALID',
+        quality: activeQuality,
         detections: realFrameObs.detections || [],
       }
     : {
@@ -458,22 +577,27 @@ const AppContent: React.FC = () => {
         ],
       };
 
-  const activeReadings: ZoneReading[] = (!isSynthetic && activeDataset?.zones && realFrameObs)
-    ? activeDataset.zones.map((z: any) => {
-        const count = (realFrameObs.detections || []).filter((d: any) => {
-          const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || (isCrowd6 ? 1280 : 1920));
-          const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || (isCrowd6 ? 720 : 1440));
-          return isPointInPolygon([px, py], z.vertices);
-        }).length;
-        return {
-          status: 'COUNTED' as const,
-          count,
-          zoneId: z.zone_id,
-          zoneName: z.name,
-        };
-      })
-    : (!isSynthetic && realFrameObs?.zone_readings)
-      ? realFrameObs.zone_readings
+  const activeReadings: ZoneReading[] = (realFrameObs?.zone_readings && realFrameObs.zone_readings.length > 0)
+    ? realFrameObs.zone_readings.map((zr: any) => ({
+        status: (zr.status === 'NOT_FULLY_OBSERVED' || zr.status === 'UNKNOWN' ? zr.status : 'COUNTED') as ZoneReading['status'],
+        count: zr.count ?? 0,
+        zoneId: zr.zoneId || zr.zone_id,
+        zoneName: zr.zoneName || zr.name,
+      }))
+    : (activeDataset?.zones && realFrameObs)
+      ? activeDataset.zones.map((z: any) => {
+          const count = (realFrameObs.detections || []).filter((d: any) => {
+            const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || (isCrowd6 ? 1280 : 1920));
+            const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || (isCrowd6 ? 720 : 1440));
+            return isPointInPolygon([px, py], z.vertices);
+          }).length;
+          return {
+            status: 'COUNTED' as const,
+            count,
+            zoneId: z.zone_id,
+            zoneName: z.name,
+          };
+        })
       : [
           {
             status: 'COUNTED',
@@ -516,76 +640,61 @@ const AppContent: React.FC = () => {
     document.body.removeChild(link);
   };
 
-  const sampleReviewSession: SessionMetadata = (!isSynthetic && activeDataset)
-    ? {
-        sessionId: currentSession.id,
-        sourceId: currentSession.sourceId,
-        mediaName: currentSession.mediaName,
-        duration: activeDataset?.metadata?.duration || currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 49.68),
-        imageWidth: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
-        imageHeight: activeDataset?.metadata?.height || (isCrowd6 ? 720 : (is150 ? 1440 : 1080)),
-        synthetic: false,
-        modelProfileId: 'yolo11n_person_detector',
-        modelProfileSha256: '0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1',
-        checkpointSha256: 'yolo11n_official_weights',
-        videoSrc: videoSrc,
-        heatmapUrl: isCrowd6 ? null : (is150 ? '/media_150_heatmap.png' : '/sample_real_heatmap.png'),
-      }
-    : {
-        sessionId: currentSession.id,
-        sourceId: currentSession.sourceId || 'media-plaza-01',
-        mediaName: currentSession.mediaName,
-        duration: currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 64.5),
-        imageWidth: matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
-        imageHeight: matchedMedia?.height || (isCrowd6 ? 720 : 1080),
-        synthetic: Boolean(currentSession.synthetic),
-        modelProfileId: 'crowd_best_local_v2',
-        modelProfileSha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
-        videoSrc: videoSrc,
-      };
+  const sampleReviewSession: SessionMetadata = {
+    sessionId: currentSession.id,
+    sourceId: currentSession.sourceId,
+    mediaName: currentSession.mediaName,
+    duration: activeDataset?.metadata?.duration || currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 49.68),
+    imageWidth: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
+    imageHeight: activeDataset?.metadata?.height || (isCrowd6 ? 720 : (is150 ? 1440 : 1080)),
+    synthetic: Boolean(currentSession.synthetic),
+    modelProfileId: activeDataset?.metadata?.model || 'models/best.pt',
+    modelProfileSha256: 'crowd_best_local_v2',
+    checkpointSha256: 'best.pt',
+    videoSrc: videoSrc,
+    heatmapUrl: `/api/v1/sessions/${currentSession.id}/heatmap`,
+  };
 
-  const sampleZones = (!isSynthetic && activeDataset?.zones)
-    ? activeDataset.zones
-    : isCrowd6
-      ? [
-          {
-            zone_id: 'zone-a',
-            name: 'Khu vực A (crowd6)',
-            color: '#0072B2',
-            vertices: [[100, 150], [600, 150], [550, 680], [80, 680]],
-          },
-          {
-            zone_id: 'zone-b',
-            name: 'Khu vực B (crowd6)',
-            color: '#009E73',
-            vertices: [[650, 150], [1200, 150], [1150, 680], [620, 680]],
-          },
-        ]
-      : [
-          {
-            zone_id: 'zone-north',
-            name: 'Khu vực Bắc (Quảng trường)',
-            color: '#0072B2',
-            vertices: [
-              [300, 200] as [number, number],
-              [900, 200] as [number, number],
-              [850, 700] as [number, number],
-              [250, 700] as [number, number],
-            ],
-          },
-          {
-            zone_id: 'zone-south',
-            name: 'Khu vực Nam (Lối vào)',
-            color: '#009E73',
-            vertices: [
-              [1000, 300] as [number, number],
-              [1600, 300] as [number, number],
-              [1550, 800] as [number, number],
-              [950, 800] as [number, number],
-            ],
-          },
-        ];
+  const sampleZones = activeDataset?.zones || (isCrowd6
+    ? [
+        {
+          zone_id: 'zone-a',
+          name: 'Khu vực A (crowd6)',
+          color: '#0072B2',
+          vertices: [[100, 150], [600, 150], [550, 680], [80, 680]],
+        },
+        {
+          zone_id: 'zone-b',
+          name: 'Khu vực B (crowd6)',
+          color: '#009E73',
+          vertices: [[650, 150], [1200, 150], [1150, 680], [620, 680]],
+        },
+      ]
+    : [
+        {
+          zone_id: 'zone-north',
+          name: 'Khu vực Bắc (Quảng trường)',
+          color: '#0072B2',
+          vertices: [
+            [300, 200] as [number, number],
+            [900, 200] as [number, number],
+            [850, 700] as [number, number],
+            [250, 700] as [number, number],
+          ],
+        },
+        {
+          zone_id: 'zone-south',
+          name: 'Khu vực Nam (Lối vào)',
+          color: '#009E73',
+          vertices: [
+            [1000, 300] as [number, number],
+            [1600, 300] as [number, number],
+            [1550, 800] as [number, number],
+            [950, 800] as [number, number],
+          ],
+        },
+      ]);
+
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -710,7 +819,7 @@ const AppContent: React.FC = () => {
           {currentView === 'wizard' && (
             <NewSessionWizard
               mediaCatalog={mediaCatalog}
-              zoneSets={MOCK_ZONE_SETS}
+              zoneSets={zoneSets}
               modelProfile={MOCK_MODEL_PROFILE}
               onCreateZoneSet={(mediaId) => {
                 const found = mediaCatalog.find((m) => m.id === mediaId) || mediaCatalog[0];

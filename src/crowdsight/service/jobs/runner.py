@@ -5,6 +5,7 @@ import logging
 
 from sqlalchemy import select
 
+from crowdsight.service.artifacts.store import ArtifactStore
 from crowdsight.service.domain.zones import Point2D, ZoneDefinition, ZonePolygon, ZoneSet
 from crowdsight.service.pipeline.runner import SessionPipeline
 from crowdsight.service.storage.database import DatabaseManager
@@ -25,9 +26,11 @@ class JobManager:
         self,
         db_manager: DatabaseManager,
         media_registry: MediaRegistry,
+        artifact_store: ArtifactStore | None = None,
     ) -> None:
         self.db_manager = db_manager
         self.media_registry = media_registry
+        self.artifact_store = artifact_store
         self._cancellation_requests: set[str] = set()
 
     def recover_orphaned_jobs(self) -> int:
@@ -120,7 +123,7 @@ class JobManager:
                 boundary = ModelBoundaryService()
                 detector, _ = boundary.create_detector(
                     synthetic=job.synthetic,
-                    enable_tracker=bool(job.options.get("enable_tracker", False)),
+                    enable_tracker=bool(job.options.get("enable_tracker", not job.synthetic)),
                 )
             except ModelBoundaryError as mbe:
                 with self.db_manager.get_session() as session:
@@ -145,11 +148,21 @@ class JobManager:
             zone_set=zone_set,
             detector=detector,
             db_manager=self.db_manager,
+            artifact_store=self.artifact_store,
             is_synthetic=job.synthetic,
         )
 
         try:
             status = pipeline.run(cancellation_check=lambda: self.is_cancelled(session_id))
             return status
+        except Exception as exc:
+            logger.exception("Pipeline run failed for session %s: %s", session_id, exc)
+            with self.db_manager.get_session() as session:
+                sess_rec = session.get(SessionRecord, session_id)
+                if sess_rec:
+                    sess_rec.status = "FAILED"
+                    sess_rec.error_code = "INFERENCE_PIPELINE_ERROR"
+                    sess_rec.user_action_hint = str(exc)
+            return "FAILED"
         finally:
             self.clear_cancellation(session_id)

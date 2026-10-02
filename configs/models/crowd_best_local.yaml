@@ -30,9 +30,9 @@ inference:
   device: auto
 tracker:
   type: botsort
-  config_source: ../heat_map/configs/trackers/botsort_uav.yaml
+  config_source: ../trackers/botsort.yaml
   config_env: CROWDSIGHT_TRACKER_CONFIG
-  config_sha256: f6b571babb8a7d078241934ded037f49d69dd854523a0793481456cd4043e641
+  config_sha256: 8cd88930d3be5557be0777f384eecff0a36a7011850fe613fc0a68178bfd5b01
   ids_scope: one_video_session
 evidence_status:
   checkpoint_hash: verified_against_heat_map_and_uav_returned_artifact

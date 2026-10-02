@@ -38,7 +38,7 @@ def init_service_dependencies(
 
     _media_registry = MediaRegistry(media_path, _db_manager)
     _artifact_store = ArtifactStore(art_path)
-    _job_manager = JobManager(_db_manager, _media_registry)
+    _job_manager = JobManager(_db_manager, _media_registry, _artifact_store)
 
 
 def get_db_manager() -> DatabaseManager:

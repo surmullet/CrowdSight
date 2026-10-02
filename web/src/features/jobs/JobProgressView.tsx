@@ -93,88 +93,94 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
 
   // Connect to SSE stream
   useEffect(() => {
+    fetchStatus();
+
     const sse = new EventSource(`/api/v1/sessions/${sessionId}/events`);
     sseRef.current = sse;
+
+    const handleProgressData = (payload: any) => {
+      setJob((prev) => ({
+        ...prev,
+        status: payload.status,
+        progress: payload.progress ?? prev.progress,
+        currentFrame: payload.processed_frames ?? payload.currentFrame ?? prev.currentFrame,
+        totalFrames: payload.total_frames ?? payload.totalFrames ?? prev.totalFrames,
+        errorCode: payload.error_code ?? payload.errorCode,
+        userActionHint: payload.user_action_hint ?? payload.userActionHint,
+        synthetic: payload.synthetic ?? prev.synthetic,
+      }));
+
+      if (payload.status === 'COMPLETED') {
+        sse.close();
+        onComplete();
+      } else if (
+        payload.status === 'FAILED' ||
+        payload.status === 'CANCELLED' ||
+        payload.status === 'PARTIAL_CANCELLED'
+      ) {
+        sse.close();
+      }
+    };
 
     sse.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        setJob((prev) => ({
-          ...prev,
-          ...payload,
-        }));
-
-        if (payload.status === 'COMPLETED') {
-          sse.close();
-          onComplete();
-        }
+        handleProgressData(payload);
       } catch {
         // SSE parse error
       }
     };
 
+    sse.addEventListener('progress', (event: any) => {
+      try {
+        const payload = JSON.parse(event.data);
+        handleProgressData(payload);
+      } catch {
+        // SSE parse error
+      }
+    });
+
+    sse.addEventListener('done', (event: any) => {
+      try {
+        const payload = JSON.parse(event.data);
+        handleProgressData(payload);
+      } catch {
+        // SSE parse error
+      }
+    });
+
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
     sse.onerror = () => {
-      // On SSE drop or mock session, fallback to polling with simulation progress
       sse.close();
-      const interval = setInterval(async () => {
-        try {
-          const res = await fetch(`/api/v1/sessions/${sessionId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setJob((prev) => ({ ...prev, ...data }));
-            if (data.status === 'COMPLETED') {
-              clearInterval(interval);
-              onComplete();
+      if (!pollInterval) {
+        pollInterval = setInterval(async () => {
+          try {
+            const res = await fetch(`/api/v1/sessions/${sessionId}`);
+            if (res.ok) {
+              const data = await res.json();
+              handleProgressData(data);
+              if (
+                data.status === 'COMPLETED' ||
+                data.status === 'FAILED' ||
+                data.status === 'CANCELLED' ||
+                data.status === 'PARTIAL_CANCELLED'
+              ) {
+                if (pollInterval) clearInterval(pollInterval);
+              }
             }
-            return;
+          } catch {
+            // Polling network retry
           }
-        } catch {
-          // Ignore
-        }
-
-        // Fallback simulation for mock/synthetic demo session
-        setJob((prev) => {
-          if (prev.status !== 'RUNNING' && prev.status !== 'QUEUED') return prev;
-          const nextProg = Math.min(1.0, +(prev.progress + 0.12).toFixed(2));
-          const currentFrame = Math.round(nextProg * 100);
-          if (nextProg >= 1.0) {
-            clearInterval(interval);
-            return {
-              ...prev,
-              status: 'COMPLETED',
-              progress: 1.0,
-              currentFrame: 100,
-              totalFrames: 100,
-              fps: 25.0,
-              etaSeconds: 0,
-              qualityCounts: { valid: 82, partial: 12, unknown: 6, stale: 0 },
-            };
-          }
-          return {
-            ...prev,
-            status: 'RUNNING',
-            progress: nextProg,
-            currentFrame,
-            totalFrames: 100,
-            fps: +(24.5 + Math.random()).toFixed(1),
-            etaSeconds: Math.max(0, Math.round((1 - nextProg) * 8)),
-            qualityCounts: {
-              valid: Math.round(currentFrame * 0.82),
-              partial: Math.round(currentFrame * 0.12),
-              unknown: Math.round(currentFrame * 0.06),
-              stale: 0,
-            },
-          };
-        });
-      }, 800);
-
-      return () => clearInterval(interval);
+        }, 1000);
+      }
     };
 
     return () => {
       sse.close();
+      if (pollInterval) clearInterval(pollInterval);
     };
-  }, [sessionId, onComplete, fetchStatus]);
+  }, [sessionId, onComplete]);
 
   const handleCancel = async () => {
     setIsCancelling(true);
