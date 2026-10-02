@@ -5,8 +5,8 @@ task: person_detection
 model_family: yolo11s_finetuned
 checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
 checkpoint_sha256: 12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc
-source_artifact: ../heat_map/models/best.pt
-matching_artifact: ../uav-crowd-monitoring/artifacts/e01-finetune-returned/best.pt
+source_artifact: ../../models/best.pt
+matching_artifact: ../../models/best.pt
 lineage:
   training_run_id: e01-finetune-pilot-v1
   initial_checkpoint_sha256: 8332891c201ec99458c567e17b059bbac59ed8fa57134d1cc7a7048905a31483

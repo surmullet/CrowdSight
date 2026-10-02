@@ -73,8 +73,10 @@ data/**
 !data/README.md
 
 # --- Machine Learning Models & Weights (Strict Invariant) ---
+models/
 models/**
 !models/README.md
+debug_output/
 *.pt
 *.pt2
 *.pth

@@ -85,11 +85,14 @@ class ModelBoundaryService:
     def __init__(self, default_config_path: Path | None = None) -> None:
         if default_config_path is None:
             repo_root = Path(__file__).resolve().parents[4]
+            crowd_best = repo_root / "configs" / "models" / "crowd_best_local.yaml"
             local_yolo = repo_root / "configs" / "models" / "yolo11n_local.yaml"
-            if (repo_root / "yolo11n.pt").is_file() and local_yolo.is_file():
+            if (repo_root / "models" / "best.pt").is_file() and crowd_best.is_file():
+                default_config_path = crowd_best
+            elif (repo_root / "yolo11n.pt").is_file() and local_yolo.is_file():
                 default_config_path = local_yolo
             else:
-                default_config_path = repo_root / "configs" / "models" / "crowd_best_local.yaml"
+                default_config_path = crowd_best
         self.default_config_path = default_config_path
 
     def load_config(self, config_path: Path | None = None) -> dict[str, Any]:
