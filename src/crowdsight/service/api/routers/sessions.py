@@ -16,10 +16,12 @@ from sqlalchemy.orm import Session
 from crowdsight.service.api.deps import (
     get_artifact_store,
     get_db,
+    get_db_manager,
     get_job_manager,
 )
 from crowdsight.service.artifacts.store import ArtifactStore
 from crowdsight.service.jobs.runner import JobManager
+from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.pipeline.synthetic import (
     SYNTHETIC_CHECKPOINT_SHA256,
     SYNTHETIC_PROFILE_ID,
@@ -397,34 +399,37 @@ def delete_session(
 async def stream_session_events(
     session_id: str,
     request: Request,
-    db: Session = Depends(get_db),
+    db_manager: DatabaseManager = Depends(get_db_manager),
 ) -> StreamingResponse:
     async def event_generator() -> AsyncGenerator[str, None]:
         while True:
             if await request.is_disconnected():
                 break
 
-            job = db.get(SessionRecord, session_id)
-            if not job:
-                yield f"event: error\ndata: {json.dumps({'error': 'Session not found'})}\n\n"
-                break
+            with db_manager.get_session() as session:
+                job = session.get(SessionRecord, session_id)
+                if not job:
+                    yield f"event: error\ndata: {json.dumps({'error': 'Session not found'})}\n\n"
+                    break
 
-            data = {
-                "session_id": job.id,
-                "status": job.status,
-                "progress": job.progress,
-                "processed_frames": job.processed_frames,
-                "total_frames": job.total_frames,
-                "error_code": job.error_code,
-                "user_action_hint": job.user_action_hint,
-            }
+                data = {
+                    "session_id": job.id,
+                    "status": job.status,
+                    "progress": job.progress,
+                    "processed_frames": job.processed_frames,
+                    "total_frames": job.total_frames,
+                    "error_code": job.error_code,
+                    "user_action_hint": job.user_action_hint,
+                }
+                status = job.status
+
             # Emit both default data event and named progress event for maximum compatibility
             yield f"data: {json.dumps(data)}\n\n"
             yield f"event: progress\ndata: {json.dumps(data)}\n\n"
 
-            if job.status in ("COMPLETED", "FAILED", "CANCELLED", "PARTIAL_CANCELLED"):
-                yield f"data: {json.dumps({'status': job.status})}\n\n"
-                yield f"event: done\ndata: {json.dumps({'status': job.status})}\n\n"
+            if status in ("COMPLETED", "FAILED", "CANCELLED", "PARTIAL_CANCELLED"):
+                yield f"data: {json.dumps({'status': status})}\n\n"
+                yield f"event: done\ndata: {json.dumps({'status': status})}\n\n"
                 break
 
             await asyncio.sleep(0.5)

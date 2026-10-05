@@ -81,6 +81,9 @@ class JobManager:
             if not job:
                 raise ValueError(f"Session not found: {session_id}")
 
+            job.status = "RUNNING"
+            session.commit()
+
             zone_version = session.get(ZoneSetVersionRecord, job.zone_set_version_id)
             if not zone_version:
                 raise ValueError(f"Zone set version {job.zone_set_version_id} not found")

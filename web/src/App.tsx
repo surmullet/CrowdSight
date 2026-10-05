@@ -45,6 +45,18 @@ function isPointInPolygon(point: [number, number], vs: [number, number][]): bool
   return inside;
 }
 
+function normalizeDataset(data: any): any {
+  if (!data) return null;
+  let frames = data.frames;
+  if (frames && !Array.isArray(frames)) {
+    frames = Object.values(frames);
+  }
+  return {
+    ...data,
+    frames: frames || [],
+  };
+}
+
 const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
     id: '5cc6461b-1cb0-4700-8305-b01c78780785',
@@ -124,15 +136,16 @@ const MOCK_MODEL_PROFILE: ModelProfileInfo = {
 };
 
 const DEFAULT_SESSION: SessionSummaryItem = {
-  id: 'session-150-real',
+  id: '8fe5393f-d235-4420-b072-285d479ec03f',
   sourceId: '150.mp4',
-  mediaName: '150.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
+  mediaName: '150.mp4 (AI Quét Thật)',
   duration: 57.44,
   status: 'COMPLETED',
   progress: 1.0,
   synthetic: false,
-  createdAt: '2026-10-01 09:55:00',
+  createdAt: '2026-10-02 14:00:00',
   zoneSetName: 'Khu vực Giám sát A & B',
+  videoSrc: '/150.mp4',
   qualityBreakdown: {
     validPct: 100,
     partialPct: 0,
@@ -141,66 +154,12 @@ const DEFAULT_SESSION: SessionSummaryItem = {
   },
 };
 
-const INITIAL_SESSIONS: SessionSummaryItem[] = [
-  {
-    id: 'session-crowd6-real',
-    sourceId: '5cc6461b-1cb0-4700-8305-b01c78780785',
-    mediaName: 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
-    duration: 25.12,
-    status: 'COMPLETED',
-    progress: 1.0,
-    synthetic: false,
-    createdAt: '2026-10-01 15:55:00',
-    zoneSetName: 'Khu vực Giám sát A & B (crowd6)',
-    videoSrc: '/crowd6.mp4',
-    qualityBreakdown: {
-      validPct: 100,
-      partialPct: 0,
-      unknownPct: 0,
-      stalePct: 0,
-    },
-  },
-  DEFAULT_SESSION,
-  {
-    id: 'session-yolo-real-01',
-    sourceId: 'sample.mp4',
-    mediaName: 'sample.mp4 (Quét AI YOLO11 Thật)',
-    duration: 49.68,
-    status: 'COMPLETED',
-    progress: 1.0,
-    synthetic: false,
-    createdAt: '2026-10-01 09:25:00',
-    zoneSetName: 'Khu vực Sảnh chính & Hành lang',
-    qualityBreakdown: {
-      validPct: 100,
-      partialPct: 0,
-      unknownPct: 0,
-      stalePct: 0,
-    },
-  },
-  {
-    id: 'session-demo-01',
-    sourceId: 'media-plaza-01',
-    mediaName: 'plaza_pedestrian_cross_1080p.mp4 (Dữ liệu mẫu)',
-    duration: 64.5,
-    status: 'COMPLETED',
-    progress: 1.0,
-    synthetic: true,
-    createdAt: '2026-09-30 08:30:00',
-    zoneSetName: 'Khu vực quảng trường trung tâm',
-    qualityBreakdown: {
-      validPct: 82,
-      partialPct: 12,
-      unknownPct: 6,
-      stalePct: 0,
-    },
-  },
-];
+const INITIAL_SESSIONS: SessionSummaryItem[] = [DEFAULT_SESSION];
 
 const AppContent: React.FC = () => {
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialView = (urlParams?.get('view') as AppView) || 'sessions';
-  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || 'session-crowd6-real';
+  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || '8fe5393f-d235-4420-b072-285d479ec03f';
 
   const [currentView, setCurrentView] = useState<AppView>(initialView);
   const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSession);
@@ -239,10 +198,12 @@ const AppContent: React.FC = () => {
               stalePct: 0,
             },
           }));
-          setSessions((prev) => {
-            const backendIds = new Set(backendSessions.map((b) => b.id));
-            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
-            return [...backendSessions, ...keepPrev];
+          setSessions(backendSessions);
+          setSelectedSessionId((prev) => {
+            if (!prev || prev.startsWith('session-') || !backendSessions.some((b) => b.id === prev)) {
+              return backendSessions[0]?.id || prev;
+            }
+            return prev;
           });
         }
       })
@@ -302,21 +263,21 @@ const AppContent: React.FC = () => {
     fetch('/media_150_observations.json')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setDataset150(data);
+        if (data) setDataset150(normalizeDataset(data));
       })
       .catch((err) => console.log('150 observations error:', err));
 
     fetch('/sample_real_observations.json')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setDatasetSample(data);
+        if (data) setDatasetSample(normalizeDataset(data));
       })
       .catch((err) => console.log('sample observations error:', err));
 
     fetch('/media_crowd6_observations.json')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) setDatasetCrowd6(data);
+        if (data) setDatasetCrowd6(normalizeDataset(data));
       })
       .catch((err) => console.log('crowd6 observations error:', err));
   }, []);
@@ -369,8 +330,30 @@ const AppContent: React.FC = () => {
     }
   }, []);
 
+  const fetchSessionDataset = async (sessionId: string) => {
+    if (!sessionId) return null;
+    try {
+      const res = await fetch(`/api/v1/sessions/${sessionId}/dataset`);
+      if (res.ok) {
+        const raw = await res.json();
+        const data = normalizeDataset(raw);
+        if (data && data.frames && data.frames.length > 0) {
+          setSessionDatasetMap((prev) => ({ ...prev, [sessionId]: data }));
+          return data;
+        }
+      }
+    } catch (err) {
+      console.log('Dataset fetch error:', err);
+    }
+    return null;
+  };
+
   const handleSelectSession = (id: string) => {
     setSelectedSessionId(id);
+    const existing = sessionDatasetMap[id];
+    if (!existing?.frames?.length) {
+      fetchSessionDataset(id);
+    }
     setCurrentView('review');
   };
 
@@ -441,28 +424,24 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // Load dataset for selected session if not already in memory
+  // Load dataset for selected session if not already in memory with real frames
   useEffect(() => {
     if (!selectedSessionId) return;
-    if (sessionDatasetMap[selectedSessionId]) return;
-    if (
-      selectedSessionId === 'session-crowd6-real' ||
-      selectedSessionId === 'session-150-real' ||
-      selectedSessionId === 'session-yolo-real-01' ||
-      selectedSessionId === 'session-demo-01'
-    ) {
-      return;
-    }
+    const existing = sessionDatasetMap[selectedSessionId];
+    if (existing?.frames?.length > 0) return;
 
-    fetch(`/api/v1/sessions/${selectedSessionId}/dataset`)
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setSessionDatasetMap((prev) => ({ ...prev, [selectedSessionId]: data }));
-        }
-      })
-      .catch((err) => console.log('Dataset fetch error:', err));
+    fetchSessionDataset(selectedSessionId);
   }, [selectedSessionId, sessionDatasetMap]);
+
+  // Ensure dataset is loaded whenever switching to review view
+  useEffect(() => {
+    if (currentView === 'review' && selectedSessionId) {
+      const existing = sessionDatasetMap[selectedSessionId];
+      if (!existing?.frames?.length) {
+        fetchSessionDataset(selectedSessionId);
+      }
+    }
+  }, [currentView, selectedSessionId, sessionDatasetMap]);
 
   const { currentTime } = usePlaybackStore();
 
@@ -473,15 +452,16 @@ const AppContent: React.FC = () => {
   const sessionSourceLower = (currentSession?.sourceId || '').toLowerCase();
 
   const isCrowd6 = sessionNameLower.includes('crowd6') || sessionSourceLower.includes('crowd6');
-  const is150 = !isCrowd6 && (sessionNameLower.includes('150') || sessionSourceLower.includes('150') || currentSession?.id === 'session-150-real');
-  const isSample = !isCrowd6 && !is150 && (sessionNameLower.includes('sample') || sessionSourceLower.includes('sample') || currentSession?.id === 'session-yolo-real-01');
+  const is150 = !isCrowd6 && (sessionNameLower.includes('150') || sessionSourceLower.includes('150'));
+  const isSample = !isCrowd6 && !is150 && (sessionNameLower.includes('sample') || sessionSourceLower.includes('sample'));
 
   const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample && !isCrowd6);
 
   // Pick dataset based on session: prefer real session dataset from backend if available
   const loadedSessionDataset = sessionDatasetMap[currentSession?.id];
-  const activeDataset = loadedSessionDataset || (
-    isCrowd6
+  const activeDataset = (loadedSessionDataset && loadedSessionDataset.frames && loadedSessionDataset.frames.length > 0)
+    ? loadedSessionDataset
+    : (isCrowd6
       ? datasetCrowd6
       : is150
         ? dataset150
@@ -489,8 +469,42 @@ const AppContent: React.FC = () => {
           ? datasetSample
           : useRealAI
             ? (datasetCrowd6 || dataset150 || datasetSample)
-            : null
-  );
+            : null);
+
+  const sampleZones = (activeDataset?.zones && activeDataset.zones.length > 0)
+    ? activeDataset.zones
+    : (is150
+      ? [
+          {
+            zone_id: 'zone-a',
+            name: 'Khu vực Giám sát A (Bên trái)',
+            color: '#0072B2',
+            vertices: [[192, 432], [1056, 432], [960, 1368], [96, 1368]] as [number, number][],
+          },
+          {
+            zone_id: 'zone-b',
+            name: 'Khu vực Giám sát B (Bên phải)',
+            color: '#009E73',
+            vertices: [[1056, 360], [1824, 360], [1824, 1368], [960, 1368]] as [number, number][],
+          },
+        ]
+      : (isCrowd6
+        ? [
+            {
+              zone_id: 'zone-a',
+              name: 'Khu vực A (crowd6)',
+              color: '#0072B2',
+              vertices: [[0, 8], [659, 0], [609, 720], [0, 714]] as [number, number][],
+            },
+            {
+              zone_id: 'zone-b',
+              name: 'Khu vực B (crowd6)',
+              color: '#009E73',
+              vertices: [[661, 0], [1280, 0], [1280, 716], [610, 720]] as [number, number][],
+            },
+          ]
+        : []
+      ));
 
   const datasetFps = activeDataset?.metadata?.fps || 25;
   const datasetTotalFrames = activeDataset?.metadata?.totalFrames || activeDataset?.frames?.length || (isCrowd6 ? 628 : is150 ? 1436 : 1242);
@@ -504,11 +518,7 @@ const AppContent: React.FC = () => {
 
   const activeQuality: FrameQuality = (!isSynthetic && realFrameObs)
     ? (realFrameObs.quality || 'VALID')
-    : currentTime >= 40 && currentTime <= 55
-      ? 'PARTIAL'
-      : 'VALID';
-
-  const baseCountNorth = Math.max(3, Math.round(14 + Math.sin(currentTime / 4) * 4));
+    : 'VALID';
 
   // Determine videoSrc accurately
   const matchedMedia = mediaCatalog.find(
@@ -526,7 +536,7 @@ const AppContent: React.FC = () => {
     } else if (currentSession.sourceId && !currentSession.sourceId.startsWith('session-')) {
       videoSrc = `/api/v1/media/${currentSession.sourceId}/stream`;
     } else {
-      videoSrc = '/crowd6.mp4';
+      videoSrc = '/150.mp4';
     }
   }
 
@@ -543,38 +553,27 @@ const AppContent: React.FC = () => {
         image_height: activeDataset?.metadata?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
-        fully_observed_zones: activeDataset?.zones
-          ? activeDataset.zones.map((z: any) => z.zone_id)
-          : ['zone-a', 'zone-b'],
+        fully_observed_zones: sampleZones.map((z: any) => z.zone_id),
         confidence_semantics: 'RAW_MODEL_SCORE',
         quality: activeQuality,
         detections: realFrameObs.detections || [],
       }
     : {
-        source_id: currentSession?.sourceId || (isCrowd6 ? 'crowd6.mp4' : is150 ? '150.mp4' : 'media-plaza-01'),
+        source_id: currentSession?.sourceId || (isCrowd6 ? 'crowd6.mp4' : is150 ? '150.mp4' : 'video.mp4'),
         session_id: currentSession?.id || selectedSessionId,
-        model_profile_id: 'crowd_best_local_v2',
-        model_profile_sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
-        checkpoint_sha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
-        frame_index: Math.round(currentTime * 25),
-        media_time_s: +currentTime.toFixed(2),
+        model_profile_id: activeDataset?.metadata?.model || 'models/best.pt',
+        model_profile_sha256: 'crowd_best_local_v2',
+        checkpoint_sha256: 'best.pt',
+        frame_index: currentFrameIdx,
+        media_time_s: +(currentFrameIdx / datasetFps).toFixed(2),
         image_width: matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
-        image_height: matchedMedia?.height || (isCrowd6 ? 720 : 1080),
+        image_height: matchedMedia?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
-        fully_observed_zones: ['zone-north', 'zone-south'],
+        fully_observed_zones: sampleZones.map((z: any) => z.zone_id),
         confidence_semantics: 'RAW_MODEL_SCORE',
         quality: activeQuality,
-        detections: [
-          { track_id: 101, x: 0.28, y: 0.42, confidence: 0.92, bbox_xyxy: [510, 390, 560, 480] },
-          { track_id: 102, x: 0.35, y: 0.48, confidence: 0.89, bbox_xyxy: [640, 450, 700, 560] },
-          { track_id: 103, x: 0.41, y: 0.38, confidence: 0.94, bbox_xyxy: [760, 360, 810, 440] },
-          { track_id: 104, x: 0.22, y: 0.52, confidence: 0.86, bbox_xyxy: [390, 490, 450, 600] },
-          { track_id: 105, x: 0.38, y: 0.58, confidence: 0.91, bbox_xyxy: [700, 550, 770, 680] },
-          { track_id: 106, x: 0.31, y: 0.33, confidence: 0.88, bbox_xyxy: [570, 320, 620, 400] },
-          { track_id: 107, x: 0.25, y: 0.40, confidence: 0.90, bbox_xyxy: [460, 380, 510, 470] },
-          { track_id: 108, x: 0.44, y: 0.45, confidence: 0.87, bbox_xyxy: [820, 430, 880, 530] },
-        ],
+        detections: [],
       };
 
   const activeReadings: ZoneReading[] = (realFrameObs?.zone_readings && realFrameObs.zone_readings.length > 0)
@@ -584,11 +583,11 @@ const AppContent: React.FC = () => {
         zoneId: zr.zoneId || zr.zone_id,
         zoneName: zr.zoneName || zr.name,
       }))
-    : (activeDataset?.zones && realFrameObs)
-      ? activeDataset.zones.map((z: any) => {
-          const count = (realFrameObs.detections || []).filter((d: any) => {
-            const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || (isCrowd6 ? 1280 : 1920));
-            const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || (isCrowd6 ? 720 : 1440));
+    : (sampleZones && sampleZones.length > 0)
+      ? sampleZones.map((z: any) => {
+          const count = (realFrameObs?.detections || []).filter((d: any) => {
+            const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920));
+            const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset?.metadata?.height || (isCrowd6 ? 720 : 1440));
             return isPointInPolygon([px, py], z.vertices);
           }).length;
           return {
@@ -598,20 +597,7 @@ const AppContent: React.FC = () => {
             zoneName: z.name,
           };
         })
-      : [
-          {
-            status: 'COUNTED',
-            count: baseCountNorth,
-            zoneId: 'zone-north',
-            zoneName: 'Khu vực Bắc (Quảng trường)',
-          },
-          {
-            status: 'COUNTED',
-            count: 0,
-            zoneId: 'zone-south',
-            zoneName: 'Khu vực Nam (Lối vào)',
-          },
-        ];
+      : [];
 
   const handleExportCsv = () => {
     let rows = 'media_time_s,frame_index,zone_id,zone_name,visible_count,quality\n';
@@ -655,45 +641,116 @@ const AppContent: React.FC = () => {
     heatmapUrl: `/api/v1/sessions/${currentSession.id}/heatmap`,
   };
 
-  const sampleZones = activeDataset?.zones || (isCrowd6
-    ? [
-        {
-          zone_id: 'zone-a',
-          name: 'Khu vực A (crowd6)',
-          color: '#0072B2',
-          vertices: [[100, 150], [600, 150], [550, 680], [80, 680]],
-        },
-        {
-          zone_id: 'zone-b',
-          name: 'Khu vực B (crowd6)',
-          color: '#009E73',
-          vertices: [[650, 150], [1200, 150], [1150, 680], [620, 680]],
-        },
-      ]
-    : [
-        {
-          zone_id: 'zone-north',
-          name: 'Khu vực Bắc (Quảng trường)',
-          color: '#0072B2',
-          vertices: [
-            [300, 200] as [number, number],
-            [900, 200] as [number, number],
-            [850, 700] as [number, number],
-            [250, 700] as [number, number],
-          ],
-        },
-        {
-          zone_id: 'zone-south',
-          name: 'Khu vực Nam (Lối vào)',
-          color: '#009E73',
-          vertices: [
-            [1000, 300] as [number, number],
-            [1600, 300] as [number, number],
-            [1550, 800] as [number, number],
-            [950, 800] as [number, number],
-          ],
-        },
-      ]);
+  const qualityIntervals = React.useMemo(() => {
+    if (!activeDataset?.frames || activeDataset.frames.length === 0) {
+      return [{ startTime: 0, endTime: sampleReviewSession.duration, quality: 'VALID' as const }];
+    }
+    const intervals: { startTime: number; endTime: number; quality: FrameQuality }[] = [];
+    let currentInterval: { startTime: number; endTime: number; quality: FrameQuality } | null = null;
+
+    for (const f of activeDataset.frames) {
+      const q: FrameQuality = f.quality || 'VALID';
+      const t: number = f.media_time_s ?? 0;
+      if (!currentInterval) {
+        currentInterval = { startTime: t, endTime: t, quality: q };
+      } else if (currentInterval.quality === q) {
+        currentInterval.endTime = t;
+      } else {
+        intervals.push(currentInterval);
+        currentInterval = { startTime: t, endTime: t, quality: q };
+      }
+    }
+    if (currentInterval) {
+      intervals.push(currentInterval);
+    }
+    return intervals.length > 0
+      ? intervals
+      : [{ startTime: 0, endTime: sampleReviewSession.duration, quality: 'VALID' as const }];
+  }, [activeDataset, sampleReviewSession.duration]);
+
+  const zoneTrends = React.useMemo(() => {
+    if (!sampleZones || sampleZones.length === 0) return [];
+
+    if (activeDataset?.frames && activeDataset.frames.length > 0) {
+      const frames = activeDataset.frames;
+      const duration = activeDataset.metadata?.duration || currentSession.duration || 30;
+      const step = Math.max(1, Math.round(duration / 25));
+      const sampleTimes: number[] = [];
+      for (let t = 0; t <= duration; t += step) {
+        sampleTimes.push(t);
+      }
+      const lastSample = sampleTimes[sampleTimes.length - 1];
+      if (lastSample !== undefined && lastSample < duration) {
+        sampleTimes.push(duration);
+      }
+
+      return sampleZones.map((z: any) => {
+        const points = sampleTimes.map((time) => {
+          const frameIdx = Math.min(
+            Math.max(0, Math.round(time * datasetFps)),
+            frames.length - 1
+          );
+          const f = frames[frameIdx];
+          let count = 0;
+          if (f?.zone_readings && f.zone_readings.length > 0) {
+            const zr = f.zone_readings.find((r: any) => (r.zoneId || r.zone_id) === z.zone_id);
+            if (zr) count = zr.count ?? 0;
+          } else if (f?.detections) {
+            count = f.detections.filter((d: any) => {
+              const px = d.bbox_xyxy ? (d.bbox_xyxy[0] + d.bbox_xyxy[2]) / 2 : d.x * (activeDataset.metadata?.width || 1920);
+              const py = d.bbox_xyxy ? d.bbox_xyxy[3] : d.y * (activeDataset.metadata?.height || 1080);
+              return isPointInPolygon([px, py], z.vertices);
+            }).length;
+          }
+          return { time, count };
+        });
+
+        return {
+          zoneId: z.zone_id,
+          name: z.name,
+          color: z.color || '#0072B2',
+          points,
+        };
+      });
+    }
+
+    return sampleZones.map((z: any) => ({
+      zoneId: z.zone_id,
+      name: z.name,
+      color: z.color || '#0072B2',
+      points: [
+        { time: 0, count: 0 },
+        { time: currentSession.duration || 30, count: 0 },
+      ],
+    }));
+  }, [activeDataset, sampleZones, currentSession.duration, datasetFps]);
+
+  const peaks = React.useMemo(() => {
+    const peakList: any[] = [];
+    zoneTrends.forEach((zt: any) => {
+      let maxPt = { time: 0, count: 0 };
+      zt.points.forEach((pt: any) => {
+        if (pt.count !== null && pt.count > maxPt.count) {
+          maxPt = { time: pt.time, count: pt.count };
+        }
+      });
+      if (maxPt.count > 0) {
+        peakList.push({
+          time: maxPt.time,
+          count: maxPt.count,
+          zoneId: zt.zoneId,
+          label: `Đỉnh ${zt.name}: ${maxPt.count} người`,
+        });
+      }
+    });
+    return peakList;
+  }, [zoneTrends]);
+
+  const initialNotes = React.useMemo(() => {
+    return [
+      { id: 'n1', time: 5, text: `Đã phân tích mô hình YOLO trên ${currentSession.mediaName}.` },
+    ];
+  }, [currentSession.mediaName]);
 
 
   return (
@@ -856,12 +913,14 @@ const AppContent: React.FC = () => {
                 setSessions((prev) =>
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
+                fetchSessionDataset(selectedSessionId);
                 setCurrentView('review');
               }}
               onOpenPartialResults={() => {
                 setSessions((prev) =>
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
+                fetchSessionDataset(selectedSessionId);
                 setCurrentView('review');
               }}
               onBackToLibrary={() => setCurrentView('sessions')}
@@ -874,70 +933,10 @@ const AppContent: React.FC = () => {
               zones={sampleZones}
               activeObservation={activeObservation}
               activeReadings={activeReadings}
-              qualityIntervals={[
-                { startTime: 0, endTime: 40, quality: 'VALID' },
-                { startTime: 40, endTime: 55, quality: 'PARTIAL' },
-                { startTime: 55, endTime: sampleReviewSession.duration, quality: 'VALID' },
-              ]}
-              zoneTrends={
-                is150
-                  ? [
-                      {
-                        zoneId: 'zone-a',
-                        name: 'Khu vực Giám sát A (Bên trái)',
-                        color: '#0072B2',
-                        points: [
-                          { time: 0, count: 0 },
-                          { time: 10, count: 1 },
-                          { time: 20, count: 1 },
-                          { time: 30, count: 1 },
-                          { time: 40, count: 1 },
-                          { time: 50, count: 1 },
-                          { time: 57, count: 1 },
-                        ],
-                      },
-                      {
-                        zoneId: 'zone-b',
-                        name: 'Khu vực Giám sát B (Bên phải)',
-                        color: '#009E73',
-                        points: [
-                          { time: 0, count: 0 },
-                          { time: 10, count: 0 },
-                          { time: 20, count: 0 },
-                          { time: 30, count: 0 },
-                          { time: 40, count: 0 },
-                          { time: 50, count: 0 },
-                          { time: 57, count: 0 },
-                        ],
-                      },
-                    ]
-                  : [
-                      {
-                        zoneId: 'zone-north',
-                        name: 'Khu vực Bắc (Quảng trường)',
-                        color: '#0072B2',
-                        points: [
-                          { time: 0, count: 5 },
-                          { time: 10, count: 12 },
-                          { time: 20, count: 18 },
-                          { time: 30, count: 14 },
-                          { time: 40, count: null },
-                          { time: 50, count: null },
-                          { time: 60, count: 11 },
-                        ],
-                      },
-                    ]
-              }
-              peaks={
-                is150
-                  ? [{ time: 15, count: 1, zoneId: 'zone-a', label: '1 người trong Khu vực A' }]
-                  : [{ time: 20, count: 18, zoneId: 'zone-north', label: 'Đỉnh lúc 00:20' }]
-              }
-              initialNotes={
-                is150
-                  ? [{ id: 'n1', time: 5, text: 'Phát hiện đối tượng di chuyển trong khu vực giám sát A.' }]
-                  : [{ id: 'n1', time: 10, text: 'Bắt đầu có nhóm người di chuyển từ cổng vào.' }]
-              }
+              qualityIntervals={qualityIntervals}
+              zoneTrends={zoneTrends}
+              peaks={peaks}
+              initialNotes={initialNotes}
               onExportCsv={handleExportCsv}
               onExportJsonl={handleExportJsonl}
               useRealAI={useRealAI}

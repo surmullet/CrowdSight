@@ -131,23 +131,25 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
       }
     };
 
-    sse.addEventListener('progress', (event: any) => {
-      try {
-        const payload = JSON.parse(event.data);
-        handleProgressData(payload);
-      } catch {
-        // SSE parse error
-      }
-    });
+    if (typeof sse.addEventListener === 'function') {
+      sse.addEventListener('progress', (event: any) => {
+        try {
+          const payload = JSON.parse(event.data);
+          handleProgressData(payload);
+        } catch {
+          // SSE parse error
+        }
+      });
 
-    sse.addEventListener('done', (event: any) => {
-      try {
-        const payload = JSON.parse(event.data);
-        handleProgressData(payload);
-      } catch {
-        // SSE parse error
-      }
-    });
+      sse.addEventListener('done', (event: any) => {
+        try {
+          const payload = JSON.parse(event.data);
+          handleProgressData(payload);
+        } catch {
+          // SSE parse error
+        }
+      });
+    }
 
     let pollInterval: ReturnType<typeof setInterval> | null = null;
 
