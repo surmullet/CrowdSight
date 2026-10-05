@@ -81,11 +81,8 @@ def _to_session_response(sess: SessionRecord, db: Session) -> SessionResponse:
     zsv = db.get(ZoneSetVersionRecord, sess.zone_set_version_id)
     media_name = media.display_name if media else None
     duration_s = media.duration_s if media else None
-    video_src = f"/api/v1/media/{media.id}/stream" if media else None
-    if media and (media.display_name == "crowd6.mp4" or "crowd6" in media.relpath.lower()):
-        video_src = "/crowd6.mp4"
-    elif media and (media.display_name == "150.mp4" or "150" in media.relpath.lower()):
-        video_src = "/150.mp4"
+    cache_token = f"{media.sha256[:10]}_{int(sess.updated_at.timestamp() if sess.updated_at else 0)}" if media else "0"
+    video_src = f"/api/v1/media/{media.id}/stream?v={cache_token}" if media else None
 
     zone_set_name = None
     if zsv and zsv.zone_set:
@@ -241,7 +238,16 @@ def get_session_dataset(
     if art:
         try:
             path = store.get_path(art.relpath)
-            return FileResponse(path=path, media_type="application/json", filename=f"session_{session_id}_observations.json")
+            return FileResponse(
+                path=path,
+                media_type="application/json",
+                filename=f"session_{session_id}_observations.json",
+                headers={
+                    "Cache-Control": "no-cache, no-store, must-revalidate",
+                    "Pragma": "no-cache",
+                    "Expires": "0",
+                },
+            )
         except Exception:
             pass
 
@@ -317,7 +323,15 @@ def get_session_dataset(
         "zones": zones_list,
         "frames": frames_list,
     }
-    return Response(content=json.dumps(dataset), media_type="application/json")
+    return Response(
+        content=json.dumps(dataset),
+        media_type="application/json",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 @router.get("/{session_id}/heatmap", summary="Download session heatmap PNG image")

@@ -76,6 +76,13 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     };
   }, [heatmapUrl]);
 
+  // Reload video element whenever videoSrc changes (e.g. re-upload or new session)
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [videoSrc]);
+
   // Sync seek/scrub from timeline and step controls to video element
   useEffect(() => {
     const video = videoRef.current;
@@ -285,6 +292,7 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
       className={`relative w-full h-full min-h-[360px] bg-black rounded-lg overflow-hidden flex items-center justify-center select-none ${className}`}
     >
       <video
+        key={videoSrc}
         ref={videoRef}
         src={videoSrc}
         playsInline

@@ -59,7 +59,7 @@ function normalizeDataset(data: any): any {
 
 const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
-    id: '5cc6461b-1cb0-4700-8305-b01c78780785',
+    id: 'media-01-crowd6',
     name: 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
     duration: 25.12,
     fps: 25,
@@ -70,7 +70,7 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
     videoSrc: '/crowd6.mp4',
   },
   {
-    id: 'media-150',
+    id: 'media-02-150',
     name: '150.mp4 (Video Vừa Tải Lên)',
     duration: 57.44,
     fps: 25,
@@ -114,13 +114,13 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
 
 const INITIAL_ZONE_SETS: ZoneSetSummary[] = [
   {
-    id: 'a874db06-a600-4d64-803a-c4ce693f7925',
+    id: 'zsv-crowd6-v2',
     name: 'Khu vực giám sát (crowd6.mp4)',
     version: 2,
     zoneCount: 2,
   },
   {
-    id: '8658e0b9-f3b0-47ea-9a00-33fd947f6fd9',
+    id: 'zsv-150-v3',
     name: 'Khu vực Giám sát A & B (150.mp4)',
     version: 3,
     zoneCount: 2,
@@ -136,16 +136,16 @@ const MOCK_MODEL_PROFILE: ModelProfileInfo = {
 };
 
 const DEFAULT_SESSION: SessionSummaryItem = {
-  id: '8fe5393f-d235-4420-b072-285d479ec03f',
-  sourceId: '150.mp4',
-  mediaName: '150.mp4 (AI Quét Thật)',
-  duration: 57.44,
+  id: 'session-01-crowd6',
+  sourceId: 'crowd6.mp4',
+  mediaName: 'crowd6.mp4 (AI Quét Thật)',
+  duration: 25.12,
   status: 'COMPLETED',
   progress: 1.0,
   synthetic: false,
   createdAt: '2026-10-02 14:00:00',
-  zoneSetName: 'Khu vực Giám sát A & B',
-  videoSrc: '/150.mp4',
+  zoneSetName: 'Khu vực giám sát (crowd6.mp4)',
+  videoSrc: '/crowd6.mp4',
   qualityBreakdown: {
     validPct: 100,
     partialPct: 0,
@@ -159,7 +159,7 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [DEFAULT_SESSION];
 const AppContent: React.FC = () => {
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialView = (urlParams?.get('view') as AppView) || 'sessions';
-  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || '8fe5393f-d235-4420-b072-285d479ec03f';
+  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || 'session-01-crowd6';
 
   const [currentView, setCurrentView] = useState<AppView>(initialView);
   const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSession);
@@ -223,12 +223,12 @@ const AppContent: React.FC = () => {
             height: m.height,
             codec: m.codec,
             browserPlayable: m.browser_playable,
-            videoSrc: m.display_name === 'crowd6.mp4' ? '/crowd6.mp4' : m.display_name === '150.mp4' ? '/150.mp4' : `/api/v1/media/${m.id}/stream`,
+            videoSrc: `/api/v1/media/${m.id}/stream?v=${m.sha256 ? m.sha256.slice(0, 10) : '0'}`,
           }));
           setMediaCatalog((prev) => {
-            const backendIds = new Set(backendMedia.map((b) => b.id));
-            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
-            return [...backendMedia, ...keepPrev];
+            // Only keep newly uploaded local blobs (with media-upload- prefix)
+            const uploadedUserBlobs = prev.filter((p) => p.id.startsWith('media-upload-'));
+            return [...backendMedia, ...uploadedUserBlobs];
           });
         }
       })
@@ -302,7 +302,11 @@ const AppContent: React.FC = () => {
           browserPlayable: data.browser_playable,
           videoSrc: localBlobUrl,
         };
-        setMediaCatalog((prev) => [mediaItem, ...prev]);
+        // Replace previous duplicate entry if same ID or name was re-uploaded
+        setMediaCatalog((prev) => [
+          mediaItem,
+          ...prev.filter((m) => m.id !== data.id && m.name !== data.display_name),
+        ]);
         return mediaItem;
       }
     } catch {
@@ -320,7 +324,10 @@ const AppContent: React.FC = () => {
       browserPlayable: true,
       videoSrc: localBlobUrl,
     };
-    setMediaCatalog((prev) => [fallbackItem, ...prev]);
+    setMediaCatalog((prev) => [
+      fallbackItem,
+      ...prev.filter((m) => m.name !== file.name),
+    ]);
     return fallbackItem;
   };
 
@@ -333,7 +340,7 @@ const AppContent: React.FC = () => {
   const fetchSessionDataset = async (sessionId: string) => {
     if (!sessionId) return null;
     try {
-      const res = await fetch(`/api/v1/sessions/${sessionId}/dataset`);
+      const res = await fetch(`/api/v1/sessions/${sessionId}/dataset?t=${Date.now()}`);
       if (res.ok) {
         const raw = await res.json();
         const data = normalizeDataset(raw);
@@ -459,21 +466,16 @@ const AppContent: React.FC = () => {
 
   // Pick dataset based on session: prefer real session dataset from backend if available
   const loadedSessionDataset = sessionDatasetMap[currentSession?.id];
+  const isDefaultInitialSample = currentSession.id === 'session-01-crowd6' || currentSession.id === 'session-03-150' || currentSession.id === 'session-sample-01';
   const activeDataset = (loadedSessionDataset && loadedSessionDataset.frames && loadedSessionDataset.frames.length > 0)
     ? loadedSessionDataset
-    : (isCrowd6
-      ? datasetCrowd6
-      : is150
-        ? dataset150
-        : isSample
-          ? datasetSample
-          : useRealAI
-            ? (datasetCrowd6 || dataset150 || datasetSample)
-            : null);
+    : (isDefaultInitialSample
+      ? (isCrowd6 ? datasetCrowd6 : is150 ? dataset150 : datasetSample)
+      : (loadedSessionDataset || null));
 
   const sampleZones = (activeDataset?.zones && activeDataset.zones.length > 0)
     ? activeDataset.zones
-    : (is150
+    : (isDefaultInitialSample && is150
       ? [
           {
             zone_id: 'zone-a',
@@ -488,7 +490,7 @@ const AppContent: React.FC = () => {
             vertices: [[1056, 360], [1824, 360], [1824, 1368], [960, 1368]] as [number, number][],
           },
         ]
-      : (isCrowd6
+      : (isDefaultInitialSample && isCrowd6
         ? [
             {
               zone_id: 'zone-a',
@@ -520,23 +522,23 @@ const AppContent: React.FC = () => {
     ? (realFrameObs.quality || 'VALID')
     : 'VALID';
 
-  // Determine videoSrc accurately
+  // Determine videoSrc accurately: prioritize active session stream (with cache busting token) or local uploaded blob
   const matchedMedia = mediaCatalog.find(
-    (m) => m.id === currentSession.sourceId || currentSession.mediaName.includes(m.name)
+    (m) => m.id === currentSession.sourceId || currentSession.mediaName === m.name
   );
 
   let videoSrc = currentSession.videoSrc || matchedMedia?.videoSrc;
   if (!videoSrc) {
-    if (isCrowd6) {
+    if (currentSession.sourceId && !currentSession.sourceId.startsWith('session-')) {
+      videoSrc = `/api/v1/media/${currentSession.sourceId}/stream`;
+    } else if (isCrowd6) {
       videoSrc = '/crowd6.mp4';
     } else if (is150) {
       videoSrc = '/150.mp4';
     } else if (isSample) {
       videoSrc = '/sample.mp4';
-    } else if (currentSession.sourceId && !currentSession.sourceId.startsWith('session-')) {
-      videoSrc = `/api/v1/media/${currentSession.sourceId}/stream`;
     } else {
-      videoSrc = '/150.mp4';
+      videoSrc = '/crowd6.mp4';
     }
   }
 
@@ -909,18 +911,18 @@ const AppContent: React.FC = () => {
                 },
                 synthetic: currentSession?.synthetic,
               }}
-              onComplete={() => {
+              onComplete={async () => {
                 setSessions((prev) =>
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
-                fetchSessionDataset(selectedSessionId);
+                await fetchSessionDataset(selectedSessionId);
                 setCurrentView('review');
               }}
-              onOpenPartialResults={() => {
+              onOpenPartialResults={async () => {
                 setSessions((prev) =>
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
-                fetchSessionDataset(selectedSessionId);
+                await fetchSessionDataset(selectedSessionId);
                 setCurrentView('review');
               }}
               onBackToLibrary={() => setCurrentView('sessions')}

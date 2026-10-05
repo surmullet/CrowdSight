@@ -111,6 +111,8 @@ class MediaRegistry:
                 existing.height = int(info["height"])
                 existing.codec = str(info["codec"])
                 existing.browser_playable = bool(info["browser_playable"])
+                session.flush()
+                session.refresh(existing)
                 return existing
 
             record = MediaAssetRecord(

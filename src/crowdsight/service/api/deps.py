@@ -19,12 +19,21 @@ _job_manager: JobManager | None = None
 
 def init_service_dependencies(
     *,
-    db_url: str = "sqlite:///./data/crowdsight.db",
+    db_url: str | None = None,
     media_dir: Path | None = None,
     artifacts_dir: Path | None = None,
 ) -> None:
     """Initialize global service dependencies (called at application lifespan startup)."""
     global _db_manager, _media_registry, _artifact_store, _job_manager
+
+    if not db_url:
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+        except ImportError:
+            pass
+        import os
+        db_url = os.environ.get("DATABASE_URL") or "sqlite:///./data/crowdsight.db"
 
     base_dir = Path("./data").resolve()
     media_path = Path(media_dir).resolve() if media_dir else base_dir / "media"
