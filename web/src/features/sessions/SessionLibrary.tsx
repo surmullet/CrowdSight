@@ -19,6 +19,7 @@ import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 export interface SessionSummaryItem {
   id: string;
+  displayCode?: string;
   sourceId: string;
   mediaName: string;
   duration: number;
@@ -236,9 +237,15 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-mono text-brand-text-muted">
-                      {session.id.slice(0, 8)}
-                    </span>
+                    {session.displayCode ? (
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-brand-gold/15 text-brand-gold border border-brand-gold/30">
+                        {session.displayCode}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-brand-text-muted">
+                        {session.id.slice(0, 8)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Media Name */}
@@ -349,7 +356,14 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                   <tr key={s.id} className="hover:bg-brand-abyssal/40 transition-colors">
                     <td className="py-3 px-4">
                       <div className="font-semibold text-brand-text-primary">{s.mediaName}</div>
-                      <div className="font-mono text-[10px] text-brand-text-muted">{s.id.slice(0, 12)}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {s.displayCode && (
+                          <span className="font-mono text-[10px] font-semibold text-brand-gold bg-brand-gold/10 px-1 py-0.5 rounded border border-brand-gold/20">
+                            {s.displayCode}
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] text-brand-text-muted">{s.id.slice(0, 8)}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">

@@ -32,6 +32,7 @@ CREATE TABLE IF NOT EXISTS media_assets (
     codec VARCHAR(64) NOT NULL,
     browser_playable BOOLEAN NOT NULL DEFAULT false,
     proxy_relpath VARCHAR(1024),
+    display_code VARCHAR(32) UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     
     CONSTRAINT uq_media_assets_relpath UNIQUE (relpath),
@@ -115,6 +116,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     applicability_snapshot JSONB NOT NULL DEFAULT '{}'::jsonb,
     synthetic BOOLEAN NOT NULL DEFAULT false,
     completeness VARCHAR(32) NOT NULL DEFAULT 'PENDING',
+    display_code VARCHAR(32) UNIQUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
 

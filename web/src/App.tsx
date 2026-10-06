@@ -60,7 +60,8 @@ function normalizeDataset(data: any): any {
 
 const INITIAL_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
-    id: 'media-01-crowd6',
+    id: '5cc6461b-1cb0-4700-8305-b01c78780785',
+    displayCode: 'MED-0002',
     name: 'crowd6.mp4',
     duration: 25.12,
     fps: 25,
@@ -71,7 +72,8 @@ const INITIAL_MEDIA_CATALOG: MediaCatalogItem[] = [
     videoSrc: '/crowd6.mp4',
   },
   {
-    id: 'media-02-150',
+    id: '4d0e3b31-186f-465f-913a-cab2359bbfa4',
+    displayCode: 'MED-0001',
     name: '150.mp4',
     duration: 57.44,
     fps: 25,
@@ -94,7 +96,8 @@ const DEFAULT_MODEL_PROFILE: ModelProfileInfo = {
 };
 
 const DEFAULT_SESSION: SessionSummaryItem = {
-  id: 'session-01-crowd6',
+  id: 'a914bc97-61a1-4840-ab7d-6c20c78afa0f',
+  displayCode: 'SES-0001',
   sourceId: 'crowd6.mp4',
   mediaName: 'crowd6.mp4 (AI Quét Thật)',
   duration: 25.12,
@@ -117,7 +120,7 @@ const INITIAL_SESSIONS: SessionSummaryItem[] = [DEFAULT_SESSION];
 const AppContent: React.FC = () => {
   const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
   const initialView = (urlParams?.get('view') as AppView) || 'sessions';
-  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || 'session-01-crowd6';
+  const initialSession = urlParams?.get('session') || INITIAL_SESSIONS[0]?.id || 'a914bc97-61a1-4840-ab7d-6c20c78afa0f';
 
   const [currentView, setCurrentView] = useState<AppView>(initialView);
   const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSession);
@@ -170,6 +173,7 @@ const AppContent: React.FC = () => {
         if (data && data.length > 0) {
           const backendSessions: SessionSummaryItem[] = data.map((item) => ({
             id: item.id,
+            displayCode: item.display_code,
             sourceId: item.media_asset_id,
             zoneSetVersionId: item.zone_set_version_id,
             mediaName: item.media_name || 'Video phân tích',
@@ -189,7 +193,7 @@ const AppContent: React.FC = () => {
           }));
           setSessions(backendSessions);
           setSelectedSessionId((prev) => {
-            if (!prev || prev.startsWith('session-') || !backendSessions.some((b) => b.id === prev)) {
+            if (!prev || !backendSessions.some((b) => b.id === prev)) {
               return backendSessions[0]?.id || prev;
             }
             return prev;
@@ -205,6 +209,7 @@ const AppContent: React.FC = () => {
         if (data && data.length > 0) {
           const backendMedia: MediaCatalogItem[] = data.map((m) => ({
             id: m.id,
+            displayCode: m.display_code,
             name: m.display_name,
             duration: m.duration_s,
             fps: m.fps,
@@ -519,7 +524,12 @@ const AppContent: React.FC = () => {
 
   // Pick dataset based on session: prefer real session dataset from backend if available
   const loadedSessionDataset = sessionDatasetMap[currentSession?.id];
-  const isDefaultInitialSample = currentSession.id === 'session-01-crowd6' || currentSession.id === 'session-03-150' || currentSession.id === 'session-sample-01';
+  const isDefaultInitialSample =
+    currentSession.id === 'a914bc97-61a1-4840-ab7d-6c20c78afa0f' ||
+    currentSession.id === 'session-01-crowd6' ||
+    currentSession.id === '8fe5393f-d235-4420-b072-285d479ec03f' ||
+    currentSession.id === 'session-03-150' ||
+    currentSession.id === 'session-sample-01';
   const activeDataset = (loadedSessionDataset && loadedSessionDataset.frames && loadedSessionDataset.frames.length > 0)
     ? loadedSessionDataset
     : (isDefaultInitialSample

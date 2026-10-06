@@ -115,8 +115,22 @@ class MediaRegistry:
                 session.refresh(existing)
                 return existing
 
+            # Compute next sequential display_code (MED-XXXX)
+            stmt_max = select(MediaAssetRecord.display_code).where(MediaAssetRecord.display_code.like("MED-%"))
+            existing_codes = session.scalars(stmt_max).all()
+            max_num = 0
+            for code in existing_codes:
+                try:
+                    num = int(code.split("-")[1])
+                    if num > max_num:
+                        max_num = num
+                except (IndexError, ValueError):
+                    pass
+            display_code = f"MED-{max_num + 1:04d}"
+
             record = MediaAssetRecord(
                 display_name=name,
+                display_code=display_code,
                 relpath=relpath,
                 sha256=sha256,
                 duration_s=float(info["duration_s"]),

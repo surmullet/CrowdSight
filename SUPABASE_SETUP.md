@@ -17,19 +17,16 @@ Tài liệu này hướng dẫn thiết lập hoàn chỉnh database PostgreSQL 
 
 ---
 
-## 2. Nạp Dữ Liệu Thực Tế (Data Seed)
+## 2. Chuẩn Hóa Khóa Chính UUID & Mã Gợi Nhớ (display_code)
 
-> [!TIP]
-> **Định Dạng ID Rõ Ràng, Có Thứ Tự (Không dùng UUID ngẫu nhiên)**:
-> Toàn bộ ID của hệ thống đã được chuẩn hóa lại theo mẫu dễ đọc và có thứ tự rõ ràng:
-> - **Video**: `media-01-crowd6`, `media-02-150`, `media-03-crowd`
-> - **Session**: `session-01-crowd6`, `session-02-crowd`, `session-03-150`
-> - **Artifact**: `art-01-crowd6-dataset`, `art-01-crowd6-heatmap`, ...
-> - **Zone Version**: `zsv-crowd6-v1`..`v3`, `zsv-150-v1`..`v4`
-> - **Observation**: `obs-crowd6-f0000`..`f0627`, `obs-150-f0000`..`f1435`
-> - **Zone Result**: `zr-00001` .. `zr-04468`
->
-> Mỗi file đều được chia nhỏ **<= 580 KB** tại [supabase_seeds/](file:///d:/Project-Gascolae/CrowdSight/supabase_seeds) để không bao giờ bị lỗi kích thước trên Supabase.
+> [!NOTE]
+> **Kiến trúc Khóa chính UUID kết hợp Mã gợi nhớ (Human-readable Code)**:
+> Hệ thống áp dụng chuẩn phân tầng chuyên nghiệp:
+> - **Khóa chính kỹ thuật (`id`)**: 100% chuẩn UUID (36 ký tự) trên tất cả các bảng (`media_assets`, `sessions`, `zone_set_versions`, `artifacts`, `observations`, `zone_results`, `audit_log`) đảm bảo tính duy nhất, tương thích cơ sở dữ liệu và không phân mảnh.
+> - **Mã hiển thị gợi nhớ (`display_code`)**: Bổ sung riêng cho các bảng người dùng thao tác trực tiếp:
+>   - **Video (`media_assets`)**: `MED-0001`, `MED-0002`, `MED-0003`, `MED-0004`, ...
+>   - **Phiên phân tích (`sessions`)**: `SES-0001`, `SES-0002`, ..., `SES-0014`, ...
+>   Mã này tự động tăng dần theo thời gian tạo và hiển thị trực tiếp dạng badge trên giao diện web.
 
 ---
 

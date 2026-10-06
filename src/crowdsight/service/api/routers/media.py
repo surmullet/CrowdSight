@@ -27,6 +27,7 @@ class MediaAssetResponse(BaseModel):
     height: int
     codec: str
     browser_playable: bool
+    display_code: str | None = None
 
 
 @router.get("", response_model=list[MediaAssetResponse], summary="List registered recorded video assets")

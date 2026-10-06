@@ -18,6 +18,7 @@ import { formatMediaTime } from '@/features/player/PlayerControls';
 
 export interface MediaCatalogItem {
   id: string;
+  displayCode?: string;
   name: string;
   duration: number;
   fps: number;
@@ -341,9 +342,16 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-brand-text-primary">
-                          {media.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {media.displayCode && (
+                            <span className="font-mono text-[10px] font-semibold text-brand-gold bg-brand-gold/15 px-1.5 py-0.5 rounded border border-brand-gold/30">
+                              {media.displayCode}
+                            </span>
+                          )}
+                          <span className="font-semibold text-sm text-brand-text-primary">
+                            {media.name}
+                          </span>
+                        </div>
                         <span className="font-mono text-xs text-brand-gold tabular-nums">
                           {formatMediaTime(media.duration)}
                         </span>

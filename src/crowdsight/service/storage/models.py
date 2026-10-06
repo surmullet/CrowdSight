@@ -47,6 +47,7 @@ class MediaAssetRecord(Base):
     codec: Mapped[str] = mapped_column(String(64), nullable=False)
     browser_playable: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     proxy_relpath: Mapped[str | None] = mapped_column(String(1024), nullable=True)
+    display_code: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
 
     sessions: Mapped[list[SessionRecord]] = relationship(back_populates="media_asset", cascade="all, delete-orphan", passive_deletes=True)
@@ -102,6 +103,7 @@ class SessionRecord(Base):
     applicability_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     synthetic: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     completeness: Mapped[str] = mapped_column(String(32), default="PENDING", nullable=False)
+    display_code: Mapped[str | None] = mapped_column(String(32), unique=True, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, onupdate=_utc_now, nullable=False)
 

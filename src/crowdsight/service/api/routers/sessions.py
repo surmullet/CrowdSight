@@ -68,6 +68,7 @@ class SessionResponse(BaseModel):
     user_action_hint: str | None
     synthetic: bool
     completeness: str
+    display_code: str | None = None
     created_at: datetime
     updated_at: datetime
     media_name: str | None = None
@@ -94,6 +95,7 @@ def _to_session_response(sess: SessionRecord, db: Session) -> SessionResponse:
 
     return SessionResponse(
         id=sess.id,
+        display_code=sess.display_code,
         media_asset_id=sess.media_asset_id,
         zone_set_version_id=sess.zone_set_version_id,
         model_profile_id=sess.model_profile_id,
@@ -183,7 +185,21 @@ def create_session(
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Model boundary verification failed: {e}")
 
+    # Compute next sequential display_code (SES-XXXX)
+    stmt_max = select(SessionRecord.display_code).where(SessionRecord.display_code.like("SES-%"))
+    existing_codes = db.scalars(stmt_max).all()
+    max_num = 0
+    for code in existing_codes:
+        try:
+            num = int(code.split("-")[1])
+            if num > max_num:
+                max_num = num
+        except (IndexError, ValueError):
+            pass
+    display_code = f"SES-{max_num + 1:04d}"
+
     sess_record = SessionRecord(
+        display_code=display_code,
         media_asset_id=media.id,
         zone_set_version_id=zsv.id,
         model_profile_id=profile_id,

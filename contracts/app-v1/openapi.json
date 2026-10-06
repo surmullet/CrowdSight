@@ -218,6 +218,17 @@
             "title": "Codec",
             "type": "string"
           },
+          "display_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Code"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -584,6 +595,17 @@
             "format": "date-time",
             "title": "Created At",
             "type": "string"
+          },
+          "display_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Code"
           },
           "duration_s": {
             "anyOf": [
