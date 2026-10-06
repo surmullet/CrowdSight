@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Clock,
   ShieldAlert,
@@ -7,8 +7,10 @@ import {
   FileSpreadsheet,
   FileCode,
   Plus,
+  Trash2,
   Info,
   Layers,
+  RotateCcw,
 } from 'lucide-react';
 import type { CrowdFrameObservation, ZoneReading } from '@/shared/types/domain';
 import { Banner } from '@/shared/ui/Banner';
@@ -55,13 +57,14 @@ interface ReviewWorkspaceProps {
   zoneTrends: ZoneTrendLine[];
   peaks?: PeakMarker[];
   initialNotes?: NoteMarker[];
+  onAddNote?: (text: string, mediaTime: number) => Promise<void>;
+  onDeleteNote?: (noteId: string) => Promise<void>;
   missingFramesCount?: number;
   onSeek?: (time: number) => void;
   onExportCsv?: () => void;
   onExportJsonl?: () => void;
-  useRealAI?: boolean;
-  onToggleRealAI?: () => void;
   onEditZones?: () => void;
+  onReanalyze?: () => void;
   className?: string;
 }
 
@@ -74,13 +77,14 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   zoneTrends,
   peaks = [],
   initialNotes = [],
+  onAddNote,
+  onDeleteNote,
   missingFramesCount = 0,
   onSeek,
   onExportCsv,
   onExportJsonl,
-  useRealAI = false,
-  onToggleRealAI,
   onEditZones,
+  onReanalyze,
   className = '',
 }) => {
   const { currentTime, setCurrentTime } = usePlaybackStore();
@@ -90,21 +94,39 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [isSemanticsOpen, setIsSemanticsOpen] = useState(false);
 
+  useEffect(() => {
+    setNotes(initialNotes);
+  }, [initialNotes]);
+
   const handleSeek = (time: number) => {
     setCurrentTime(time);
     if (onSeek) onSeek(time);
   };
 
-  const handleAddNote = (e: React.FormEvent) => {
+  const handleAddNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNoteText.trim()) return;
-    const newNote: NoteMarker = {
-      id: `note-${Date.now()}`,
-      time: currentTime,
-      text: newNoteText.trim(),
-    };
-    setNotes((prev) => [...prev, newNote]);
+    const text = newNoteText.trim();
+    const time = currentTime;
     setNewNoteText('');
+    if (onAddNote) {
+      await onAddNote(text, time);
+    } else {
+      const newNote: NoteMarker = {
+        id: `note-${Date.now()}`,
+        time,
+        text,
+      };
+      setNotes((prev) => [...prev, newNote]);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (onDeleteNote) {
+      await onDeleteNote(noteId);
+    } else {
+      setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    }
   };
 
   const copyToClipboard = (text: string, label: string) => {
@@ -139,23 +161,19 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
           </div>
         </div>
 
-        {/* Action buttons: AI Toggle, Semantics modal, Export */}
+        {/* Real Session Status Badge, Semantics modal, Export */}
         <div className="flex items-center gap-2">
-          {onToggleRealAI && (
-            <button
-              type="button"
-              onClick={onToggleRealAI}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-all shadow-sm cursor-pointer ${
-                useRealAI
-                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 hover:bg-emerald-500/30'
-                  : 'bg-amber-500/20 text-amber-400 border-amber-500/50 hover:bg-amber-500/30'
-              }`}
-              title="Chuyển đổi giữa Chế độ AI Quét Thật và Dữ liệu Mẫu Giả Lập"
-            >
-              <span className="w-2 h-2 rounded-full animate-ping bg-emerald-400" />
-              <span className="font-semibold">{useRealAI ? '🤖 AI Quét Thật (YOLO11)' : '🧪 Mẫu Giả Lập (Mock)'}</span>
-            </button>
-          )}
+          <div
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border shadow-sm ${
+              session.synthetic
+                ? 'bg-purple-500/20 text-purple-300 border-purple-500/40'
+                : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+            }`}
+            title={session.synthetic ? 'Phiên chạy với dữ liệu mô phỏng (Synthetic)' : 'Phiên phân tích bằng mô hình AI YOLO11 thực'}
+          >
+            <span className={`w-2 h-2 rounded-full ${session.synthetic ? 'bg-purple-400' : 'bg-emerald-400 animate-pulse'}`} />
+            <span className="font-semibold">{session.synthetic ? '🧪 Dữ liệu Mô phỏng' : '🤖 AI Quét Thật (YOLO11)'}</span>
+          </div>
 
           {onEditZones && (
             <button
@@ -166,6 +184,18 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             >
               <Layers className="w-3.5 h-3.5 text-brand-gold" />
               <span>Chỉnh sửa khu vực</span>
+            </button>
+          )}
+
+          {onReanalyze && (
+            <button
+              type="button"
+              onClick={onReanalyze}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-gold/15 hover:bg-brand-gold/25 border border-brand-gold/40 text-brand-gold transition-colors cursor-pointer font-medium"
+              title="Chạy lại phân tích toàn bộ video này với mô hình AI"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Phân tích lại</span>
             </button>
           )}
 
@@ -426,13 +456,23 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
                         </div>
                         <p className="text-brand-text-primary">{note.text}</p>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleSeek(note.time)}
-                        className="text-[10px] text-brand-text-muted hover:text-brand-gold underline shrink-0"
-                      >
-                        Tua tới
-                      </button>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleSeek(note.time)}
+                          className="text-[10px] text-brand-text-muted hover:text-brand-gold underline shrink-0"
+                        >
+                          Tua tới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(note.id)}
+                          className="p-1 text-brand-text-muted hover:text-red-400 rounded transition-colors"
+                          title="Xóa ghi chú"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

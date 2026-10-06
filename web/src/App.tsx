@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import {
   Film,
@@ -7,6 +7,7 @@ import {
   Cpu,
   FlaskConical,
   Languages,
+  RotateCcw,
 } from 'lucide-react';
 import { SessionLibrary, type SessionSummaryItem } from '@/features/sessions/SessionLibrary';
 import { NewSessionWizard, type MediaCatalogItem, type ZoneSetSummary, type ModelProfileInfo } from '@/features/wizard/NewSessionWizard';
@@ -57,10 +58,10 @@ function normalizeDataset(data: any): any {
   };
 }
 
-const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
+const INITIAL_MEDIA_CATALOG: MediaCatalogItem[] = [
   {
     id: 'media-01-crowd6',
-    name: 'crowd6.mp4 (Video Vừa Tải Lên - AI Quét Thật)',
+    name: 'crowd6.mp4',
     duration: 25.12,
     fps: 25,
     width: 1280,
@@ -71,7 +72,7 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
   },
   {
     id: 'media-02-150',
-    name: '150.mp4 (Video Vừa Tải Lên)',
+    name: '150.mp4',
     duration: 57.44,
     fps: 25,
     width: 1920,
@@ -80,54 +81,11 @@ const MOCK_MEDIA_CATALOG: MediaCatalogItem[] = [
     browserPlayable: true,
     videoSrc: '/150.mp4',
   },
-  {
-    id: 'media-sample-01',
-    name: 'sample.mp4 (Video Phòng Giám Sát)',
-    duration: 49.68,
-    fps: 25,
-    width: 1920,
-    height: 1080,
-    codec: 'h264',
-    browserPlayable: true,
-  },
-  {
-    id: 'media-plaza-01',
-    name: 'plaza_pedestrian_cross_1080p.mp4',
-    duration: 64.5,
-    fps: 25,
-    width: 1920,
-    height: 1080,
-    codec: 'h264',
-    browserPlayable: true,
-  },
-  {
-    id: 'media-station-02',
-    name: 'metro_station_gate_north.mp4',
-    duration: 120.0,
-    fps: 30,
-    width: 1920,
-    height: 1080,
-    codec: 'hevc',
-    browserPlayable: false,
-  },
 ];
 
-const INITIAL_ZONE_SETS: ZoneSetSummary[] = [
-  {
-    id: 'zsv-crowd6-v2',
-    name: 'Khu vực giám sát (crowd6.mp4)',
-    version: 2,
-    zoneCount: 2,
-  },
-  {
-    id: 'zsv-150-v3',
-    name: 'Khu vực Giám sát A & B (150.mp4)',
-    version: 3,
-    zoneCount: 2,
-  },
-];
+const INITIAL_ZONE_SETS: ZoneSetSummary[] = [];
 
-const MOCK_MODEL_PROFILE: ModelProfileInfo = {
+const DEFAULT_MODEL_PROFILE: ModelProfileInfo = {
   profileId: 'crowd_best_local_v2',
   profileSha256: '83f5287f340ee77b4ba71f3014389146dfd2806283b9cf79427b3ecab6e7a2b2',
   checkpointSha256: '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
@@ -163,16 +121,46 @@ const AppContent: React.FC = () => {
 
   const [currentView, setCurrentView] = useState<AppView>(initialView);
   const [selectedSessionId, setSelectedSessionId] = useState<string>(initialSession);
-  const [useRealAI, setUseRealAI] = useState<boolean>(true);
   const [dataset150, setDataset150] = useState<any>(null);
   const [datasetSample, setDatasetSample] = useState<any>(null);
   const [datasetCrowd6, setDatasetCrowd6] = useState<any>(null);
   const { locale, toggleLocale, t } = useLanguage();
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
-  const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(MOCK_MEDIA_CATALOG);
+  const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(INITIAL_MEDIA_CATALOG);
   const [zoneSets, setZoneSets] = useState<ZoneSetSummary[]>(INITIAL_ZONE_SETS);
+  const [modelProfile, setModelProfile] = useState<ModelProfileInfo>(DEFAULT_MODEL_PROFILE);
+  const [sessionNotes, setSessionNotes] = useState<Record<string, Array<{ id: string; time: number; text: string }>>>({});
   const [activeMediaForZoneEditor, setActiveMediaForZoneEditor] = useState<MediaCatalogItem | null>(null);
   const [sessionDatasetMap, setSessionDatasetMap] = useState<Record<string, any>>({});
+  const [reanalyzeTarget, setReanalyzeTarget] = useState<SessionSummaryItem | null>(null);
+  const [reanalyzeStride, setReanalyzeStride] = useState<number>(2);
+  const [reanalyzeConfidence, setReanalyzeConfidence] = useState<number>(0.18);
+  const [reanalyzeModel, setReanalyzeModel] = useState<string>('yolo11n_local');
+
+  const refreshZoneSets = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/v1/zone-sets?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data) && data.length > 0) {
+          const backendZoneSets: ZoneSetSummary[] = data.map((zs: any) => {
+            const latestVersion = zs.versions && zs.versions.length > 0
+              ? zs.versions[zs.versions.length - 1]
+              : null;
+            return {
+              id: latestVersion ? latestVersion.id : zs.id,
+              name: zs.name,
+              version: latestVersion ? latestVersion.version : 1,
+              zoneCount: latestVersion?.polygon_data?.zones?.length || 2,
+            };
+          });
+          setZoneSets(backendZoneSets);
+        }
+      }
+    } catch (err) {
+      console.log('Error fetching zone sets:', err);
+    }
+  }, []);
 
   useEffect(() => {
     // 1. Fetch real sessions from SQLite backend
@@ -183,6 +171,7 @@ const AppContent: React.FC = () => {
           const backendSessions: SessionSummaryItem[] = data.map((item) => ({
             id: item.id,
             sourceId: item.media_asset_id,
+            zoneSetVersionId: item.zone_set_version_id,
             mediaName: item.media_name || 'Video phân tích',
             duration: item.duration_s || 25.12,
             status: item.status,
@@ -234,30 +223,24 @@ const AppContent: React.FC = () => {
       })
       .catch((err) => console.log('Error fetching media:', err));
 
-    // 3. Fetch real zone-sets from backend
-    fetch('/api/v1/zone-sets')
-      .then((res) => (res.ok ? res.json() : []))
-      .then((data: any[]) => {
-        if (data && data.length > 0) {
-          const backendZoneSets: ZoneSetSummary[] = data.map((zs) => {
-            const latestVersion = zs.versions && zs.versions.length > 0
-              ? zs.versions[zs.versions.length - 1]
-              : null;
-            return {
-              id: latestVersion ? latestVersion.id : zs.id,
-              name: zs.name,
-              version: latestVersion ? latestVersion.version : 1,
-              zoneCount: latestVersion?.polygon_data?.zones?.length || 2,
-            };
-          });
-          setZoneSets((prev) => {
-            const backendIds = new Set(backendZoneSets.map((b) => b.id));
-            const keepPrev = prev.filter((p) => !backendIds.has(p.id));
-            return [...backendZoneSets, ...keepPrev];
+    // 3. Fetch real zone sets
+    refreshZoneSets();
+
+    // 4. Fetch real model profile
+    fetch('/api/v1/model/profile')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setModelProfile({
+            profileId: data.profile_id || 'crowd_best_local_v2',
+            profileSha256: data.checkpoint_sha256 ? data.checkpoint_sha256.slice(0, 64) : 'crowd_best_local_v2',
+            checkpointSha256: data.checkpoint_sha256 || '',
+            applicabilityStatus: data.applicability_status || 'EXPERIMENTAL_NO_APPROVAL',
+            operationalAlertsAllowed: Boolean(data.operational_alerts_allowed),
           });
         }
       })
-      .catch((err) => console.log('Error fetching zone sets:', err));
+      .catch((err) => console.log('Error fetching model profile:', err));
 
     // Fallback fixtures
     fetch('/media_150_observations.json')
@@ -366,11 +349,23 @@ const AppContent: React.FC = () => {
 
   const handleDeleteSession = async (id: string) => {
     try {
-      await fetch(`/api/v1/sessions/${id}`, { method: 'DELETE' });
-    } catch {
-      // Ignore
+      const res = await fetch(`/api/v1/sessions/${id}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.detail || 'Không thể xóa phiên phân tích');
+      }
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      // Đồng bộ lại danh sách phiên từ backend
+      const refreshRes = await fetch('/api/v1/sessions');
+      if (refreshRes.ok) {
+        const data = await refreshRes.json();
+        setSessions(data);
+      }
+    } catch (err: any) {
+      console.error('Lỗi khi xóa phiên:', err);
+      alert(err.message || 'Lỗi khi xóa phiên phân tích');
+      throw err;
     }
-    setSessions((prev) => prev.filter((s) => s.id !== id));
   };
 
   const handleStartSession = async (params: {
@@ -378,6 +373,8 @@ const AppContent: React.FC = () => {
     zoneSetId: string;
     zoneSetVersion: number;
     frameStride: number;
+    confidence?: number;
+    modelProfile?: string;
     useSynthetic: boolean;
   }) => {
     try {
@@ -392,6 +389,8 @@ const AppContent: React.FC = () => {
           options: {
             enable_tracker: true,
             frame_stride: params.frameStride || 1,
+            confidence: params.confidence !== undefined ? params.confidence : 0.18,
+            model_profile: params.modelProfile || 'yolo11n_local',
           },
           use_synthetic: params.useSynthetic,
         }),
@@ -406,6 +405,7 @@ const AppContent: React.FC = () => {
       const newSession: SessionSummaryItem = {
         id: created.id,
         sourceId: created.media_asset_id,
+        zoneSetVersionId: created.zone_set_version_id,
         mediaName: created.media_name || 'Video phân tích',
         duration: created.duration_s || 25.12,
         status: created.status,
@@ -428,6 +428,59 @@ const AppContent: React.FC = () => {
     } catch (err) {
       console.error('Failed to create session:', err);
       throw err;
+    }
+  };
+
+  const handleOpenReanalyzeModal = (session: SessionSummaryItem) => {
+    setReanalyzeTarget(session);
+    setReanalyzeStride(2);
+    const isTopDown = session.mediaName.includes('150') || session.mediaName.toLowerCase().includes('topdown') || session.mediaName.toLowerCase().includes('drone');
+    if (isTopDown) {
+      setReanalyzeModel('crowd_best_local_v2');
+      setReanalyzeConfidence(0.08);
+    } else {
+      setReanalyzeModel('yolo11n_local');
+      setReanalyzeConfidence(0.18);
+    }
+  };
+
+  const handleConfirmReanalyze = async () => {
+    if (!reanalyzeTarget) return;
+    const session = reanalyzeTarget;
+    setReanalyzeTarget(null);
+
+    try {
+      const mediaId = session.sourceId;
+      let zoneSetId = session.zoneSetVersionId;
+      if (!zoneSetId) {
+        const targetMedia = mediaCatalog.find((m) => m.id === mediaId) || mediaCatalog.find((m) => session.mediaName.includes(m.name));
+        const matched = zoneSets.find((z) => {
+          const zName = z.name.toLowerCase();
+          const mName = (targetMedia?.name || session.mediaName).toLowerCase();
+          if (mName.includes('crowd') && zName.includes('crowd')) return true;
+          if (mName.includes('150') && zName.includes('150')) return true;
+          return false;
+        }) || zoneSets[0];
+        zoneSetId = matched?.id;
+      }
+
+      if (!mediaId || !zoneSetId) {
+        alert('Không tìm thấy tệp video hoặc tập vùng tương ứng để phân tích lại.');
+        return;
+      }
+
+      await handleStartSession({
+        mediaId,
+        zoneSetId,
+        zoneSetVersion: 1,
+        frameStride: reanalyzeStride,
+        confidence: reanalyzeConfidence,
+        modelProfile: reanalyzeModel,
+        useSynthetic: false,
+      });
+    } catch (err: any) {
+      console.error('Lỗi khi phân tích lại:', err);
+      alert(err.message || 'Lỗi khi khởi động lại phân tích');
     }
   };
 
@@ -462,7 +515,7 @@ const AppContent: React.FC = () => {
   const is150 = !isCrowd6 && (sessionNameLower.includes('150') || sessionSourceLower.includes('150'));
   const isSample = !isCrowd6 && !is150 && (sessionNameLower.includes('sample') || sessionSourceLower.includes('sample'));
 
-  const isSynthetic = Boolean(currentSession?.synthetic) || (!useRealAI && !is150 && !isSample && !isCrowd6);
+  const isSynthetic = Boolean(currentSession?.synthetic);
 
   // Pick dataset based on session: prefer real session dataset from backend if available
   const loadedSessionDataset = sessionDatasetMap[currentSession?.id];
@@ -511,12 +564,42 @@ const AppContent: React.FC = () => {
   const datasetFps = activeDataset?.metadata?.fps || 25;
   const datasetTotalFrames = activeDataset?.metadata?.totalFrames || activeDataset?.frames?.length || (isCrowd6 ? 628 : is150 ? 1436 : 1242);
 
-  const currentFrameIdx = Math.min(
+  // Synchronize frame observation with video currentTime using binary search on media_time_s
+  // This guarantees 100% lock between bounding boxes and video frames regardless of frame_stride or FPS.
+  const realFrameObs = React.useMemo(() => {
+    if (!activeDataset?.frames || activeDataset.frames.length === 0) return null;
+    const frames = activeDataset.frames;
+
+    let low = 0;
+    let high = frames.length - 1;
+    let bestIdx = 0;
+    let minDiff = Infinity;
+
+    while (low <= high) {
+      const mid = (low + high) >> 1;
+      const f = frames[mid];
+      const t = f.media_time_s ?? (f.frame_index !== undefined ? f.frame_index / datasetFps : mid / datasetFps);
+      const diff = Math.abs(t - currentTime);
+
+      if (diff < minDiff) {
+        minDiff = diff;
+        bestIdx = mid;
+      }
+
+      if (t < currentTime) {
+        low = mid + 1;
+      } else {
+        high = mid - 1;
+      }
+    }
+
+    return frames[bestIdx] || null;
+  }, [activeDataset, currentTime, datasetFps]);
+
+  const currentFrameIdx = realFrameObs?.frame_index ?? Math.min(
     Math.max(0, Math.round(currentTime * datasetFps)),
     datasetTotalFrames - 1
   );
-
-  const realFrameObs = activeDataset?.frames ? activeDataset.frames[currentFrameIdx] : null;
 
   const activeQuality: FrameQuality = (!isSynthetic && realFrameObs)
     ? (realFrameObs.quality || 'VALID')
@@ -551,8 +634,8 @@ const AppContent: React.FC = () => {
         checkpoint_sha256: 'best.pt',
         frame_index: realFrameObs.frame_index ?? currentFrameIdx,
         media_time_s: realFrameObs.media_time_s ?? +(currentFrameIdx / datasetFps).toFixed(2),
-        image_width: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
-        image_height: activeDataset?.metadata?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
+        image_width: activeDataset?.metadata?.width || matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
+        image_height: activeDataset?.metadata?.height || matchedMedia?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
         fully_observed_zones: sampleZones.map((z: any) => z.zone_id),
@@ -568,8 +651,8 @@ const AppContent: React.FC = () => {
         checkpoint_sha256: 'best.pt',
         frame_index: currentFrameIdx,
         media_time_s: +(currentFrameIdx / datasetFps).toFixed(2),
-        image_width: matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
-        image_height: matchedMedia?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
+        image_width: matchedMedia?.width || activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
+        image_height: matchedMedia?.height || activeDataset?.metadata?.height || (isCrowd6 ? 720 : is150 ? 1440 : 1080),
         observation_valid: true,
         registration_valid: false,
         fully_observed_zones: sampleZones.map((z: any) => z.zone_id),
@@ -628,13 +711,23 @@ const AppContent: React.FC = () => {
     document.body.removeChild(link);
   };
 
+  const lastFrameTime = (activeDataset?.frames && activeDataset.frames.length > 0)
+    ? (activeDataset.frames[activeDataset.frames.length - 1].media_time_s ?? 0)
+    : 0;
+  const sessionDuration = Math.max(
+    currentSession?.duration || 0,
+    lastFrameTime,
+    activeDataset?.metadata?.duration || 0,
+    (isCrowd6 ? 25.12 : is150 ? 57.44 : 52.47)
+  );
+
   const sampleReviewSession: SessionMetadata = {
     sessionId: currentSession.id,
     sourceId: currentSession.sourceId,
     mediaName: currentSession.mediaName,
-    duration: activeDataset?.metadata?.duration || currentSession.duration || (isCrowd6 ? 25.12 : is150 ? 57.44 : 49.68),
-    imageWidth: activeDataset?.metadata?.width || (isCrowd6 ? 1280 : 1920),
-    imageHeight: activeDataset?.metadata?.height || (isCrowd6 ? 720 : (is150 ? 1440 : 1080)),
+    duration: sessionDuration,
+    imageWidth: activeDataset?.metadata?.width || matchedMedia?.width || (isCrowd6 ? 1280 : 1920),
+    imageHeight: activeDataset?.metadata?.height || matchedMedia?.height || (isCrowd6 ? 720 : (is150 ? 1440 : 1080)),
     synthetic: Boolean(currentSession.synthetic),
     modelProfileId: activeDataset?.metadata?.model || 'models/best.pt',
     modelProfileSha256: 'crowd_best_local_v2',
@@ -645,7 +738,7 @@ const AppContent: React.FC = () => {
 
   const qualityIntervals = React.useMemo(() => {
     if (!activeDataset?.frames || activeDataset.frames.length === 0) {
-      return [{ startTime: 0, endTime: sampleReviewSession.duration, quality: 'VALID' as const }];
+      return [{ startTime: 0, endTime: sessionDuration, quality: 'VALID' as const }];
     }
     const intervals: { startTime: number; endTime: number; quality: FrameQuality }[] = [];
     let currentInterval: { startTime: number; endTime: number; quality: FrameQuality } | null = null;
@@ -663,19 +756,20 @@ const AppContent: React.FC = () => {
       }
     }
     if (currentInterval) {
+      currentInterval.endTime = Math.max(currentInterval.endTime, sessionDuration);
       intervals.push(currentInterval);
     }
     return intervals.length > 0
       ? intervals
-      : [{ startTime: 0, endTime: sampleReviewSession.duration, quality: 'VALID' as const }];
-  }, [activeDataset, sampleReviewSession.duration]);
+      : [{ startTime: 0, endTime: sessionDuration, quality: 'VALID' as const }];
+  }, [activeDataset, sessionDuration]);
 
   const zoneTrends = React.useMemo(() => {
     if (!sampleZones || sampleZones.length === 0) return [];
 
     if (activeDataset?.frames && activeDataset.frames.length > 0) {
       const frames = activeDataset.frames;
-      const duration = activeDataset.metadata?.duration || currentSession.duration || 30;
+      const duration = sessionDuration;
       const step = Math.max(1, Math.round(duration / 25));
       const sampleTimes: number[] = [];
       for (let t = 0; t <= duration; t += step) {
@@ -748,11 +842,65 @@ const AppContent: React.FC = () => {
     return peakList;
   }, [zoneTrends]);
 
-  const initialNotes = React.useMemo(() => {
-    return [
-      { id: 'n1', time: 5, text: `Đã phân tích mô hình YOLO trên ${currentSession.mediaName}.` },
-    ];
-  }, [currentSession.mediaName]);
+  // Real Operator Notes: fetch from SQLite backend for current session
+  useEffect(() => {
+    if (!currentSession?.id) return;
+    fetch(`/api/v1/sessions/${currentSession.id}/notes`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data: any[]) => {
+        if (Array.isArray(data)) {
+          setSessionNotes((prev) => ({
+            ...prev,
+            [currentSession.id]: data.map((n) => ({
+              id: n.id,
+              time: n.media_time_s,
+              text: n.text,
+            })),
+          }));
+        }
+      })
+      .catch((err) => console.log('Error fetching session notes:', err));
+  }, [currentSession?.id]);
+
+  const handleAddSessionNote = async (text: string, mediaTime: number) => {
+    if (!currentSession?.id) return;
+    try {
+      const res = await fetch(`/api/v1/sessions/${currentSession.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ media_time_s: mediaTime, text, author: 'operator' }),
+      });
+      if (res.ok) {
+        const created = await res.json();
+        setSessionNotes((prev) => ({
+          ...prev,
+          [currentSession.id]: [
+            ...(prev[currentSession.id] || []),
+            { id: created.id, time: created.media_time_s, text: created.text },
+          ],
+        }));
+      }
+    } catch (err) {
+      console.error('Lỗi khi thêm ghi chú:', err);
+    }
+  };
+
+  const handleDeleteSessionNote = async (noteId: string) => {
+    if (!currentSession?.id) return;
+    try {
+      const res = await fetch(`/api/v1/sessions/${currentSession.id}/notes/${noteId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok || res.status === 204) {
+        setSessionNotes((prev) => ({
+          ...prev,
+          [currentSession.id]: (prev[currentSession.id] || []).filter((n) => n.id !== noteId),
+        }));
+      }
+    } catch (err) {
+      console.error('Lỗi khi xóa ghi chú:', err);
+    }
+  };
 
 
   return (
@@ -872,6 +1020,7 @@ const AppContent: React.FC = () => {
               onSelectSession={handleSelectSession}
               onNewSession={() => setCurrentView('wizard')}
               onDeleteSession={handleDeleteSession}
+              onReanalyzeSession={handleOpenReanalyzeModal}
             />
           )}
 
@@ -879,7 +1028,7 @@ const AppContent: React.FC = () => {
             <NewSessionWizard
               mediaCatalog={mediaCatalog}
               zoneSets={zoneSets}
-              modelProfile={MOCK_MODEL_PROFILE}
+              modelProfile={modelProfile}
               onCreateZoneSet={(mediaId) => {
                 const found = mediaCatalog.find((m) => m.id === mediaId) || mediaCatalog[0];
                 setActiveMediaForZoneEditor(found || null);
@@ -925,6 +1074,7 @@ const AppContent: React.FC = () => {
                 await fetchSessionDataset(selectedSessionId);
                 setCurrentView('review');
               }}
+              onRetry={() => currentSession && handleOpenReanalyzeModal(currentSession)}
               onBackToLibrary={() => setCurrentView('sessions')}
             />
           )}
@@ -938,11 +1088,12 @@ const AppContent: React.FC = () => {
               qualityIntervals={qualityIntervals}
               zoneTrends={zoneTrends}
               peaks={peaks}
-              initialNotes={initialNotes}
+              initialNotes={sessionNotes[currentSession?.id] || []}
+              onAddNote={handleAddSessionNote}
+              onDeleteNote={handleDeleteSessionNote}
               onExportCsv={handleExportCsv}
               onExportJsonl={handleExportJsonl}
-              useRealAI={useRealAI}
-              onToggleRealAI={() => setUseRealAI((prev) => !prev)}
+              onReanalyze={() => currentSession && handleOpenReanalyzeModal(currentSession)}
               onEditZones={() => {
                 const found = mediaCatalog.find((m) => m.id === currentSession.sourceId || currentSession.mediaName.includes(m.name)) || mediaCatalog[0];
                 setActiveMediaForZoneEditor(found || null);
@@ -983,16 +1134,32 @@ const AppContent: React.FC = () => {
             const width = targetMedia?.width || 1920;
             const height = targetMedia?.height || (isTarget150 ? 1440 : 1080);
 
+            // Compute appropriate initial zones matching the specific video aspect ratio
+            const initialZonesForMedia = isTarget150
+              ? [
+                  { zoneId: 'zone-a', name: 'Khu vực Giám sát A (Bên trái)', color: '#0072B2', vertices: [[192, 432], [1056, 432], [960, 1368], [96, 1368]] as [number, number][] },
+                  { zoneId: 'zone-b', name: 'Khu vực Giám sát B (Bên phải)', color: '#009E73', vertices: [[1056, 360], [1824, 360], [1824, 1368], [960, 1368]] as [number, number][] },
+                ]
+              : (targetName.includes('crowd') && !targetName.includes('crowd6'))
+                ? [
+                    { zoneId: 'zone-a', name: 'Khu vực A (Bên trái)', color: '#0072B2', vertices: [[100, 150], [920, 150], [860, 1020], [100, 1020]] as [number, number][] },
+                    { zoneId: 'zone-b', name: 'Khu vực B (Bên phải)', color: '#009E73', vertices: [[960, 150], [1820, 150], [1820, 1020], [920, 1020]] as [number, number][] },
+                  ]
+                : targetName.includes('crowd6')
+                  ? [
+                      { zoneId: 'zone-a', name: 'Khu vực A', color: '#0072B2', vertices: [[0, 8], [659, 0], [609, 720], [0, 714]] as [number, number][] },
+                      { zoneId: 'zone-b', name: 'Khu vực B', color: '#009E73', vertices: [[661, 0], [1280, 0], [1280, 716], [610, 720]] as [number, number][] },
+                    ]
+                  : [
+                      { zoneId: 'zone-a', name: 'Khu vực A', color: '#0072B2', vertices: [[Math.round(width * 0.05), Math.round(height * 0.1)], [Math.round(width * 0.48), Math.round(height * 0.1)], [Math.round(width * 0.45), Math.round(height * 0.9)], [Math.round(width * 0.05), Math.round(height * 0.9)]] as [number, number][] },
+                      { zoneId: 'zone-b', name: 'Khu vực B', color: '#009E73', vertices: [[Math.round(width * 0.52), Math.round(height * 0.1)], [Math.round(width * 0.95), Math.round(height * 0.1)], [Math.round(width * 0.95), Math.round(height * 0.9)], [Math.round(width * 0.52), Math.round(height * 0.9)]] as [number, number][] },
+                    ];
+
             return (
               <ZoneEditor
-                key={`zone-editor-${targetMedia?.id || currentSession.id}-${sampleZones.length}`}
+                key={`zone-editor-${targetMedia?.id || currentSession.id}`}
                 initialZoneSetName={targetMedia?.name ? `Khu vực giám sát (${targetMedia.name.split(' ')[0]})` : (currentSession.zoneSetName || 'Khu vực quan sát')}
-                initialZones={sampleZones.map((z: any) => ({
-                  zoneId: z.zone_id,
-                  name: z.name,
-                  color: z.color,
-                  vertices: z.vertices,
-                }))}
+                initialZones={initialZonesForMedia}
                 imageWidth={width}
                 imageHeight={height}
                 sampleFrameUrl={resolvedFrameUrl}
@@ -1010,9 +1177,16 @@ const AppContent: React.FC = () => {
                     setDatasetSample((prev: any) => (prev ? { ...prev, zones: updatedZones } : prev));
                   }
 
-                  // Persist new zone set version to SQLite backend database (data/crowdsight.db)
+                  // Persist new zone set version to backend database
                   try {
-                    const zoneSetId = isTarget150 ? 'zones-150-real' : `zones-${targetMedia?.id || 'custom'}`;
+                    const zoneSetId = isTarget150
+                      ? 'zones-150'
+                      : (targetName.includes('crowd') && !targetName.includes('crowd6'))
+                        ? 'zones-media-03-crowd'
+                        : targetName.includes('crowd6')
+                          ? 'zones-crowd6'
+                          : `zones-${targetMedia?.id || 'custom'}`;
+
                     const payload = {
                       image_width: width,
                       image_height: height,
@@ -1035,11 +1209,12 @@ const AppContent: React.FC = () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                           id: zoneSetId,
-                          name: data.name || (isTarget150 ? 'Khu vực Giám sát A & B' : 'Khu vực quan sát'),
+                          name: data.name || (isTarget150 ? 'Khu vực giám sát (150.mp4)' : `Khu vực giám sát (${targetMedia?.name || 'video'})`),
                           ...payload,
                         }),
                       });
                     }
+                    await refreshZoneSets();
                   } catch (err) {
                     console.warn('Could not persist zone set to backend database:', err);
                   }
@@ -1063,16 +1238,251 @@ const AppContent: React.FC = () => {
 
           {currentView === 'model' && (
             <ModelStatusPage
-              modelProfileId={MOCK_MODEL_PROFILE.profileId}
-              modelProfileSha256={MOCK_MODEL_PROFILE.profileSha256}
-              checkpointSha256={MOCK_MODEL_PROFILE.checkpointSha256}
-              applicabilityStatus={MOCK_MODEL_PROFILE.applicabilityStatus}
-              operationalAlertsAllowed={MOCK_MODEL_PROFILE.operationalAlertsAllowed}
+              modelProfileId={modelProfile.profileId}
+              modelProfileSha256={modelProfile.profileSha256}
+              checkpointSha256={modelProfile.checkpointSha256}
+              applicabilityStatus={modelProfile.applicabilityStatus}
+              operationalAlertsAllowed={modelProfile.operationalAlertsAllowed}
             />
           )}
 
           {currentView === 'dev-states' && <DevStatesPage />}
         </div>
+
+        {/* Re-analyze Configuration Modal */}
+        {reanalyzeTarget && (
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm"
+          >
+            <div className="bg-brand-surface border border-brand-border rounded-2xl max-w-md w-full p-6 shadow-2xl text-xs space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-brand-gold/10 border border-brand-gold/30 rounded-xl text-brand-gold">
+                  <RotateCcw className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-brand-text-primary">
+                    Cấu hình phân tích lại video
+                  </h3>
+                  <p className="text-[11px] text-brand-text-muted">
+                    {reanalyzeTarget.mediaName}
+                  </p>
+                </div>
+              </div>
+
+              {/* Frame stride option */}
+              <div className="space-y-3 p-4 bg-brand-abyssal/60 border border-brand-border rounded-xl">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-brand-text-primary">
+                    Bước nhảy khung hình (frame_stride):
+                  </span>
+                  <span className="font-mono text-sm font-bold text-brand-gold">
+                    {reanalyzeStride}
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="1"
+                  max="15"
+                  value={reanalyzeStride}
+                  onChange={(e) => setReanalyzeStride(parseInt(e.target.value, 10))}
+                  className="w-full accent-brand-gold bg-brand-border rounded cursor-pointer"
+                />
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {[
+                    { label: '1x (Chi tiết)', stride: 1 },
+                    { label: '2x (Khuyên dùng)', stride: 2 },
+                    { label: '5x (Nhanh)', stride: 5 },
+                    { label: '10x (Siêu tốc)', stride: 10 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.stride}
+                      type="button"
+                      onClick={() => setReanalyzeStride(preset.stride)}
+                      className={`py-1 px-1.5 rounded text-[10px] font-medium border transition-colors ${
+                        reanalyzeStride === preset.stride
+                          ? 'bg-brand-gold/20 border-brand-gold text-brand-gold font-bold'
+                          : 'bg-brand-surface border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Explanation & Impact preview */}
+                <div className="p-3 bg-brand-surface border border-brand-border/70 rounded-lg space-y-1.5 text-[11px] text-brand-text-muted">
+                  <div className="flex justify-between text-brand-text-primary">
+                    <span>Số khung hình xử lý:</span>
+                    <span className="font-mono font-semibold text-brand-gold">
+                      ~{Math.round(((reanalyzeTarget.duration || 57) * 25) / reanalyzeStride)} khung hình
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Tốc độ xử lý dự kiến:</span>
+                    <span className="font-mono text-emerald-400">
+                      Nhanh gấp ~{reanalyzeStride}x lần
+                    </span>
+                  </div>
+                  <p className="text-[10px] pt-1 text-brand-text-muted/80 leading-normal border-t border-brand-border/40">
+                    {reanalyzeStride === 1
+                      ? '⚡ Quét toàn bộ mọi khung hình (100%), độ chính xác tuyệt đối, thời gian xử lý tiêu chuẩn.'
+                      : `⚡ Bỏ qua ${reanalyzeStride - 1} khung và quét 1 khung, giúp tăng tốc độ xử lý gấp ~${reanalyzeStride} lần mà vẫn bắt kịp xu hướng mật độ.`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Confidence option */}
+              <div className="space-y-3 p-4 bg-brand-abyssal/60 border border-brand-border rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="font-semibold text-brand-text-primary block">
+                      Độ nhạy phát hiện (Confidence):
+                    </span>
+                    <span className="text-[10px] text-brand-text-muted">
+                      Hạ thấp để phát hiện cả người che ô, áo mưa, người già chống gậy
+                    </span>
+                  </div>
+                  <span className="font-mono text-sm font-bold text-amber-400">
+                    {reanalyzeConfidence.toFixed(2)}
+                  </span>
+                </div>
+
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.50"
+                  step="0.01"
+                  value={reanalyzeConfidence}
+                  onChange={(e) => setReanalyzeConfidence(parseFloat(e.target.value))}
+                  className="w-full accent-amber-400 bg-brand-border rounded cursor-pointer"
+                />
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-4 gap-1.5 pt-1">
+                  {(reanalyzeTarget?.mediaName.includes('150') || reanalyzeModel === 'crowd_best_local_v2'
+                    ? [
+                        { label: '0.08 (Góc trần/Đề xuất)', conf: 0.08 },
+                        { label: '0.10 (Nhạy cao)', conf: 0.10 },
+                        { label: '0.15 (Vừa phải)', conf: 0.15 },
+                        { label: '0.25 (Tiêu chuẩn)', conf: 0.25 },
+                      ]
+                    : [
+                        { label: '0.15 (Nhạy tối đa)', conf: 0.15 },
+                        { label: '0.18 (Đề xuất)', conf: 0.18 },
+                        { label: '0.25 (Tiêu chuẩn)', conf: 0.25 },
+                        { label: '0.35 (Nghiêm ngặt)', conf: 0.35 },
+                      ]
+                  ).map((preset) => (
+                    <button
+                      key={preset.conf}
+                      type="button"
+                      onClick={() => setReanalyzeConfidence(preset.conf)}
+                      className={`py-1 px-1.5 rounded text-[10px] font-medium border transition-colors ${
+                        Math.abs(reanalyzeConfidence - preset.conf) < 0.005
+                          ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold'
+                          : 'bg-brand-surface border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                <p className="text-[10px] text-brand-text-muted/80 leading-normal border-t border-brand-border/40 pt-1.5">
+                  {reanalyzeModel === 'crowd_best_local_v2'
+                    ? '🎯 Góc trên đỉnh đầu (Top-Down): Khuyên dùng mức 0.08 – 0.10 để bắt trọn từng đầu người/nón cam trong đám đông đông đúc.'
+                    : reanalyzeConfidence <= 0.18
+                    ? '🎯 Góc nghiêng/đường phố: Khuyên dùng 0.18 để quét trọn vẹn cả người cận cảnh, che ô, cúi lưng, áo mưa.'
+                    : '🛡️ Độ nhạy nghiêm ngặt: Chỉ nhận diện khi AI có độ tự tin cao.'}
+                </p>
+              </div>
+
+              {/* Model Selection option */}
+              <div className="space-y-2 p-3 bg-brand-abyssal/60 border border-brand-border rounded-xl text-xs">
+                <div className="flex items-center justify-between">
+                  <span className="font-semibold text-brand-text-primary">
+                    Mô hình AI nhận diện:
+                  </span>
+                  <span className="text-[10px] text-emerald-400 font-mono">
+                    {reanalyzeModel === 'yolo11n_local' ? 'COCO Đa Góc Nhìn' : 'VisDrone Góc Cao'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReanalyzeModel('yolo11n_local');
+                      if (reanalyzeConfidence < 0.15) setReanalyzeConfidence(0.18);
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                      reanalyzeModel === 'yolo11n_local'
+                        ? 'bg-emerald-950/40 border-emerald-500/80 text-emerald-200'
+                        : 'bg-brand-surface border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                    }`}
+                  >
+                    <div className="font-bold text-[11px] flex items-center justify-between">
+                      <span>YOLO11 Toàn Năng</span>
+                      {(!reanalyzeTarget?.mediaName.includes('150')) && (
+                        <span className="text-[9px] bg-emerald-500/20 text-emerald-400 px-1 rounded font-semibold">Khuyên dùng</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-brand-text-muted mt-1 leading-tight">
+                      Góc nhìn camera đường phố / CCTV nghiêng (thấy thân người, chân tay, cận cảnh).
+                    </p>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReanalyzeModel('crowd_best_local_v2');
+                      if (reanalyzeConfidence > 0.15) setReanalyzeConfidence(0.08);
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                      reanalyzeModel === 'crowd_best_local_v2'
+                        ? 'bg-amber-950/40 border-amber-500/80 text-amber-200'
+                        : 'bg-brand-surface border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                    }`}
+                  >
+                    <div className="font-bold text-[11px] flex items-center justify-between">
+                      <span>YOLO11 Finetuned</span>
+                      {reanalyzeTarget?.mediaName.includes('150') && (
+                        <span className="text-[9px] bg-amber-500/20 text-amber-300 px-1 rounded font-semibold">Khuyên dùng video này</span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-brand-text-muted mt-1 leading-tight">
+                      Chuyên camera góc cao nhìn thẳng từ trần xuống đỉnh đầu (Flycam/Drone/Cửa kiểm soát).
+                    </p>
+                  </button>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center justify-end gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setReanalyzeTarget(null)}
+                  className="px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border text-brand-text-primary rounded-lg transition-colors"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmReanalyze}
+                  className="px-5 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal font-bold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Bắt đầu phân tích lại</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </QueryClientProvider>
   );

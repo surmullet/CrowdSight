@@ -46,6 +46,7 @@ class SessionPipeline:
         is_synthetic: bool = False,
         max_consecutive_unknown: int = 30,
         max_unknown_rate: float = 0.5,
+        frame_stride: int = 1,
     ) -> None:
         self.session_id = session_id
         self.video_path = video_path
@@ -59,20 +60,23 @@ class SessionPipeline:
         self.is_synthetic = is_synthetic
         self.max_consecutive_unknown = max_consecutive_unknown
         self.max_unknown_rate = max_unknown_rate
+        self.frame_stride = max(1, frame_stride)
 
     def run(self, cancellation_check: Callable[[], bool] | None = None) -> str:
         """Run the pipeline to completion, cancellation, or failure.
 
         Returns final session status string.
         """
-        decoder = VideoDecoder(self.video_path)
+        decoder = VideoDecoder(self.video_path, frame_stride=self.frame_stride)
 
         with self.db_manager.get_session() as session:
             sess_record = session.get(SessionRecord, self.session_id)
             if not sess_record:
                 raise ValueError(f"Session {self.session_id} not found")
             sess_record.status = "RUNNING"
-            total_frames = sess_record.total_frames or 100
+            raw_total = sess_record.total_frames or 100
+            total_frames = max(1, (raw_total + self.frame_stride - 1) // self.frame_stride) if self.frame_stride > 1 else raw_total
+            sess_record.total_frames = total_frames
 
         processed = 0
         unknown_count = 0
@@ -183,19 +187,25 @@ class SessionPipeline:
             }
             for i, z in enumerate(self.zone_set.zones)
         ]
-        duration_s = round(processed / 25.0, 2) if processed > 0 else 0.0
+        v_fps = float(getattr(decoder, "fps", 25.0) or 25.0)
+        v_raw_total = int(getattr(decoder, "total_raw_frames", 0) or 0)
+        duration_s = (
+            round(v_raw_total / v_fps, 2)
+            if v_raw_total > 0
+            else (round(processed * self.frame_stride / v_fps, 2) if processed > 0 else 0.0)
+        )
         dataset_dict = {
             "metadata": {
                 "sessionId": self.session_id,
                 "sourceId": self.video_path.name,
                 "mediaName": self.video_path.name,
                 "duration": duration_s,
-                "fps": 25.0,
+                "fps": v_fps,
                 "width": frame_width,
                 "height": frame_height,
                 "totalFrames": processed,
                 "model": getattr(self.detector, "profile_id", "models/best.pt"),
-                "confidence": 0.25,
+                "confidence": round(float(getattr(getattr(self.detector, "_profile", None), "confidence", 0.18)), 2),
                 "tracker": "BoT-SORT",
             },
             "zones": zone_list,

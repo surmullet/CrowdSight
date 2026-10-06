@@ -49,7 +49,7 @@ class MediaAssetRecord(Base):
     proxy_relpath: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
 
-    sessions: Mapped[list[SessionRecord]] = relationship(back_populates="media_asset", cascade="all, delete-orphan")
+    sessions: Mapped[list[SessionRecord]] = relationship(back_populates="media_asset", cascade="all, delete-orphan", passive_deletes=True)
 
 
 class ZoneSetRecord(Base):
@@ -107,10 +107,10 @@ class SessionRecord(Base):
 
     media_asset: Mapped[MediaAssetRecord] = relationship(back_populates="sessions")
     zone_set_version: Mapped[ZoneSetVersionRecord] = relationship(back_populates="sessions")
-    observations: Mapped[list[ObservationRecord]] = relationship(back_populates="session", cascade="all, delete-orphan")
-    zone_results: Mapped[list[ZoneResultRecord]] = relationship(back_populates="session", cascade="all, delete-orphan")
-    artifacts: Mapped[list[ArtifactRecord]] = relationship(back_populates="session", cascade="all, delete-orphan")
-    notes: Mapped[list[NoteRecord]] = relationship(back_populates="session", cascade="all, delete-orphan")
+    observations: Mapped[list[ObservationRecord]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
+    zone_results: Mapped[list[ZoneResultRecord]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
+    artifacts: Mapped[list[ArtifactRecord]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
+    notes: Mapped[list[NoteRecord]] = relationship(back_populates="session", cascade="all, delete-orphan", passive_deletes=True)
 
     __table_args__ = (
         Index("ix_sessions_status", "status"),

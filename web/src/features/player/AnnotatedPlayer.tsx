@@ -211,8 +211,12 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     const isQualityUsable = observation && (observation.quality === 'VALID' || observation.quality === 'PARTIAL');
 
     if (showBoxes && isQualityUsable && observation.detections) {
+      const video = videoRef.current;
+      const naturalWidth = (video && video.videoWidth > 0) ? video.videoWidth : (observation.image_width || imageWidth || 1920);
+      const naturalHeight = (video && video.videoHeight > 0) ? video.videoHeight : (observation.image_height || imageHeight || 1080);
+
       for (const det of observation.detections) {
-        const box = sourceBoxToCanvasCoords(det.bbox_xyxy, imageWidth, imageHeight, letterbox, dpr);
+        const box = sourceBoxToCanvasCoords(det.bbox_xyxy, naturalWidth, naturalHeight, letterbox, dpr);
 
         ctx.save();
         // Bounding box

@@ -3,12 +3,18 @@ task: person_detection
 model_family: yolo11n
 checkpoint_env: CROWDSIGHT_CROWD_CHECKPOINT
 checkpoint_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
-source_artifact: yolo11n.pt
+source_artifact: ../../yolo11n.pt
 class_mapping:
   person: 0
 preprocessing:
   color_order: BGR
   image_size: 1280
 inference:
-  confidence: 0.25
+  confidence: 0.18
   device: auto
+tracker:
+  type: botsort
+  config_source: ../trackers/botsort.yaml
+  config_env: CROWDSIGHT_TRACKER_CONFIG
+  config_sha256: 8cd88930d3be5557be0777f384eecff0a36a7011850fe613fc0a68178bfd5b01
+  ids_scope: one_video_session

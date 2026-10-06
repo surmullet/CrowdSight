@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from sqlalchemy import select
 
@@ -124,9 +125,25 @@ class JobManager:
 
             try:
                 boundary = ModelBoundaryService()
+                conf_override = None
+                if job.options and "confidence" in job.options:
+                    try:
+                        conf_override = float(job.options["confidence"])
+                    except (ValueError, TypeError):
+                        conf_override = None
+
+                target_cfg = None
+                model_opt = job.options.get("model_profile") if job.options else None
+                if model_opt in ("crowd_best", "crowd_best_local_v2"):
+                    target_cfg = Path("configs/models/crowd_best_local.yaml").resolve()
+                elif model_opt in ("yolo11n", "yolo11n_local"):
+                    target_cfg = Path("configs/models/yolo11n_local.yaml").resolve()
+
                 detector, _ = boundary.create_detector(
+                    config_path=target_cfg,
                     synthetic=job.synthetic,
                     enable_tracker=bool(job.options.get("enable_tracker", not job.synthetic)),
+                    confidence_override=conf_override,
                 )
             except ModelBoundaryError as mbe:
                 with self.db_manager.get_session() as session:
@@ -145,6 +162,7 @@ class JobManager:
                         sess_rec.user_action_hint = f"Failed to initialize detector: {exc}"
                 return "FAILED"
 
+        stride = int(job.options.get("frame_stride", 1)) if job.options else 1
         pipeline = SessionPipeline(
             session_id=session_id,
             video_path=video_path,
@@ -153,6 +171,7 @@ class JobManager:
             db_manager=self.db_manager,
             artifact_store=self.artifact_store,
             is_synthetic=job.synthetic,
+            frame_stride=stride,
         )
 
         try:

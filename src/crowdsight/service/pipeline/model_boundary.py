@@ -87,12 +87,12 @@ class ModelBoundaryService:
             repo_root = Path(__file__).resolve().parents[4]
             crowd_best = repo_root / "configs" / "models" / "crowd_best_local.yaml"
             local_yolo = repo_root / "configs" / "models" / "yolo11n_local.yaml"
-            if (repo_root / "models" / "best.pt").is_file() and crowd_best.is_file():
-                default_config_path = crowd_best
-            elif (repo_root / "yolo11n.pt").is_file() and local_yolo.is_file():
+            if (repo_root / "yolo11n.pt").is_file() and local_yolo.is_file():
                 default_config_path = local_yolo
-            else:
+            elif (repo_root / "models" / "best.pt").is_file() and crowd_best.is_file():
                 default_config_path = crowd_best
+            else:
+                default_config_path = local_yolo
         self.default_config_path = default_config_path
 
     def load_config(self, config_path: Path | None = None) -> dict[str, Any]:
@@ -210,6 +210,7 @@ class ModelBoundaryService:
         enable_tracker: bool = False,
         tracker_config_override: Path | None = None,
         seed: int = 42,
+        confidence_override: float | None = None,
     ) -> tuple[PersonDetector, dict[str, Any]]:
         """Instantiate detector with integrity checks or fallback to deterministic synthetic."""
         target_config = config_path or self.default_config_path
@@ -247,13 +248,19 @@ class ModelBoundaryService:
                 verification.actual_checkpoint_sha256,
             )
 
+        target_conf = (
+            float(confidence_override)
+            if confidence_override is not None
+            else float(config.get("inference", {}).get("confidence", 0.18))
+        )
+
         detector_profile = PersonDetectorProfile(
             profile_id=profile_id,
             checkpoint_path=verification.checkpoint_path,
             expected_sha256=verification.expected_checkpoint_sha256,
             profile_sha256=profile_sha256,
             person_class_id=int(config.get("class_mapping", {}).get("person", 0)),
-            confidence=float(config.get("inference", {}).get("confidence", 0.25)),
+            confidence=target_conf,
             image_size=int(config.get("preprocessing", {}).get("image_size", 1280)),
             device=str(config.get("inference", {}).get("device", "auto")),
         )

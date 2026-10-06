@@ -26,7 +26,7 @@ preprocessing:
   color_order: BGR
   image_size: 1280
 inference:
-  confidence: 0.25
+  confidence: 0.18
   device: auto
 tracker:
   type: botsort

@@ -51,8 +51,8 @@ class DatabaseManager:
             "future": True,
         }
         if "postgresql" in db_url:
-            engine_kwargs["pool_pre_ping"] = True
-            engine_kwargs["pool_recycle"] = 300
+            from sqlalchemy.pool import NullPool
+            engine_kwargs["poolclass"] = NullPool
 
         self.engine = create_engine(
             db_url,
