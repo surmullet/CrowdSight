@@ -203,7 +203,7 @@ class UltralyticsPersonDetector:
             y1 = min(max(y1, 0.0), float(height))
             y2 = min(max(y2, 0.0), float(height))
             if x2 <= x1 or y2 <= y1:
-                raise RuntimeError("Detector returned a person box outside the source frame")
+                continue
             detections.append(
                 PersonDetection(
                     x=((x1 + x2) / 2.0) / width,
@@ -267,10 +267,8 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
             raise RuntimeError("Tracker must return exactly one boxes result for one frame")
         result = outputs[0]
         if result.boxes.id is None:
-            if len(result.boxes.xyxy) != 0:
-                raise RuntimeError("Tracker returned detections without track IDs")
-            return self._decode_result(result, width, height)
+            return self._decode_result(result, width, height, None)
         ids = result.boxes.id.detach().cpu().numpy()
         if len(ids) != len(result.boxes.xyxy):
-            raise RuntimeError("Tracker ID count does not match returned boxes")
+            return self._decode_result(result, width, height, None)
         return self._decode_result(result, width, height, ids)

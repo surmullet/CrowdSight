@@ -121,3 +121,71 @@ def test_artifact_download(api_context: tuple[TestClient, str, str]) -> None:
     res = client.get(f"/api/v1/artifacts/{art_id}")
     assert res.status_code == 200
     assert res.content == b"png image data"
+
+
+def test_session_dataset_and_heatmap_endpoints(api_context: tuple[TestClient, str, str]) -> None:
+    client, asset_id, zsv_id = api_context
+    from crowdsight.service.api.deps import get_artifact_store, get_db_manager
+    from crowdsight.service.storage.models import ArtifactRecord, ObservationRecord, SessionRecord, ZoneResultRecord
+
+    # Create session
+    create_payload = {
+        "media_asset_id": asset_id,
+        "zone_set_version_id": zsv_id,
+        "use_synthetic": True,
+    }
+    create_res = client.post("/api/v1/sessions", json=create_payload)
+    assert create_res.status_code == 201
+    sess_id = create_res.json()["id"]
+
+    # Insert fake observation and zone result in DB
+    db = get_db_manager()
+    with db.get_session() as session:
+        obs = ObservationRecord(
+            session_id=sess_id,
+            frame_index=0,
+            media_time_s=0.0,
+            quality="VALID",
+            payload_v1={
+                "frame_index": 0,
+                "media_time_s": 0.0,
+                "detections": [{"track_id": 1, "x": 0.5, "y": 0.5, "confidence": 0.9, "bbox_xyxy": [10, 10, 20, 20]}],
+            },
+        )
+        session.add(obs)
+        zr = ZoneResultRecord(
+            session_id=sess_id,
+            frame_index=0,
+            media_time_s=0.0,
+            zone_id="zone-a",
+            availability="COUNTED",
+            visible_count=1,
+        )
+        session.add(zr)
+
+    # Test dataset endpoint (dynamic fallback)
+    ds_res = client.get(f"/api/v1/sessions/{sess_id}/dataset")
+    assert ds_res.status_code == 200
+    ds = ds_res.json()
+    assert ds["metadata"]["sessionId"] == sess_id
+    assert len(ds["frames"]) >= 1
+    assert "detections" in ds["frames"][0]
+
+    # Save heatmap artifact
+    store = get_artifact_store()
+    hm_id, hm_path, hm_sha = store.save_bytes(b"\x89PNG\r\n\x1a\nfake_png", kind="HEATMAP", suffix=".png", session_id=sess_id)
+    with db.get_session() as session:
+        hm_rec = ArtifactRecord(
+            id=hm_id,
+            session_id=sess_id,
+            kind="HEATMAP",
+            relpath=hm_path,
+            sha256=hm_sha,
+        )
+        session.add(hm_rec)
+
+    # Test heatmap endpoint
+    hm_res = client.get(f"/api/v1/sessions/{sess_id}/heatmap")
+    assert hm_res.status_code == 200
+    assert hm_res.headers["content-type"] == "image/png"
+    assert hm_res.content == b"\x89PNG\r\n\x1a\nfake_png"

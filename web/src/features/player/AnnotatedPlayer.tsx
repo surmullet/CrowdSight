@@ -76,6 +76,13 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     };
   }, [heatmapUrl]);
 
+  // Reload video element whenever videoSrc changes (e.g. re-upload or new session)
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.load();
+    }
+  }, [videoSrc]);
+
   // Sync seek/scrub from timeline and step controls to video element
   useEffect(() => {
     const video = videoRef.current;
@@ -204,8 +211,12 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     const isQualityUsable = observation && (observation.quality === 'VALID' || observation.quality === 'PARTIAL');
 
     if (showBoxes && isQualityUsable && observation.detections) {
+      const video = videoRef.current;
+      const naturalWidth = (video && video.videoWidth > 0) ? video.videoWidth : (observation.image_width || imageWidth || 1920);
+      const naturalHeight = (video && video.videoHeight > 0) ? video.videoHeight : (observation.image_height || imageHeight || 1080);
+
       for (const det of observation.detections) {
-        const box = sourceBoxToCanvasCoords(det.bbox_xyxy, imageWidth, imageHeight, letterbox, dpr);
+        const box = sourceBoxToCanvasCoords(det.bbox_xyxy, naturalWidth, naturalHeight, letterbox, dpr);
 
         ctx.save();
         // Bounding box
@@ -285,6 +296,7 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
       className={`relative w-full h-full min-h-[360px] bg-black rounded-lg overflow-hidden flex items-center justify-center select-none ${className}`}
     >
       <video
+        key={videoSrc}
         ref={videoRef}
         src={videoSrc}
         playsInline

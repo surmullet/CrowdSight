@@ -8,6 +8,7 @@ import {
   Clock,
   Sparkles,
   ArrowRight,
+  RotateCcw,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
 import { formatMediaTime } from '@/features/player/PlayerControls';
@@ -38,6 +39,7 @@ interface JobProgressViewProps {
   onComplete: () => void;
   onOpenPartialResults: () => void;
   onBackToLibrary: () => void;
+  onRetry?: () => void;
   className?: string;
 }
 
@@ -47,6 +49,7 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
   onComplete,
   onOpenPartialResults,
   onBackToLibrary,
+  onRetry,
   className = '',
 }) => {
   const [job, setJob] = useState<JobProgressData>(
@@ -65,116 +68,168 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
 
   const [isCancelling, setIsCancelling] = useState(false);
   const sseRef = useRef<EventSource | null>(null);
+  const lastFrameTimeRef = useRef<{ frame: number; time: number } | null>(null);
+  const fpsEmaRef = useRef<number>(0);
 
-  // Poll fallback function
-  const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/v1/sessions/${sessionId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setJob((prev) => ({
-          ...prev,
-          status: data.status,
-          progress: data.progress ?? 0,
-          currentFrame: data.current_frame ?? 0,
-          totalFrames: data.total_frames ?? 100,
-          errorCode: data.error_code,
-          userActionHint: data.user_action_hint,
-          synthetic: data.synthetic,
-        }));
-        if (data.status === 'COMPLETED') {
-          onComplete();
+  // Unified progress updater
+  const handleProgressData = useCallback((payload: any) => {
+    const isCompleted = payload.status === 'COMPLETED';
+    const rawProcessed = payload.processed_frames ?? payload.current_frame ?? payload.currentFrame;
+    const rawTotal = payload.total_frames ?? payload.totalFrames;
+
+    setJob((prev) => {
+      const total = rawTotal ?? prev.totalFrames ?? 100;
+      const current = isCompleted ? total : (rawProcessed ?? prev.currentFrame);
+      const progress = isCompleted ? 1.0 : (payload.progress ?? (total > 0 ? current / total : prev.progress));
+
+      let currentFps = prev.fps;
+      let eta = prev.etaSeconds;
+      const now = performance.now();
+
+      if (lastFrameTimeRef.current && current > lastFrameTimeRef.current.frame) {
+        const deltaFrames = current - lastFrameTimeRef.current.frame;
+        const deltaTime = (now - lastFrameTimeRef.current.time) / 1000;
+        if (deltaTime > 0.1) {
+          const instFps = deltaFrames / deltaTime;
+          currentFps = fpsEmaRef.current > 0 ? (fpsEmaRef.current * 0.7 + instFps * 0.3) : instFps;
+          fpsEmaRef.current = currentFps;
+          const remainingFrames = Math.max(0, total - current);
+          eta = currentFps > 0 ? Math.round(remainingFrames / currentFps) : 0;
+          lastFrameTimeRef.current = { frame: current, time: now };
         }
+      } else if (!lastFrameTimeRef.current && current > 0) {
+        lastFrameTimeRef.current = { frame: current, time: now };
       }
-    } catch {
-      // Ignore polling errors
+
+      if (isCompleted) {
+        eta = 0;
+      }
+
+      return {
+        ...prev,
+        status: payload.status || prev.status,
+        progress: Math.min(1.0, Math.max(0, progress)),
+        currentFrame: current,
+        totalFrames: total,
+        fps: currentFps,
+        etaSeconds: eta,
+        qualityCounts: prev.qualityCounts.valid === 0 && current > 0 && !isCompleted
+          ? { ...prev.qualityCounts, valid: current }
+          : prev.qualityCounts,
+        errorCode: payload.error_code ?? payload.errorCode ?? prev.errorCode,
+        userActionHint: payload.user_action_hint ?? payload.userActionHint ?? prev.userActionHint,
+        synthetic: payload.synthetic ?? prev.synthetic,
+      };
+    });
+
+    if (isCompleted) {
+      if (sseRef.current) sseRef.current.close();
+      // Fetch comprehensive quality counts from backend
+      fetch(`/api/v1/sessions/${sessionId}/summary`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((summary) => {
+          if (summary) {
+            setJob((prev) => ({
+              ...prev,
+              qualityCounts: {
+                valid: summary.valid_frames ?? prev.totalFrames,
+                partial: summary.partial_frames ?? 0,
+                unknown: summary.unknown_frames ?? 0,
+                stale: summary.stale_frames ?? 0,
+              },
+            }));
+          }
+        })
+        .catch(() => {});
+      onComplete();
+    } else if (
+      payload.status === 'FAILED' ||
+      payload.status === 'CANCELLED' ||
+      payload.status === 'PARTIAL_CANCELLED'
+    ) {
+      if (sseRef.current) sseRef.current.close();
     }
   }, [sessionId, onComplete]);
 
-  // Connect to SSE stream
+  // Connect to SSE stream + active Heartbeat Polling
   useEffect(() => {
+    // 1. Initial direct fetch
+    const fetchInitial = async () => {
+      try {
+        const res = await fetch(`/api/v1/sessions/${sessionId}?_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          handleProgressData(data);
+        }
+      } catch {
+        // Ignore initial fetch error
+      }
+    };
+    fetchInitial();
+
+    // 2. Active Heartbeat Polling every 1200ms (resilient against tab throttle / severed SSE)
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/sessions/${sessionId}?_t=${Date.now()}`);
+        if (res.ok) {
+          const data = await res.json();
+          handleProgressData(data);
+          if (
+            data.status === 'COMPLETED' ||
+            data.status === 'FAILED' ||
+            data.status === 'CANCELLED' ||
+            data.status === 'PARTIAL_CANCELLED'
+          ) {
+            clearInterval(pollInterval);
+          }
+        }
+      } catch {
+        // Polling retry
+      }
+    }, 1200);
+
+    // 3. Real-time SSE connection
     const sse = new EventSource(`/api/v1/sessions/${sessionId}/events`);
     sseRef.current = sse;
 
     sse.onmessage = (event) => {
       try {
         const payload = JSON.parse(event.data);
-        setJob((prev) => ({
-          ...prev,
-          ...payload,
-        }));
-
-        if (payload.status === 'COMPLETED') {
-          sse.close();
-          onComplete();
-        }
+        handleProgressData(payload);
       } catch {
         // SSE parse error
       }
     };
 
-    sse.onerror = () => {
-      // On SSE drop or mock session, fallback to polling with simulation progress
-      sse.close();
-      const interval = setInterval(async () => {
+    if (typeof sse.addEventListener === 'function') {
+      sse.addEventListener('progress', (event: any) => {
         try {
-          const res = await fetch(`/api/v1/sessions/${sessionId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setJob((prev) => ({ ...prev, ...data }));
-            if (data.status === 'COMPLETED') {
-              clearInterval(interval);
-              onComplete();
-            }
-            return;
-          }
+          const payload = JSON.parse(event.data);
+          handleProgressData(payload);
         } catch {
-          // Ignore
+          // SSE parse error
         }
+      });
 
-        // Fallback simulation for mock/synthetic demo session
-        setJob((prev) => {
-          if (prev.status !== 'RUNNING' && prev.status !== 'QUEUED') return prev;
-          const nextProg = Math.min(1.0, +(prev.progress + 0.12).toFixed(2));
-          const currentFrame = Math.round(nextProg * 100);
-          if (nextProg >= 1.0) {
-            clearInterval(interval);
-            return {
-              ...prev,
-              status: 'COMPLETED',
-              progress: 1.0,
-              currentFrame: 100,
-              totalFrames: 100,
-              fps: 25.0,
-              etaSeconds: 0,
-              qualityCounts: { valid: 82, partial: 12, unknown: 6, stale: 0 },
-            };
-          }
-          return {
-            ...prev,
-            status: 'RUNNING',
-            progress: nextProg,
-            currentFrame,
-            totalFrames: 100,
-            fps: +(24.5 + Math.random()).toFixed(1),
-            etaSeconds: Math.max(0, Math.round((1 - nextProg) * 8)),
-            qualityCounts: {
-              valid: Math.round(currentFrame * 0.82),
-              partial: Math.round(currentFrame * 0.12),
-              unknown: Math.round(currentFrame * 0.06),
-              stale: 0,
-            },
-          };
-        });
-      }, 800);
+      sse.addEventListener('done', (event: any) => {
+        try {
+          const payload = JSON.parse(event.data);
+          handleProgressData(payload);
+        } catch {
+          // SSE parse error
+        }
+      });
+    }
 
-      return () => clearInterval(interval);
+    sse.onerror = () => {
+      sse.close();
     };
 
     return () => {
       sse.close();
+      clearInterval(pollInterval);
     };
-  }, [sessionId, onComplete, fetchStatus]);
+  }, [sessionId, handleProgressData]);
 
   const handleCancel = async () => {
     setIsCancelling(true);
@@ -247,27 +302,35 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
                 <h2 className="text-base font-bold text-brand-text-primary">
                   {job.status === 'QUEUED' && 'Đang xếp hàng chờ xử lý...'}
                   {job.status === 'RUNNING' && 'Đang giải mã và phát hiện đối tượng...'}
+                  {job.status === 'COMPLETED' && 'Phân tích hoàn tất! Đang mở không gian xem lại...'}
                   {job.status === 'CANCELLING' && 'Đang dừng tiến trình hợp tác...'}
                   {job.status === 'CANCELLED' && 'Phiên phân tích đã dừng'}
                   {job.status === 'FAILED' && 'Xử lý thất bại'}
                 </h2>
                 <p className="text-xs text-brand-text-muted mt-0.5">
-                  Khung {job.currentFrame} / {job.totalFrames} ({progressPct}%)
+                  {job.status === 'COMPLETED'
+                    ? `Đã xử lý trọn vẹn ${job.totalFrames} / ${job.totalFrames} khung hình (100%)`
+                    : `Khung ${job.currentFrame} / ${job.totalFrames} (${progressPct}%)`}
                 </p>
               </div>
             </div>
 
-            <span className="font-mono text-xl font-bold text-brand-gold tabular-nums">
-              {progressPct}%
+            <span className="font-mono text-xl font-bold text-amber-400 tabular-nums">
+              {job.status === 'COMPLETED' ? 100 : progressPct}%
             </span>
           </div>
 
-          {/* Large Progress Bar */}
+          {/* Large Visible Progress Bar */}
           <div className="space-y-1.5">
-            <div className="w-full h-3 bg-brand-abyssal rounded-full overflow-hidden border border-brand-border flex">
+            <div className="w-full h-3.5 bg-slate-900/90 rounded-full overflow-hidden border border-brand-border flex items-center p-0.5 shadow-inner">
               <div
-                style={{ width: `${progressPct}%` }}
-                className="bg-brand-gold transition-all duration-300 rounded-full"
+                style={{
+                  width: `${Math.max(
+                    job.status === 'COMPLETED' ? 100 : (progressPct > 0 ? 3 : 0),
+                    Math.min(100, job.status === 'COMPLETED' ? 100 : progressPct)
+                  )}%`,
+                }}
+                className="h-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 transition-all duration-300 rounded-full shadow-sm"
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-brand-text-muted">
@@ -277,9 +340,20 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
               </span>
               <span className="flex items-center gap-1 font-mono">
                 <Clock className="w-3.5 h-3.5" />
-                ETA: {formatMediaTime(job.etaSeconds)}
+                {job.status === 'COMPLETED' ? 'Đã hoàn tất' : `ETA: ${formatMediaTime(job.etaSeconds)}`}
               </span>
             </div>
+
+            {job.status === 'COMPLETED' && (
+              <button
+                type="button"
+                onClick={onComplete}
+                className="w-full py-2.5 px-4 bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold rounded-xl transition-all shadow-md flex items-center justify-center gap-2 mt-3 cursor-pointer"
+              >
+                <ArrowRight className="w-4 h-4" />
+                <span>Xem kết quả phân tích</span>
+              </button>
+            )}
           </div>
 
           {/* Real-time Live Quality Tally */}
@@ -342,22 +416,46 @@ export const JobProgressView: React.FC<JobProgressViewProps> = ({
                 <span>{isCancelling ? 'Đang gửi lệnh dừng...' : 'Hủy phân tích'}</span>
               </button>
             ) : job.status === 'CANCELLED' ? (
-              <button
-                type="button"
-                onClick={onOpenPartialResults}
-                className="px-4 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Mở kết quả một phần ({job.currentFrame} khung)</span>
-              </button>
+              <div className="flex items-center gap-2">
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border text-xs font-medium text-brand-text-primary rounded-lg transition-colors flex items-center gap-1.5"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Phân tích lại</span>
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={onOpenPartialResults}
+                  className="px-4 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <span>Mở kết quả một phần ({job.currentFrame} khung)</span>
+                </button>
+              </div>
             ) : job.status === 'FAILED' ? (
-              <button
-                type="button"
-                onClick={onBackToLibrary}
-                className="px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border text-xs text-brand-text-primary rounded-lg transition-colors"
-              >
-                Quay lại thư viện
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onBackToLibrary}
+                  className="px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border text-xs text-brand-text-primary rounded-lg transition-colors"
+                >
+                  Quay lại thư viện
+                </button>
+                {onRetry && (
+                  <button
+                    type="button"
+                    onClick={onRetry}
+                    className="px-4 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 shadow"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Thử lại</span>
+                  </button>
+                )}
+              </div>
             ) : null}
 
             {job.status === 'COMPLETED' && (

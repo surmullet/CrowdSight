@@ -22,8 +22,8 @@ pnpm install
 pnpm run build
 cd ..
 
-# 3. Start Application
-uvicorn crowdsight.service.api.app:app --host 0.0.0.0 --port 8000
+# 3. Start Application (Backend runs on port 8001 to avoid Windows system port 8000 conflicts)
+uvicorn crowdsight.service.api.app:app --host 127.0.0.1 --port 8001
 ```
 
 ---

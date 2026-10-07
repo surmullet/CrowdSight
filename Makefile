@@ -30,7 +30,7 @@ lint:
 	$(PYTHON) scripts/semantic_lint.py
 
 dev:
-	$(PYTHON) -m uvicorn crowdsight.service.api.app:app --reload --host 127.0.0.1 --port 8000
+	$(PYTHON) -m uvicorn crowdsight.service.api.app:app --reload --host 127.0.0.1 --port 8001
 
 web:
 	cd web && pnpm run dev

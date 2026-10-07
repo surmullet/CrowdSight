@@ -218,6 +218,17 @@
             "title": "Codec",
             "type": "string"
           },
+          "display_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Code"
+          },
           "display_name": {
             "title": "Display Name",
             "type": "string"
@@ -541,8 +552,19 @@
             "title": "Options",
             "type": "object"
           },
+          "synthetic": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synthetic"
+          },
           "use_synthetic": {
-            "default": true,
+            "default": false,
             "title": "Use Synthetic",
             "type": "boolean"
           },
@@ -574,6 +596,28 @@
             "title": "Created At",
             "type": "string"
           },
+          "display_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Code"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
           "error_code": {
             "anyOf": [
               {
@@ -592,6 +636,17 @@
           "media_asset_id": {
             "title": "Media Asset Id",
             "type": "string"
+          },
+          "media_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Name"
           },
           "model_profile_id": {
             "title": "Model Profile Id",
@@ -652,6 +707,28 @@
               }
             ],
             "title": "User Action Hint"
+          },
+          "video_src": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Video Src"
+          },
+          "zone_set_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Set Name"
           },
           "zone_set_version_id": {
             "title": "Zone Set Version Id",
@@ -1775,6 +1852,46 @@
         ]
       }
     },
+    "/api/v1/sessions/{session_id}/dataset": {
+      "get": {
+        "operationId": "get_session_dataset_api_v1_sessions__session_id__dataset_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download complete session observation dataset JSON for smooth frontend playback",
+        "tags": [
+          "Analysis Sessions"
+        ]
+      }
+    },
     "/api/v1/sessions/{session_id}/events": {
       "get": {
         "operationId": "stream_session_events_api_v1_sessions__session_id__events_get",
@@ -2015,6 +2132,46 @@
         "summary": "Get nearest frame observation at time t with freshness policy applied",
         "tags": [
           "Frame Observations"
+        ]
+      }
+    },
+    "/api/v1/sessions/{session_id}/heatmap": {
+      "get": {
+        "operationId": "get_session_heatmap_api_v1_sessions__session_id__heatmap_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Download session heatmap PNG image",
+        "tags": [
+          "Analysis Sessions"
         ]
       }
     },

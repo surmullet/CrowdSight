@@ -31,7 +31,8 @@ interface ZoneEditorProps {
   initialZones?: EditableZone[];
   imageWidth: number;
   imageHeight: number;
-  sampleFrameUrl: string;
+  sampleFrameUrl?: string;
+  videoSrc?: string;
   onSave: (data: { name: string; zones: EditableZone[]; note: string }) => Promise<void>;
   onCancel: () => void;
   className?: string;
@@ -52,12 +53,14 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
   imageWidth,
   imageHeight,
   sampleFrameUrl,
+  videoSrc,
   onSave,
   onCancel,
   className = '',
 }) => {
   const [zoneSetName, setZoneSetName] = useState(initialZoneSetName);
   const [versionNote, setVersionNote] = useState('Khởi tạo cấu hình ban đầu');
+  const [imgError, setImgError] = useState(false);
   const [zones, setZones] = useState<EditableZone[]>(
     initialZones.length > 0
       ? initialZones
@@ -90,6 +93,7 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
 
   const svgRef = useRef<SVGSVGElement>(null);
+  const dragOccurredRef = useRef(false);
 
   // Push to history before modifications
   const recordHistory = useCallback(() => {
@@ -148,69 +152,136 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
     });
   }, [zones, imageWidth, imageHeight]);
 
-  const getSvgCoordinates = (e: React.MouseEvent): [number, number] => {
-    const svg = svgRef.current;
-    if (!svg) return [0, 0];
-    const rect = svg.getBoundingClientRect();
-    const scaleX = imageWidth / rect.width;
-    const scaleY = imageHeight / rect.height;
-    let px = (e.clientX - rect.left) * scaleX;
-    let py = (e.clientY - rect.top) * scaleY;
+  const getSvgCoordinatesFromClient = useCallback(
+    (clientX: number, clientY: number): [number, number] => {
+      const svg = svgRef.current;
+      if (!svg) return [0, 0];
+      const rect = svg.getBoundingClientRect();
+      const scaleX = imageWidth / rect.width;
+      const scaleY = imageHeight / rect.height;
+      let px = (clientX - rect.left) * scaleX;
+      let py = (clientY - rect.top) * scaleY;
 
-    if (snapToGrid) {
-      px = Math.round(px / gridSize) * gridSize;
-      py = Math.round(py / gridSize) * gridSize;
-    }
+      if (snapToGrid) {
+        px = Math.round(px / gridSize) * gridSize;
+        py = Math.round(py / gridSize) * gridSize;
+      }
 
-    return [Math.round(px), Math.round(py)];
-  };
+      px = Math.max(0, Math.min(imageWidth, Math.round(px)));
+      py = Math.max(0, Math.min(imageHeight, Math.round(py)));
 
+      return [px, py];
+    },
+    [gridSize, imageHeight, imageWidth, snapToGrid]
+  );
+
+  // Global window listeners for drag move and release
+  useEffect(() => {
+    if (!draggingVertex) return;
+
+    const handleWindowMouseMove = (e: MouseEvent) => {
+      dragOccurredRef.current = true;
+      const [px, py] = getSvgCoordinatesFromClient(e.clientX, e.clientY);
+
+      setZones((prev) =>
+        prev.map((z) => {
+          if (z.zoneId !== draggingVertex.zoneId) return z;
+          const newVertices: [number, number][] = z.vertices.map((v, i) =>
+            i === draggingVertex.index ? [px, py] : v
+          );
+          return { ...z, vertices: newVertices };
+        })
+      );
+    };
+
+    const handleWindowMouseUp = () => {
+      setDraggingVertex(null);
+      // Keep dragOccurredRef true briefly so click event doesn't trigger
+      setTimeout(() => {
+        dragOccurredRef.current = false;
+      }, 80);
+    };
+
+    window.addEventListener('mousemove', handleWindowMouseMove);
+    window.addEventListener('mouseup', handleWindowMouseUp);
+
+    return () => {
+      window.removeEventListener('mousemove', handleWindowMouseMove);
+      window.removeEventListener('mouseup', handleWindowMouseUp);
+    };
+  }, [draggingVertex, getSvgCoordinatesFromClient]);
+
+  // Click on empty canvas: only adds points if the active zone has fewer than 3 vertices!
   const handleSvgClick = (e: React.MouseEvent) => {
-    if (draggingVertex) return;
-    const [px, py] = getSvgCoordinates(e);
+    if (dragOccurredRef.current || draggingVertex) return;
 
     const activeZone = zones.find((z) => z.zoneId === activeZoneId);
     if (!activeZone) return;
 
-    recordHistory();
-    setZones((prev) =>
-      prev.map((z) =>
-        z.zoneId === activeZoneId ? { ...z, vertices: [...z.vertices, [px, py]] } : z
-      )
-    );
+    // Only allow clicking to add initial vertices when starting a new zone from scratch
+    if (activeZone.vertices.length < 3) {
+      const [px, py] = getSvgCoordinatesFromClient(e.clientX, e.clientY);
+      recordHistory();
+      setZones((prev) =>
+        prev.map((z) =>
+          z.zoneId === activeZoneId ? { ...z, vertices: [...z.vertices, [px, py]] } : z
+        )
+      );
+    }
   };
 
+  // Mousedown on an existing vertex: ONLY moves this vertex
   const handleVertexMouseDown = (
     e: React.MouseEvent,
     zoneId: string,
     index: number
   ) => {
     e.stopPropagation();
+    e.preventDefault();
     recordHistory();
+    setActiveZoneId(zoneId);
     setDraggingVertex({ zoneId, index });
+    dragOccurredRef.current = true;
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!draggingVertex) return;
-    const [px, py] = getSvgCoordinates(e);
+  // Mousedown on an EDGE: inserts a new vertex between edgeIndex and (edgeIndex+1) and starts dragging it
+  const handleEdgeMouseDown = (
+    e: React.MouseEvent,
+    zoneId: string,
+    edgeIndex: number
+  ) => {
+    e.stopPropagation();
+    e.preventDefault();
+    recordHistory();
+    setActiveZoneId(zoneId);
 
+    const [px, py] = getSvgCoordinatesFromClient(e.clientX, e.clientY);
+
+    const insertIndex = edgeIndex + 1;
     setZones((prev) =>
       prev.map((z) => {
-        if (z.zoneId !== draggingVertex.zoneId) return z;
+        if (z.zoneId !== zoneId) return z;
         const newVertices = [...z.vertices];
-        newVertices[draggingVertex.index] = [px, py];
+        newVertices.splice(insertIndex, 0, [px, py]);
         return { ...z, vertices: newVertices };
       })
     );
-  };
 
-  const handleMouseUp = () => {
-    setDraggingVertex(null);
+    // Immediately drag the newly inserted vertex
+    setDraggingVertex({ zoneId, index: insertIndex });
+    dragOccurredRef.current = true;
   };
 
   const handleDeleteVertex = (zoneId: string, index: number, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    const targetZone = zones.find((z) => z.zoneId === zoneId);
+    if (!targetZone || targetZone.vertices.length <= 3) {
+      // Must maintain at least 3 vertices for a polygon
+      return;
+    }
+
     recordHistory();
     setZones((prev) =>
       prev.map((z) => {
@@ -258,11 +329,7 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
   };
 
   return (
-    <div
-      className={`flex flex-col min-h-screen bg-brand-abyssal text-brand-text-primary ${className}`}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-    >
+    <div className={`flex flex-col min-h-screen bg-brand-abyssal text-brand-text-primary ${className}`}>
       <Banner />
 
       {/* Header */}
@@ -280,7 +347,7 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
               Trình soạn thảo tập vùng quan sát
             </h1>
             <p className="text-xs text-brand-text-muted">
-              Vẽ các polygon có tên trực tiếp trên khung hình tham chiếu {imageWidth}×{imageHeight}
+              Kéo đỉnh để đổi vị trí • Kéo cạnh để thêm đỉnh mới • Chuột phải để xóa đỉnh
             </p>
           </div>
         </div>
@@ -337,18 +404,39 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
         <div className="lg:col-span-8 flex flex-col gap-2">
           <div className="relative w-full aspect-video bg-black rounded-xl overflow-hidden border border-brand-border select-none shadow-xl">
             {/* Background Sample Image */}
-            <img
-              src={sampleFrameUrl}
-              alt="Khung hình tham chiếu để vẽ vùng"
-              className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            />
+            {sampleFrameUrl && !imgError && (
+              <img
+                src={sampleFrameUrl}
+                alt="Khung hình tham chiếu để vẽ vùng"
+                onError={() => setImgError(true)}
+                className="absolute inset-0 w-full h-full object-contain pointer-events-none"
+              />
+            )}
+
+            {/* Video element fallback: decodes and displays first frame directly from video stream/file */}
+            {videoSrc && (
+              <video
+                src={videoSrc}
+                crossOrigin="anonymous"
+                preload="auto"
+                muted
+                playsInline
+                onLoadedMetadata={(e) => {
+                  const v = e.currentTarget;
+                  v.currentTime = 0.1;
+                }}
+                className={`absolute inset-0 w-full h-full object-contain pointer-events-none ${
+                  sampleFrameUrl && !imgError ? 'hidden' : ''
+                }`}
+              />
+            )}
 
             {/* Interactive SVG Drawing Canvas */}
             <svg
               ref={svgRef}
               viewBox={`0 0 ${imageWidth} ${imageHeight}`}
               onClick={handleSvgClick}
-              className="absolute inset-0 w-full h-full cursor-crosshair"
+              className="absolute inset-0 w-full h-full select-none"
             >
               {/* Optional Grid overlay */}
               {snapToGrid && (
@@ -364,36 +452,113 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
               {zones.map((zone) => {
                 const isActive = zone.zoneId === activeZoneId;
                 const pointsStr = zone.vertices.map((v) => `${v[0]},${v[1]}`).join(' ');
+                const numVerts = zone.vertices.length;
 
                 return (
                   <g key={zone.zoneId}>
-                    {zone.vertices.length >= 3 && (
+                    {/* Filled Polygon */}
+                    {numVerts >= 3 && (
                       <polygon
                         points={pointsStr}
                         fill={`${zone.color}26`}
                         stroke={zone.color}
                         strokeWidth={isActive ? '3' : '1.5'}
                         strokeDasharray={isActive ? undefined : '4,2'}
+                        onClick={() => setActiveZoneId(zone.zoneId)}
+                        className="cursor-pointer"
                       />
                     )}
 
-                    {/* Vertices Draggable Dots */}
-                    {zone.vertices.map(([vx, vy], idx) => (
-                      <circle
-                        key={`v-${zone.zoneId}-${idx}`}
-                        cx={vx}
-                        cy={vy}
-                        r={isActive ? 7 : 4}
-                        fill={isActive ? '#FFFFFF' : zone.color}
-                        stroke={zone.color}
-                        strokeWidth={2}
-                        onMouseDown={(e) => handleVertexMouseDown(e, zone.zoneId, idx)}
-                        onContextMenu={(e) => handleDeleteVertex(zone.zoneId, idx, e)}
-                        className="cursor-move hover:scale-125 transition-transform"
-                      >
-                        <title>Kéo để di chuyển • Chuột phải để xóa đỉnh</title>
-                      </circle>
-                    ))}
+                    {/* Interactive Edges: pure CSS group-hover highlight & midpoint "+" handle */}
+                    {numVerts >= 2 &&
+                      zone.vertices.map(([x1, y1], edgeIdx) => {
+                        const nextIdx = (edgeIdx + 1) % numVerts;
+                        if (numVerts === 2 && edgeIdx === 1) return null; // Incomplete line
+                        const [x2, y2] = zone.vertices[nextIdx]!;
+                        const midX = (x1 + x2) / 2;
+                        const midY = (y1 + y2) / 2;
+
+                        return (
+                          <g key={`edge-${zone.zoneId}-${edgeIdx}`} className="group/edge cursor-copy">
+                            {/* Fat invisible hit area */}
+                            <line
+                              x1={x1}
+                              y1={y1}
+                              x2={x2}
+                              y2={y2}
+                              stroke="transparent"
+                              strokeWidth={16}
+                              onMouseDown={(e) => handleEdgeMouseDown(e, zone.zoneId, edgeIdx)}
+                            >
+                              <title>Kéo cạnh này để tạo thêm đỉnh mới</title>
+                            </line>
+
+                            {/* Edge highlight on hover (pure CSS group-hover: no React re-render, no jitter) */}
+                            {isActive && (
+                              <>
+                                <line
+                                  x1={x1}
+                                  y1={y1}
+                                  x2={x2}
+                                  y2={y2}
+                                  stroke="#F5A623"
+                                  strokeWidth={2.5}
+                                  strokeDasharray="6,4"
+                                  className="pointer-events-none opacity-0 group-hover/edge:opacity-100 transition-opacity duration-150"
+                                />
+                                {/* Midpoint "+" Handle */}
+                                <g
+                                  transform={`translate(${midX}, ${midY})`}
+                                  className="pointer-events-none opacity-0 group-hover/edge:opacity-100 transition-opacity duration-150"
+                                >
+                                  <circle
+                                    r={8}
+                                    fill="#F5A623"
+                                    stroke="#FFFFFF"
+                                    strokeWidth={2}
+                                    className="drop-shadow"
+                                  />
+                                  <line x1={-3.5} y1={0} x2={3.5} y2={0} stroke="#1A1F2C" strokeWidth={2} strokeLinecap="round" />
+                                  <line x1={0} y1={-3.5} x2={0} y2={3.5} stroke="#1A1F2C" strokeWidth={2} strokeLinecap="round" />
+                                </g>
+                              </>
+                            )}
+                          </g>
+                        );
+                      })}
+
+                    {/* Vertices Draggable Dots: Stable 14px hit target, NO hover:scale (prevents SVG boundary tremor) */}
+                    {zone.vertices.map(([vx, vy], idx) => {
+                      const isDraggingThis =
+                        draggingVertex?.zoneId === zone.zoneId && draggingVertex?.index === idx;
+
+                      return (
+                        <g key={`v-grp-${zone.zoneId}-${idx}`} className="group/vertex cursor-move">
+                          {/* Generous 14px radius hit area so cursor never drops off */}
+                          <circle
+                            cx={vx}
+                            cy={vy}
+                            r={14}
+                            fill="transparent"
+                            onMouseDown={(e) => handleVertexMouseDown(e, zone.zoneId, idx)}
+                            onContextMenu={(e) => handleDeleteVertex(zone.zoneId, idx, e)}
+                          >
+                            <title>Kéo để di chuyển • Chuột phải để xóa đỉnh</title>
+                          </circle>
+
+                          {/* Crisp visible dot with smooth color transitions, no geometry transforms */}
+                          <circle
+                            cx={vx}
+                            cy={vy}
+                            r={isDraggingThis ? 9 : isActive ? 7.5 : 5}
+                            fill={isDraggingThis ? '#F5A623' : isActive ? '#FFFFFF' : zone.color}
+                            stroke={isDraggingThis ? '#FFFFFF' : zone.color}
+                            strokeWidth={isDraggingThis ? 3 : 2}
+                            className="pointer-events-none drop-shadow-md group-hover/vertex:fill-amber-400 group-hover/vertex:stroke-white transition-colors duration-150"
+                          />
+                        </g>
+                      );
+                    })}
                   </g>
                 );
               })}
@@ -401,7 +566,11 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
           </div>
 
           <div className="text-[11px] text-brand-text-muted flex justify-between px-1">
-            <span>Click trên ảnh để thêm đỉnh • Kéo chấm tròn để sửa vị trí • Chuột phải trên đỉnh để xóa</span>
+            <span>
+              🎯 <strong className="text-brand-text-primary">Kéo đỉnh:</strong> Di chuyển đỉnh đó &bull;{' '}
+              ➕ <strong className="text-brand-gold">Kéo cạnh:</strong> Tạo thêm đỉnh mới &bull;{' '}
+              ❌ <strong className="text-red-400">Chuột phải đỉnh:</strong> Xóa đỉnh
+            </span>
             <span>Độ phân giải tham chiếu: {imageWidth}×{imageHeight} px</span>
           </div>
         </div>

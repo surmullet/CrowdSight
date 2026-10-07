@@ -78,21 +78,23 @@ export function normalizedToCanvasCoords(
  * Transform bounding box in source frame pixels to canvas destination rect.
  */
 export function sourceBoxToCanvasCoords(
-  bboxXyxy: [number, number, number, number],
+  bboxXyxy: [number, number, number, number] | undefined | null,
   imageWidth: number,
   imageHeight: number,
   letterbox: LetterboxRect,
   dpr: number = 1
 ): { x: number; y: number; width: number; height: number } {
-  if (imageWidth <= 0 || imageHeight <= 0) {
+  if (!bboxXyxy || imageWidth <= 0 || imageHeight <= 0) {
     return { x: 0, y: 0, width: 0, height: 0 };
   }
 
   const [x1, y1, x2, y2] = bboxXyxy;
-  const normX1 = x1 / imageWidth;
-  const normY1 = y1 / imageHeight;
-  const normX2 = x2 / imageWidth;
-  const normY2 = y2 / imageHeight;
+  // If coordinates are already normalized (all <= 1.05 and > 0), use directly without double dividing
+  const isNormalized = x1 >= 0 && x2 <= 1.05 && y1 >= 0 && y2 <= 1.05 && (x2 > x1 || y2 > y1);
+  const normX1 = isNormalized ? x1 : x1 / imageWidth;
+  const normY1 = isNormalized ? y1 : y1 / imageHeight;
+  const normX2 = isNormalized ? x2 : x2 / imageWidth;
+  const normY2 = isNormalized ? y2 : y2 / imageHeight;
 
   const p1 = normalizedToCanvasCoords(normX1, normY1, letterbox, dpr);
   const p2 = normalizedToCanvasCoords(normX2, normY2, letterbox, dpr);
@@ -100,7 +102,7 @@ export function sourceBoxToCanvasCoords(
   return {
     x: p1.canvasX,
     y: p1.canvasY,
-    width: p2.canvasX - p1.canvasX,
-    height: p2.canvasY - p1.canvasY,
+    width: Math.max(0, p2.canvasX - p1.canvasX),
+    height: Math.max(0, p2.canvasY - p1.canvasY),
   };
 }

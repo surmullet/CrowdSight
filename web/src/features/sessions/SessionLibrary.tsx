@@ -11,6 +11,7 @@ import {
   Sparkles,
   LayoutGrid,
   List as ListIcon,
+  RotateCcw,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
 import { formatMediaTime } from '@/features/player/PlayerControls';
@@ -18,6 +19,7 @@ import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 export interface SessionSummaryItem {
   id: string;
+  displayCode?: string;
   sourceId: string;
   mediaName: string;
   duration: number;
@@ -26,6 +28,8 @@ export interface SessionSummaryItem {
   synthetic: boolean;
   createdAt: string;
   zoneSetName?: string;
+  zoneSetVersionId?: string;
+  videoSrc?: string;
   qualityBreakdown?: {
     validPct: number;
     partialPct: number;
@@ -39,6 +43,7 @@ interface SessionLibraryProps {
   onSelectSession: (id: string) => void;
   onNewSession: () => void;
   onDeleteSession: (id: string) => Promise<void>;
+  onReanalyzeSession?: (session: SessionSummaryItem) => void;
   isLoading?: boolean;
   className?: string;
 }
@@ -48,6 +53,7 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
   onSelectSession,
   onNewSession,
   onDeleteSession,
+  onReanalyzeSession,
   isLoading = false,
   className = '',
 }) => {
@@ -80,6 +86,8 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
     try {
       await onDeleteSession(sessionToDelete.id);
       setSessionToDelete(null);
+    } catch {
+      // Đã được xử lý và hiển thị thông báo trong onDeleteSession
     } finally {
       setIsDeleting(false);
     }
@@ -229,9 +237,15 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                         </span>
                       )}
                     </div>
-                    <span className="text-[10px] font-mono text-brand-text-muted">
-                      {session.id.slice(0, 8)}
-                    </span>
+                    {session.displayCode ? (
+                      <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-brand-gold/15 text-brand-gold border border-brand-gold/30">
+                        {session.displayCode}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-mono text-brand-text-muted">
+                        {session.id.slice(0, 8)}
+                      </span>
+                    )}
                   </div>
 
                   {/* Media Name */}
@@ -297,14 +311,28 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                     <Trash2 className="w-4 h-4" />
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => onSelectSession(session.id)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-abyssal hover:bg-brand-gold hover:text-brand-abyssal border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary transition-all"
-                  >
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Xem kết quả</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {onReanalyzeSession && (
+                      <button
+                        type="button"
+                        onClick={() => onReanalyzeSession(session)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-surface hover:bg-brand-gold/10 hover:border-brand-gold/40 border border-brand-border rounded-lg text-xs font-medium text-brand-text-muted hover:text-brand-gold transition-all"
+                        title="Phân tích lại video này bằng mô hình AI"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Phân tích lại</span>
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={() => onSelectSession(session.id)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-abyssal hover:bg-brand-gold hover:text-brand-abyssal border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary transition-all"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Xem kết quả</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -328,7 +356,14 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                   <tr key={s.id} className="hover:bg-brand-abyssal/40 transition-colors">
                     <td className="py-3 px-4">
                       <div className="font-semibold text-brand-text-primary">{s.mediaName}</div>
-                      <div className="font-mono text-[10px] text-brand-text-muted">{s.id.slice(0, 12)}</div>
+                      <div className="flex items-center gap-1.5 mt-0.5">
+                        {s.displayCode && (
+                          <span className="font-mono text-[10px] font-semibold text-brand-gold bg-brand-gold/10 px-1 py-0.5 rounded border border-brand-gold/20">
+                            {s.displayCode}
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] text-brand-text-muted">{s.id.slice(0, 8)}</span>
+                      </div>
                     </td>
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-1.5">
@@ -355,9 +390,20 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                           type="button"
                           onClick={() => setSessionToDelete(s)}
                           className="p-1 rounded text-brand-text-muted hover:text-red-400"
+                          title="Xóa phiên"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
+                        {onReanalyzeSession && (
+                          <button
+                            type="button"
+                            onClick={() => onReanalyzeSession(s)}
+                            className="p-1 rounded text-brand-text-muted hover:text-brand-gold"
+                            title="Phân tích lại video này"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => onSelectSession(s.id)}

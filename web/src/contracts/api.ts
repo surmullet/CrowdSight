@@ -553,6 +553,8 @@ export interface components {
             browser_playable: boolean;
             /** Codec */
             codec: string;
+            /** Display Code */
+            display_code?: string | null;
             /** Display Name */
             display_name: string;
             /** Duration S */
@@ -692,6 +694,8 @@ export interface components {
             checkpoint_sha256: string;
             /** Completeness */
             completeness: string;
+            /** Display Code */
+            display_code?: string | null;
             /**
              * Created At
              * Format: date-time

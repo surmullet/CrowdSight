@@ -53,6 +53,10 @@ class VideoDecoder:
 
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        self.fps = fps
+        self.width = width
+        self.height = height
+        self.total_raw_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
         prev_frame_gray: np.ndarray[Any, Any] | None = None
         consecutive_frozen = 0

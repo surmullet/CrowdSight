@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Film,
   Layers,
@@ -18,6 +18,7 @@ import { formatMediaTime } from '@/features/player/PlayerControls';
 
 export interface MediaCatalogItem {
   id: string;
+  displayCode?: string;
   name: string;
   duration: number;
   fps: number;
@@ -25,6 +26,7 @@ export interface MediaCatalogItem {
   height: number;
   codec: string;
   browserPlayable: boolean;
+  videoSrc?: string;
 }
 
 export interface ZoneSetSummary {
@@ -46,13 +48,14 @@ interface NewSessionWizardProps {
   mediaCatalog: MediaCatalogItem[];
   zoneSets: ZoneSetSummary[];
   modelProfile: ModelProfileInfo;
-  onCreateZoneSet?: () => void;
+  onCreateZoneSet?: (selectedMediaId?: string) => void;
   onUploadMedia?: (file: File) => Promise<MediaCatalogItem>;
   onSubmit: (params: {
     mediaId: string;
     zoneSetId: string;
     zoneSetVersion: number;
     frameStride: number;
+    confidence?: number;
     useSynthetic: boolean;
   }) => Promise<void>;
   onCancel: () => void;
@@ -72,7 +75,8 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedMediaId, setSelectedMediaId] = useState<string>(mediaCatalog[0]?.id ?? '');
   const [selectedZoneSetId, setSelectedZoneSetId] = useState<string>(zoneSets[0]?.id ?? '');
-  const [frameStride, setFrameStride] = useState<number>(5);
+  const [frameStride, setFrameStride] = useState<number>(2);
+  const [confidence, setConfidence] = useState<number>(0.18);
   const [useSynthetic, setUseSynthetic] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -112,6 +116,34 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
   const selectedMedia = mediaCatalog.find((m) => m.id === selectedMediaId);
   const selectedZoneSet = zoneSets.find((z) => z.id === selectedZoneSetId);
 
+  // Automatically select the most matching Zone Set for the selected media
+  useEffect(() => {
+    if (!selectedMediaId || zoneSets.length === 0) return;
+    const media = mediaCatalog.find((m) => m.id === selectedMediaId);
+    if (!media) return;
+
+    const mediaNameLower = (media.name || '').toLowerCase();
+    const mediaStem = mediaNameLower.split('.')[0] || '';
+
+    // Match priority:
+    // 1. Zone Set specifically naming or containing this media file stem
+    const matched = zoneSets.find((zs) => {
+      const zsNameLower = zs.name.toLowerCase();
+      if (mediaStem) {
+        if (mediaStem === 'crowd' && zsNameLower.includes('crowd6')) return false;
+        if (mediaStem === 'crowd6' && !zsNameLower.includes('crowd6')) return false;
+        if (zsNameLower.includes(mediaStem)) return true;
+      }
+      return false;
+    });
+
+    if (matched) {
+      setSelectedZoneSetId(matched.id);
+    } else if (!selectedZoneSetId || !zoneSets.some((z) => z.id === selectedZoneSetId)) {
+      setSelectedZoneSetId(zoneSets[0]?.id ?? '');
+    }
+  }, [selectedMediaId, mediaCatalog, zoneSets]);
+
   const handleNext = () => {
     if (currentStep === 1 && !selectedMediaId) {
       setErrorMessage('Vui lòng chọn hoặc tải lên một video để phân tích.');
@@ -140,6 +172,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
         zoneSetId: selectedZoneSetId,
         zoneSetVersion: selectedZoneSet.version,
         frameStride,
+        confidence,
         useSynthetic,
       });
     } catch (err: unknown) {
@@ -309,9 +342,16 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                     />
                     <div className="flex-1">
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-brand-text-primary">
-                          {media.name}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          {media.displayCode && (
+                            <span className="font-mono text-[10px] font-semibold text-brand-gold bg-brand-gold/15 px-1.5 py-0.5 rounded border border-brand-gold/30">
+                              {media.displayCode}
+                            </span>
+                          )}
+                          <span className="font-semibold text-sm text-brand-text-primary">
+                            {media.name}
+                          </span>
+                        </div>
                         <span className="font-mono text-xs text-brand-gold tabular-nums">
                           {formatMediaTime(media.duration)}
                         </span>
@@ -349,8 +389,8 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
               {onCreateZoneSet && (
                 <button
                   type="button"
-                  onClick={onCreateZoneSet}
-                  className="px-3 py-1.5 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded text-xs text-brand-gold transition-colors"
+                  onClick={() => onCreateZoneSet(selectedMediaId)}
+                  className="px-3 py-1.5 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded text-xs text-brand-gold transition-colors cursor-pointer"
                 >
                   + Vẽ tập vùng mới
                 </button>
@@ -363,38 +403,56 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                   Chưa có tập vùng nào. Vui lòng bấm &ldquo;Vẽ tập vùng mới&rdquo; để tạo.
                 </div>
               ) : (
-                zoneSets.map((zs) => (
-                  <label
-                    key={zs.id}
-                    className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
-                      selectedZoneSetId === zs.id
-                        ? 'border-brand-gold bg-brand-gold/5 shadow-sm'
-                        : 'border-brand-border bg-brand-surface hover:border-brand-border/80'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="zoneSet"
-                      value={zs.id}
-                      checked={selectedZoneSetId === zs.id}
-                      onChange={() => setSelectedZoneSetId(zs.id)}
-                      className="mt-1 accent-brand-gold"
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-semibold text-sm text-brand-text-primary">
-                          {zs.name}
-                        </span>
-                        <span className="text-xs text-brand-text-muted">
-                          Phiên bản v{zs.version}
-                        </span>
+                zoneSets.map((zs) => {
+                  const mediaStem = (selectedMedia?.name || '').toLowerCase().split('.')[0] || '';
+                  const zsNameLower = zs.name.toLowerCase();
+                  const isMatch = mediaStem && (
+                    (mediaStem === 'crowd' && !zsNameLower.includes('crowd6') && zsNameLower.includes('crowd')) ||
+                    (mediaStem === 'crowd6' && zsNameLower.includes('crowd6')) ||
+                    (mediaStem === '150' && zsNameLower.includes('150')) ||
+                    (mediaStem !== 'crowd' && mediaStem !== 'crowd6' && mediaStem !== '150' && zsNameLower.includes(mediaStem))
+                  );
+
+                  return (
+                    <label
+                      key={zs.id}
+                      className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all ${
+                        selectedZoneSetId === zs.id
+                          ? 'border-brand-gold bg-brand-gold/5 shadow-sm'
+                          : 'border-brand-border bg-brand-surface hover:border-brand-border/80'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="zoneSet"
+                        value={zs.id}
+                        checked={selectedZoneSetId === zs.id}
+                        onChange={() => setSelectedZoneSetId(zs.id)}
+                        className="mt-1 accent-brand-gold"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm text-brand-text-primary">
+                              {zs.name}
+                            </span>
+                            {isMatch && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                Phù hợp với video
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-xs text-brand-text-muted">
+                            Phiên bản v{zs.version}
+                          </span>
+                        </div>
+                        <p className="text-xs text-brand-text-muted mt-1">
+                          Bao gồm {zs.zoneCount} vùng quan sát đã được kiểm định hình học
+                        </p>
                       </div>
-                      <p className="text-xs text-brand-text-muted mt-1">
-                        Bao gồm {zs.zoneCount} vùng quan sát đã được kiểm định hình học
-                      </p>
-                    </div>
-                  </label>
-                ))
+                    </label>
+                  );
+                })
               )}
             </div>
           </div>
@@ -487,6 +545,52 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                 />
                 <p className="text-[11px] text-brand-text-muted">
                   Giá trị 1 phân tích mọi khung hình (chính xác tối đa, chậm hơn). Giá trị 5 phân tích 1 khung mỗi 5 khung hình.
+                </p>
+              </div>
+
+              {/* Confidence option */}
+              <div className="space-y-2 pt-3 border-t border-brand-border/60">
+                <label className="font-medium text-brand-text-primary flex items-center justify-between">
+                  <div>
+                    <span>Độ nhạy phát hiện (Confidence): </span>
+                    <span className="font-mono text-amber-400 font-bold">{confidence.toFixed(2)}</span>
+                  </div>
+                  <span className="text-[11px] text-brand-text-muted">
+                    {confidence <= 0.18 ? '🎯 Quét nhạy (khuyên dùng cảnh mưa)' : '🛡️ Chuẩn lọc nhiễu'}
+                  </span>
+                </label>
+                <input
+                  type="range"
+                  min="0.10"
+                  max="0.50"
+                  step="0.01"
+                  value={confidence}
+                  onChange={(e) => setConfidence(parseFloat(e.target.value))}
+                  className="w-full accent-amber-400 bg-brand-border rounded cursor-pointer"
+                />
+                <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                  {[
+                    { label: '0.15 (Nhạy tối đa)', val: 0.15 },
+                    { label: '0.18 (Đề xuất)', val: 0.18 },
+                    { label: '0.25 (Tiêu chuẩn)', val: 0.25 },
+                    { label: '0.35 (Nghiêm ngặt)', val: 0.35 },
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      type="button"
+                      onClick={() => setConfidence(p.val)}
+                      className={`py-1 px-1 rounded text-[10px] font-medium border transition-colors ${
+                        Math.abs(confidence - p.val) < 0.005
+                          ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-bold'
+                          : 'bg-brand-abyssal border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-brand-text-muted">
+                  Hạ thấp xuống 0.15 - 0.18 giúp quét đầy đủ người đi bộ mặc áo mưa, áo trùm mũ, người già chống gậy cúi người và người che ô.
                 </p>
               </div>
 

@@ -1,11 +1,13 @@
 """Video pipeline orchestrator: decoding, inference, zone aggregation, and persistence."""
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from crowdsight.service.artifacts.store import ArtifactStore
 from crowdsight.service.domain.aggregation import aggregate_frame
 from crowdsight.service.domain.models import (
     CrowdFrameObservationV1,
@@ -16,6 +18,7 @@ from crowdsight.service.domain.zones import ZoneSet
 from crowdsight.service.pipeline.decoder import DecodedFrame, VideoDecoder
 from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.storage.models import (
+    ArtifactRecord,
     ObservationRecord,
     SessionRecord,
     ZoneResultRecord,
@@ -37,40 +40,56 @@ class SessionPipeline:
         session_id: str,
         video_path: Path,
         zone_set: ZoneSet,
-        detector: Any,  # Supports predict(frame_bgr, frame_index)
+        detector: Any,  # Supports track(frame_bgr) or predict(frame_bgr)
         db_manager: DatabaseManager,
+        artifact_store: ArtifactStore | None = None,
         is_synthetic: bool = False,
         max_consecutive_unknown: int = 30,
         max_unknown_rate: float = 0.5,
+        frame_stride: int = 1,
     ) -> None:
         self.session_id = session_id
         self.video_path = video_path
         self.zone_set = zone_set
         self.detector = detector
         self.db_manager = db_manager
+        if artifact_store is None:
+            self.artifact_store = ArtifactStore(Path("data/artifacts"))
+        else:
+            self.artifact_store = artifact_store
         self.is_synthetic = is_synthetic
         self.max_consecutive_unknown = max_consecutive_unknown
         self.max_unknown_rate = max_unknown_rate
+        self.frame_stride = max(1, frame_stride)
 
     def run(self, cancellation_check: Callable[[], bool] | None = None) -> str:
         """Run the pipeline to completion, cancellation, or failure.
 
         Returns final session status string.
         """
-        decoder = VideoDecoder(self.video_path)
+        decoder = VideoDecoder(self.video_path, frame_stride=self.frame_stride)
 
         with self.db_manager.get_session() as session:
             sess_record = session.get(SessionRecord, self.session_id)
             if not sess_record:
                 raise ValueError(f"Session {self.session_id} not found")
             sess_record.status = "RUNNING"
-            total_frames = sess_record.total_frames or 100
+            raw_total = sess_record.total_frames or 100
+            total_frames = max(1, (raw_total + self.frame_stride - 1) // self.frame_stride) if self.frame_stride > 1 else raw_total
+            sess_record.total_frames = total_frames
 
         processed = 0
         unknown_count = 0
         consecutive_unknown = 0
+        exported_frames: list[dict[str, Any]] = []
+        zone_names = {z.zone_id: z.name for z in self.zone_set.zones}
+        frame_width = 1280
+        frame_height = 720
 
         for frame in decoder.iter_frames():
+            frame_width = frame.width
+            frame_height = frame.height
+
             # Check cooperative cancellation
             if cancellation_check and cancellation_check():
                 with self.db_manager.get_session() as session:
@@ -119,6 +138,34 @@ class SessionPipeline:
                     sess_record.processed_frames = processed
                     sess_record.progress = min(round(processed / max(total_frames, 1), 3), 1.0)
 
+            # Accumulate frame data for export artifact
+            frame_export = {
+                "frame_index": observation.frame_index,
+                "media_time_s": round(observation.media_time_s, 3),
+                "quality": observation.quality.value,
+                "fully_observed_zones": list(self.zone_set.zone_ids),
+                "detections": [
+                    {
+                        "track_id": d.track_id,
+                        "x": round(d.x, 4),
+                        "y": round(d.y, 4),
+                        "confidence": round(d.confidence, 3),
+                        "bbox_xyxy": [round(c, 1) for c in d.bbox_xyxy] if d.bbox_xyxy else None,
+                    }
+                    for d in observation.detections
+                ],
+                "zone_readings": [
+                    {
+                        "status": z_res.availability.value,
+                        "count": z_res.visible_count if z_res.availability.value == "COUNTED" else 0,
+                        "zoneId": z_res.zone_id,
+                        "zoneName": zone_names.get(z_res.zone_id, z_res.zone_id),
+                    }
+                    for z_res in agg_result.zones
+                ],
+            }
+            exported_frames.append(frame_export)
+
             # Failure rate threshold check
             if consecutive_unknown >= self.max_consecutive_unknown:
                 with self.db_manager.get_session() as session:
@@ -129,6 +176,90 @@ class SessionPipeline:
                         sess_record.user_action_hint = "Too many consecutive unreadable or failed frames"
                 raise PipelineInferenceError("Exceeded maximum consecutive UNKNOWN frames")
 
+        # Generate artifacts and finalize session
+        palette = ["#0072B2", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
+        zone_list = [
+            {
+                "zone_id": z.zone_id,
+                "name": z.name,
+                "color": palette[i % len(palette)],
+                "vertices": [[round(p.x, 1), round(p.y, 1)] for p in z.polygon.vertices],
+            }
+            for i, z in enumerate(self.zone_set.zones)
+        ]
+        v_fps = float(getattr(decoder, "fps", 25.0) or 25.0)
+        v_raw_total = int(getattr(decoder, "total_raw_frames", 0) or 0)
+        duration_s = (
+            round(v_raw_total / v_fps, 2)
+            if v_raw_total > 0
+            else (round(processed * self.frame_stride / v_fps, 2) if processed > 0 else 0.0)
+        )
+        dataset_dict = {
+            "metadata": {
+                "sessionId": self.session_id,
+                "sourceId": self.video_path.name,
+                "mediaName": self.video_path.name,
+                "duration": duration_s,
+                "fps": v_fps,
+                "width": frame_width,
+                "height": frame_height,
+                "totalFrames": processed,
+                "model": getattr(self.detector, "profile_id", "models/best.pt"),
+                "confidence": round(float(getattr(getattr(self.detector, "_profile", None), "confidence", 0.18)), 2),
+                "tracker": "BoT-SORT",
+            },
+            "zones": zone_list,
+            "frames": exported_frames,
+        }
+
+        # 1. Save DATASET_EXPORT JSON artifact
+        try:
+            json_bytes = json.dumps(dataset_dict).encode("utf-8")
+            art_id, relpath, digest = self.artifact_store.save_bytes(
+                json_bytes,
+                kind="DATASET_EXPORT",
+                suffix=".json",
+                session_id=self.session_id,
+            )
+            with self.db_manager.get_session() as session:
+                art_rec = ArtifactRecord(
+                    id=art_id,
+                    session_id=self.session_id,
+                    kind="DATASET_EXPORT",
+                    relpath=relpath,
+                    sha256=digest,
+                )
+                session.add(art_rec)
+        except Exception as exc:
+            logger.warning("Failed to save dataset export artifact: %s", exc)
+
+        # 2. Save HEATMAP PNG artifact
+        try:
+            from crowdsight.service.analytics.heatmaps import ImageSpaceHeatmapGenerator
+            hm_result = ImageSpaceHeatmapGenerator.generate(
+                observations=exported_frames,
+                image_width=frame_width,
+                image_height=frame_height,
+                zone_set=self.zone_set,
+            )
+            hm_art_id, hm_relpath, hm_digest = self.artifact_store.save_bytes(
+                hm_result.png_bytes,
+                kind="HEATMAP",
+                suffix=".png",
+                session_id=self.session_id,
+            )
+            with self.db_manager.get_session() as session:
+                hm_art_rec = ArtifactRecord(
+                    id=hm_art_id,
+                    session_id=self.session_id,
+                    kind="HEATMAP",
+                    relpath=hm_relpath,
+                    sha256=hm_digest,
+                )
+                session.add(hm_art_rec)
+        except Exception as exc:
+            logger.warning("Failed to generate heatmap artifact: %s", exc)
+
         # Mark completed
         with self.db_manager.get_session() as session:
             sess_record = session.get(SessionRecord, self.session_id)
@@ -136,6 +267,7 @@ class SessionPipeline:
                 sess_record.status = "COMPLETED"
                 sess_record.progress = 1.0
                 sess_record.completeness = "FULL"
+                sess_record.processed_frames = processed
 
         return "COMPLETED"
 
@@ -143,6 +275,7 @@ class SessionPipeline:
         profile_id = getattr(self.detector, "profile_id", "crowd_best_local_v2")
         profile_sha256 = getattr(self.detector, "profile_sha256", "a" * 64)
         checkpoint_sha256 = getattr(self.detector, "checkpoint_sha256", "b" * 64)
+        tracker_sha256 = getattr(self.detector, "tracker_config_sha256", None)
 
         if not frame.is_usable or frame.image_bgr is None:
             return CrowdFrameObservationV1(
@@ -151,7 +284,7 @@ class SessionPipeline:
                 model_profile_id=profile_id,
                 model_profile_sha256=profile_sha256,
                 checkpoint_sha256=checkpoint_sha256,
-                tracker_config_sha256=None,
+                tracker_config_sha256=tracker_sha256,
                 frame_index=frame.frame_index,
                 media_time_s=frame.media_time_s,
                 captured_at=None,
@@ -165,16 +298,15 @@ class SessionPipeline:
                 detections=(),
             )
 
-        # Run detector
-        predict_fn = self.detector.predict
+        # Run tracker or detector
+        infer_fn = getattr(self.detector, "track", None) or self.detector.predict
         try:
-            # Check if predict accepts frame_index
             import inspect
-            sig = inspect.signature(predict_fn)
+            sig = inspect.signature(infer_fn)
             if "frame_index" in sig.parameters:
-                raw_detections = predict_fn(frame.image_bgr, frame_index=frame.frame_index)
+                raw_detections = infer_fn(frame.image_bgr, frame_index=frame.frame_index)
             else:
-                raw_detections = predict_fn(frame.image_bgr)
+                raw_detections = infer_fn(frame.image_bgr)
         except Exception as exc:
             logger.warning("Inference error on frame %d: %s", frame.frame_index, exc)
             return CrowdFrameObservationV1(
@@ -183,7 +315,7 @@ class SessionPipeline:
                 model_profile_id=profile_id,
                 model_profile_sha256=profile_sha256,
                 checkpoint_sha256=checkpoint_sha256,
-                tracker_config_sha256=None,
+                tracker_config_sha256=tracker_sha256,
                 frame_index=frame.frame_index,
                 media_time_s=frame.media_time_s,
                 captured_at=None,
@@ -200,13 +332,16 @@ class SessionPipeline:
         # Map to DetectionV1
         detection_models: list[DetectionV1] = []
         for d in raw_detections:
+            track_id = int(d.track_id) if getattr(d, "track_id", None) is not None else None
+            bbox_raw = getattr(d, "bbox_xyxy_px", None) or getattr(d, "bbox_xyxy", None)
+            bbox = tuple(float(c) for c in bbox_raw) if bbox_raw is not None else None
             detection_models.append(
                 DetectionV1(
-                    track_id=d.track_id,
-                    x=d.x,
-                    y=d.y,
-                    confidence=d.confidence,
-                    bbox_xyxy=d.bbox_xyxy_px,
+                    track_id=track_id,
+                    x=min(max(float(d.x), 0.0), 1.0),
+                    y=min(max(float(d.y), 0.0), 1.0),
+                    confidence=min(max(float(d.confidence), 0.0), 1.0),
+                    bbox_xyxy=bbox,
                 )
             )
 
@@ -216,7 +351,7 @@ class SessionPipeline:
             model_profile_id=profile_id,
             model_profile_sha256=profile_sha256,
             checkpoint_sha256=checkpoint_sha256,
-            tracker_config_sha256=None,
+            tracker_config_sha256=tracker_sha256,
             frame_index=frame.frame_index,
             media_time_s=frame.media_time_s,
             captured_at=None,

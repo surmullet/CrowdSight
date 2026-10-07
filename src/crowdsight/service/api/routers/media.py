@@ -27,6 +27,7 @@ class MediaAssetResponse(BaseModel):
     height: int
     codec: str
     browser_playable: bool
+    display_code: str | None = None
 
 
 @router.get("", response_model=list[MediaAssetResponse], summary="List registered recorded video assets")
@@ -112,6 +113,9 @@ def stream_media(
                 "Content-Length": str(file_size),
                 "Content-Type": content_type,
                 "Accept-Ranges": "bytes",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
             },
         )
 
@@ -152,6 +156,9 @@ def stream_media(
             "Accept-Ranges": "bytes",
             "Content-Length": str(chunk_size),
             "Content-Type": content_type,
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
         },
     )
 

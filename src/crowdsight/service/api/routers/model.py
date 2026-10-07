@@ -58,11 +58,17 @@ def get_model_profile() -> ModelProfileResponse:
     expected_checkpoint_sha256 = str(profile_data.get("checkpoint_sha256", "12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc"))
     checkpoint_env = str(profile_data.get("checkpoint_env", "CROWDSIGHT_CROWD_CHECKPOINT"))
 
-    # Check if checkpoint exists on server via env
+    # Check if checkpoint exists on server via env or relative path or models/best.pt
     checkpoint_path_str = os.environ.get(checkpoint_env)
     checkpoint_available = False
     if checkpoint_path_str and Path(checkpoint_path_str).is_file():
         checkpoint_available = True
+    elif (REPO_ROOT / "models" / "best.pt").is_file():
+        checkpoint_available = True
+    else:
+        raw_src = profile_data.get("source_artifact")
+        if raw_src and (MODEL_CONFIG_PATH.parent / str(raw_src)).resolve().is_file():
+            checkpoint_available = True
 
     # Applicability check defaults fail-closed
     decision = assess_crowd_operating_use(
