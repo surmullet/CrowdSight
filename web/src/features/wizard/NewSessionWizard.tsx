@@ -161,7 +161,11 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
 
   const handleBack = () => {
     setErrorMessage(null);
-    setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4) : prev));
+    if (currentStep > 1) {
+      setCurrentStep((prev) => ((prev - 1) as 1 | 2 | 3 | 4));
+    } else if (onCancel) {
+      onCancel();
+    }
   };
 
   const handleSubmit = async () => {
@@ -191,13 +195,26 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
 
       {/* 2. Wizard Header */}
       <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
-            Khởi tạo phiên phân tích mới
-          </h1>
-          <p className="text-xs text-brand-text-muted mt-0.5">
-            Tải video lên hoặc chọn từ danh mục máy chủ để quét mật độ đám đông
-          </p>
+        <div className="flex items-center gap-3">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="p-1.5 rounded-lg text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface border border-transparent hover:border-brand-border transition-colors cursor-pointer"
+              title="Quay lại danh sách phiên"
+              aria-label="Quay lại danh sách phiên"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
+              Khởi tạo phiên phân tích mới
+            </h1>
+            <p className="text-xs text-brand-text-muted mt-0.5">
+              Tải video lên hoặc chọn từ danh mục máy chủ để quét mật độ đám đông
+            </p>
+          </div>
         </div>
         <button
           type="button"
@@ -684,11 +701,11 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
         <button
           type="button"
           onClick={handleBack}
-          disabled={currentStep === 1 || isSubmitting}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary disabled:opacity-40 transition-colors"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary disabled:opacity-40 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại</span>
+          <span>{currentStep === 1 ? 'Quay lại danh sách' : 'Quay lại'}</span>
         </button>
 
         {currentStep < 4 ? (

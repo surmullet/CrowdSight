@@ -319,13 +319,7 @@ const AppContent: React.FC = () => {
     return fallbackItem;
   };
 
-  useEffect(() => {
-    if (window.location.pathname === '/dev/states') {
-      setCurrentView('dev-states');
-    }
-  }, []);
-
-  const fetchSessionDataset = async (sessionId: string) => {
+  const fetchSessionDataset = useCallback(async (sessionId: string) => {
     if (!sessionId) return null;
     try {
       const res = await fetch(`/api/v1/sessions/${sessionId}/dataset?t=${Date.now()}`);
@@ -341,7 +335,112 @@ const AppContent: React.FC = () => {
       console.log('Dataset fetch error:', err);
     }
     return null;
-  };
+  }, []);
+
+  const navigateTo = useCallback(
+    (view: AppView, sessionId?: string, replace: boolean = false) => {
+      const targetSession = sessionId !== undefined ? sessionId : selectedSessionId;
+      setCurrentView(view);
+      if (sessionId !== undefined) {
+        setSelectedSessionId(sessionId);
+      }
+
+      if (typeof window !== 'undefined') {
+        const params = new URLSearchParams(window.location.search);
+        params.set('view', view);
+        if (targetSession && (view === 'review' || view === 'progress' || view === 'zones')) {
+          params.set('session', targetSession);
+        } else {
+          params.delete('session');
+        }
+
+        const basePath = view === 'dev-states' ? '/dev/states' : '/';
+        const newUrl = `${basePath}?${params.toString()}`;
+        const stateObj = {
+          view,
+          sessionId: (view === 'review' || view === 'progress' || view === 'zones') ? targetSession : null,
+        };
+
+        if (replace) {
+          window.history.replaceState(stateObj, '', newUrl);
+        } else {
+          const currentState = window.history.state;
+          if (currentState?.view !== view || currentState?.sessionId !== stateObj.sessionId) {
+            window.history.pushState(stateObj, '', newUrl);
+          }
+        }
+      }
+    },
+    [selectedSessionId]
+  );
+
+  // Initialize history state and popstate listener
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const params = new URLSearchParams(window.location.search);
+    const pathView = window.location.pathname === '/dev/states' ? 'dev-states' : null;
+    const v = (params.get('view') as AppView) || pathView || 'sessions';
+    const s = params.get('session') || initialSession;
+
+    // If initial view is not 'sessions', prime history with 'sessions' first
+    // so pressing browser Back returns to 'sessions' instead of exiting the app!
+    if (v !== 'sessions') {
+      const rootParams = new URLSearchParams();
+      rootParams.set('view', 'sessions');
+      window.history.replaceState(
+        { view: 'sessions', sessionId: null },
+        '',
+        `/?${rootParams.toString()}`
+      );
+
+      const currentParams = new URLSearchParams();
+      currentParams.set('view', v);
+      if (s && (v === 'review' || v === 'progress' || v === 'zones')) {
+        currentParams.set('session', s);
+      }
+      const currentPath = v === 'dev-states' ? '/dev/states' : '/';
+      window.history.pushState(
+        { view: v, sessionId: s },
+        '',
+        `${currentPath}?${currentParams.toString()}`
+      );
+    } else {
+      const rootParams = new URLSearchParams();
+      rootParams.set('view', 'sessions');
+      window.history.replaceState(
+        { view: 'sessions', sessionId: null },
+        '',
+        `/?${rootParams.toString()}`
+      );
+    }
+
+    const handlePopState = (event: PopStateEvent) => {
+      let targetView: AppView = 'sessions';
+      let targetSessionId: string | null = null;
+
+      if (event.state && typeof event.state.view === 'string') {
+        targetView = event.state.view as AppView;
+        targetSessionId = event.state.sessionId || null;
+      } else {
+        const curParams = new URLSearchParams(window.location.search);
+        const curPathView = window.location.pathname === '/dev/states' ? 'dev-states' : null;
+        targetView = (curParams.get('view') as AppView) || curPathView || 'sessions';
+        targetSessionId = curParams.get('session');
+      }
+
+      setCurrentView(targetView);
+      if (targetSessionId) {
+        setSelectedSessionId(targetSessionId);
+        fetchSessionDataset(targetSessionId);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [fetchSessionDataset, initialSession]);
 
   const handleSelectSession = (id: string) => {
     setSelectedSessionId(id);
@@ -349,7 +448,7 @@ const AppContent: React.FC = () => {
     if (!existing?.frames?.length) {
       fetchSessionDataset(id);
     }
-    setCurrentView('review');
+    navigateTo('review', id);
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -430,8 +529,7 @@ const AppContent: React.FC = () => {
       };
 
       setSessions((prev) => [newSession, ...prev.filter((s) => s.id !== created.id)]);
-      setSelectedSessionId(created.id);
-      setCurrentView('progress');
+      navigateTo('progress', created.id);
     } catch (err) {
       console.error('Failed to create session:', err);
       throw err;
@@ -924,7 +1022,7 @@ const AppContent: React.FC = () => {
             {/* Logo */}
             <button
               type="button"
-              onClick={() => setCurrentView('sessions')}
+              onClick={() => navigateTo('sessions')}
               className="flex items-center gap-2 group cursor-pointer focus-visible:outline-none"
             >
               <div className="w-5 h-5 rounded bg-brand-gold flex items-center justify-center text-brand-abyssal font-bold text-xs shadow">
@@ -944,7 +1042,7 @@ const AppContent: React.FC = () => {
             <div className="flex items-center gap-1 text-xs">
               <button
                 type="button"
-                onClick={() => setCurrentView('sessions')}
+                onClick={() => navigateTo('sessions')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
                   currentView === 'sessions'
                     ? 'bg-brand-surface text-brand-gold font-medium'
@@ -957,7 +1055,7 @@ const AppContent: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentView('wizard')}
+                onClick={() => navigateTo('wizard')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
                   currentView === 'wizard'
                     ? 'bg-brand-surface text-brand-gold font-medium'
@@ -970,7 +1068,7 @@ const AppContent: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentView('zones')}
+                onClick={() => navigateTo('zones')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
                   currentView === 'zones'
                     ? 'bg-brand-surface text-brand-gold font-medium'
@@ -983,7 +1081,7 @@ const AppContent: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentView('model')}
+                onClick={() => navigateTo('model')}
                 className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
                   currentView === 'model'
                     ? 'bg-brand-surface text-brand-gold font-medium'
@@ -996,7 +1094,7 @@ const AppContent: React.FC = () => {
 
               <button
                 type="button"
-                onClick={() => setCurrentView('dev-states')}
+                onClick={() => navigateTo('dev-states')}
                 className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
                   currentView === 'dev-states'
                     ? 'bg-brand-surface text-brand-gold font-medium'
@@ -1030,7 +1128,7 @@ const AppContent: React.FC = () => {
             <SessionLibrary
               sessions={sessions}
               onSelectSession={handleSelectSession}
-              onNewSession={() => setCurrentView('wizard')}
+              onNewSession={() => navigateTo('wizard')}
               onDeleteSession={handleDeleteSession}
               onReanalyzeSession={handleOpenReanalyzeModal}
             />
@@ -1044,11 +1142,11 @@ const AppContent: React.FC = () => {
               onCreateZoneSet={(mediaId) => {
                 const found = mediaCatalog.find((m) => m.id === mediaId) || mediaCatalog[0];
                 setActiveMediaForZoneEditor(found || null);
-                setCurrentView('zones');
+                navigateTo('zones');
               }}
               onUploadMedia={handleUploadMedia}
               onSubmit={handleStartSession}
-              onCancel={() => setCurrentView('sessions')}
+              onCancel={() => navigateTo('sessions')}
             />
           )}
 
@@ -1077,17 +1175,17 @@ const AppContent: React.FC = () => {
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
                 await fetchSessionDataset(selectedSessionId);
-                setCurrentView('review');
+                navigateTo('review', selectedSessionId);
               }}
               onOpenPartialResults={async () => {
                 setSessions((prev) =>
                   prev.map((s) => (s.id === selectedSessionId ? { ...s, status: 'COMPLETED', progress: 1.0 } : s))
                 );
                 await fetchSessionDataset(selectedSessionId);
-                setCurrentView('review');
+                navigateTo('review', selectedSessionId);
               }}
               onRetry={() => currentSession && handleOpenReanalyzeModal(currentSession)}
-              onBackToLibrary={() => setCurrentView('sessions')}
+              onBackToLibrary={() => navigateTo('sessions')}
             />
           )}
 
@@ -1095,6 +1193,7 @@ const AppContent: React.FC = () => {
             <ReviewWorkspace
               session={sampleReviewSession}
               zones={sampleZones}
+              onBack={() => navigateTo('sessions')}
               activeObservation={activeObservation}
               activeReadings={activeReadings}
               qualityIntervals={qualityIntervals}
@@ -1109,7 +1208,7 @@ const AppContent: React.FC = () => {
               onEditZones={() => {
                 const found = mediaCatalog.find((m) => m.id === currentSession.sourceId || currentSession.mediaName.includes(m.name)) || mediaCatalog[0];
                 setActiveMediaForZoneEditor(found || null);
-                setCurrentView('zones');
+                navigateTo('zones');
               }}
             />
           )}
@@ -1232,16 +1331,16 @@ const AppContent: React.FC = () => {
                   }
 
                   if (activeMediaForZoneEditor) {
-                    setCurrentView('wizard');
+                    navigateTo('wizard');
                   } else {
-                    setCurrentView('review');
+                    navigateTo('review');
                   }
                 }}
                 onCancel={() => {
                   if (activeMediaForZoneEditor) {
-                    setCurrentView('wizard');
+                    navigateTo('wizard');
                   } else {
-                    setCurrentView('review');
+                    navigateTo('review');
                   }
                 }}
               />
@@ -1250,6 +1349,7 @@ const AppContent: React.FC = () => {
 
           {currentView === 'model' && (
             <ModelStatusPage
+              onBack={() => navigateTo('sessions')}
               modelProfileId={modelProfile.profileId}
               modelProfileSha256={modelProfile.profileSha256}
               checkpointSha256={modelProfile.checkpointSha256}
@@ -1258,7 +1358,7 @@ const AppContent: React.FC = () => {
             />
           )}
 
-          {currentView === 'dev-states' && <DevStatesPage />}
+          {currentView === 'dev-states' && <DevStatesPage onBack={() => navigateTo('sessions')} />}
         </div>
 
         {/* Re-analyze Configuration Modal */}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
+  ArrowLeft,
   Clock,
   ShieldAlert,
   Copy,
@@ -44,6 +45,7 @@ export interface SessionMetadata {
 }
 
 interface ReviewWorkspaceProps {
+  onBack?: () => void;
   session: SessionMetadata;
   zones: {
     zone_id: string;
@@ -69,6 +71,7 @@ interface ReviewWorkspaceProps {
 }
 
 export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
+  onBack,
   session,
   zones,
   activeObservation,
@@ -143,6 +146,17 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
       {/* 2. Workspace Navigation & Metadata Header */}
       <header className="flex flex-wrap items-center justify-between gap-4 px-6 py-3 bg-brand-surface border-b border-brand-border">
         <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-1.5 rounded-lg text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-border/60 transition-colors cursor-pointer"
+              title="Quay lại danh sách phiên"
+              aria-label="Quay lại danh sách phiên"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
           <div className="p-1.5 bg-brand-gold/10 border border-brand-gold/30 rounded text-brand-gold">
             <Clock className="w-5 h-5" />
           </div>

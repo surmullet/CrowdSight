@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  ArrowLeft,
   Cpu,
   Copy,
   Check,
@@ -12,6 +13,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { useLanguage } from '@/shared/i18n/LanguageContext';
 
 interface ModelStatusPageProps {
+  onBack?: () => void;
   modelProfileId: string;
   modelProfileSha256: string;
   checkpointSha256: string;
@@ -21,6 +23,7 @@ interface ModelStatusPageProps {
 }
 
 export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
+  onBack,
   modelProfileId = 'crowd_best_local_v2',
   modelProfileSha256 = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
   checkpointSha256 = '12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc',
@@ -43,15 +46,30 @@ export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
       <Banner />
 
       {/* 2. Page Header */}
-      <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40">
-        <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
-          {locale === 'vi' ? 'Mô hình & Tình trạng sử dụng' : 'Model & Applicability Status'}
-        </h1>
-        <p className="text-xs text-brand-text-muted mt-0.5">
-          {locale === 'vi'
-            ? 'Minh bạch danh tính thuật toán, mã băm mật mã và ranh giới an toàn vận hành'
-            : 'Algorithmic provenance, cryptographic hashes, and operational safety boundaries'}
-        </p>
+      <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {onBack && (
+            <button
+              type="button"
+              onClick={onBack}
+              className="p-1.5 rounded-lg text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface border border-transparent hover:border-brand-border transition-colors cursor-pointer"
+              title="Quay lại"
+              aria-label="Quay lại"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
+              {locale === 'vi' ? 'Mô hình & Tình trạng sử dụng' : 'Model & Applicability Status'}
+            </h1>
+            <p className="text-xs text-brand-text-muted mt-0.5">
+              {locale === 'vi'
+                ? 'Minh bạch danh tính thuật toán, mã băm mật mã và ranh giới an toàn vận hành'
+                : 'Algorithmic provenance, cryptographic hashes, and operational safety boundaries'}
+            </p>
+          </div>
+        </div>
       </header>
 
       {/* 3. Main Content Container */}
