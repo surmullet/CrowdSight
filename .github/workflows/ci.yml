@@ -18,7 +18,7 @@ jobs:
       - name: Invariant Check - Ensure No Weights or Videos in Git
         run: |
           echo "Verifying no forbidden binaries (.pt, .mp4, .env) are committed..."
-          FORBIDDEN=$(git ls-files | grep -E '\.(pt|pth|onnx|mp4|avi|mov)$|^\.env' || true)
+          FORBIDDEN=$(git ls-files | grep -E '\.(pt|pth|onnx|mp4|avi|mov)$|(^|/)\.env$' || true)
           if [ -n "$FORBIDDEN" ]; then
             echo "Error: Forbidden files tracked in git repository:"
             echo "$FORBIDDEN"

@@ -51,8 +51,12 @@ class DatabaseManager:
             "future": True,
         }
         if "postgresql" in db_url:
-            from sqlalchemy.pool import NullPool
-            engine_kwargs["poolclass"] = NullPool
+            from sqlalchemy.pool import QueuePool
+            engine_kwargs["poolclass"] = QueuePool
+            engine_kwargs["pool_size"] = 10
+            engine_kwargs["max_overflow"] = 20
+            engine_kwargs["pool_recycle"] = 300
+            engine_kwargs["pool_pre_ping"] = True
 
         self.engine = create_engine(
             db_url,

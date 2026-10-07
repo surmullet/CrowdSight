@@ -96,8 +96,10 @@ class VideoDecoder:
                     continue
 
                 # Check for blank / blackout / whiteout frame
-                std_dev = float(frame.std())
-                mean_val = float(frame.mean())
+                # Subsample high-resolution frames for quality checks to avoid computing over millions of pixels on CPU
+                sample = frame[::4, ::4] if (width > 240 and height > 240) else frame
+                std_dev = float(sample.std())
+                mean_val = float(sample.mean())
                 if std_dev < self.blank_threshold_std and (mean_val < 15.0 or mean_val > 240.0):
                     yield DecodedFrame(
                         frame_index=current_frame_idx,
@@ -111,9 +113,9 @@ class VideoDecoder:
                     continue
 
                 # Check for frozen frames
-                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                gray = cv2.cvtColor(sample, cv2.COLOR_BGR2GRAY)
                 if prev_frame_gray is not None and prev_frame_gray.shape == gray.shape:
-                    mse = float(np.mean((prev_frame_gray.astype(float) - gray.astype(float)) ** 2))
+                    mse = float(np.mean((prev_frame_gray.astype(np.float32) - gray.astype(np.float32)) ** 2))
                     if mse < self.freeze_mse_threshold:
                         consecutive_frozen += 1
                     else:

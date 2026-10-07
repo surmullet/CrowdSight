@@ -167,21 +167,30 @@ def create_session(
         checkpoint_sha256 = SYNTHETIC_CHECKPOINT_SHA256
         tracker_sha256 = None
     else:
+        from pathlib import Path
         from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
         boundary = ModelBoundaryService()
+        target_cfg = None
+        model_opt = payload.options.get("model_profile") if payload.options else None
+        if model_opt in ("crowd_best", "crowd_best_local_v2"):
+            target_cfg = Path("configs/models/crowd_best_local.yaml").resolve()
+        elif model_opt in ("yolo11n", "yolo11n_local"):
+            target_cfg = Path("configs/models/yolo11n_local.yaml").resolve()
+
         enable_tracker = bool(payload.options.get("enable_tracker", True))
         try:
-            _, prov = boundary.create_detector(synthetic=False, enable_tracker=enable_tracker)
-            if isinstance(prov, dict):
-                profile_id = prov.get("profile_id", "crowd_best_local_v2")
-                profile_sha256 = prov.get("profile_sha256", "")
-                checkpoint_sha256 = prov.get("checkpoint_sha256", "")
-                tracker_sha256 = prov.get("tracker_config_sha256")
-            else:
-                profile_id = getattr(prov, "model_profile_id", getattr(prov, "profile_id", "crowd_best_local_v2"))
-                profile_sha256 = getattr(prov, "model_profile_sha256", getattr(prov, "profile_sha256", ""))
-                checkpoint_sha256 = getattr(prov, "checkpoint_sha256", "")
-                tracker_sha256 = getattr(prov, "tracker_config_sha256", None)
+            verification = boundary.verify_model(config_path=target_cfg)
+            if not verification.is_checkpoint_valid:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Model boundary verification failed: {verification.error_message}",
+                )
+            profile_id = verification.profile_id
+            profile_sha256 = verification.profile_sha256
+            checkpoint_sha256 = verification.actual_checkpoint_sha256 or verification.expected_checkpoint_sha256
+            tracker_sha256 = verification.tracker_config_sha256 if enable_tracker else None
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=400, detail=f"Model boundary verification failed: {e}")
 

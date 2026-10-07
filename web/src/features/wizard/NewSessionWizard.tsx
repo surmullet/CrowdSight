@@ -56,6 +56,7 @@ interface NewSessionWizardProps {
     zoneSetVersion: number;
     frameStride: number;
     confidence?: number;
+    imageSize?: number;
     useSynthetic: boolean;
   }) => Promise<void>;
   onCancel: () => void;
@@ -75,7 +76,8 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedMediaId, setSelectedMediaId] = useState<string>(mediaCatalog[0]?.id ?? '');
   const [selectedZoneSetId, setSelectedZoneSetId] = useState<string>(zoneSets[0]?.id ?? '');
-  const [frameStride, setFrameStride] = useState<number>(2);
+  const [frameStride, setFrameStride] = useState<number>(1);
+  const [imageSize, setImageSize] = useState<number>(1280);
   const [confidence, setConfidence] = useState<number>(0.18);
   const [useSynthetic, setUseSynthetic] = useState<boolean>(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -159,7 +161,11 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
 
   const handleBack = () => {
     setErrorMessage(null);
-    setCurrentStep((prev) => (prev > 1 ? ((prev - 1) as 1 | 2 | 3 | 4) : prev));
+    if (currentStep > 1) {
+      setCurrentStep((prev) => ((prev - 1) as 1 | 2 | 3 | 4));
+    } else if (onCancel) {
+      onCancel();
+    }
   };
 
   const handleSubmit = async () => {
@@ -173,6 +179,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
         zoneSetVersion: selectedZoneSet.version,
         frameStride,
         confidence,
+        imageSize,
         useSynthetic,
       });
     } catch (err: unknown) {
@@ -188,13 +195,26 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
 
       {/* 2. Wizard Header */}
       <header className="px-8 py-5 border-b border-brand-border bg-brand-surface/40 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
-            Khởi tạo phiên phân tích mới
-          </h1>
-          <p className="text-xs text-brand-text-muted mt-0.5">
-            Tải video lên hoặc chọn từ danh mục máy chủ để quét mật độ đám đông
-          </p>
+        <div className="flex items-center gap-3">
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="p-1.5 rounded-lg text-brand-text-muted hover:text-brand-text-primary hover:bg-brand-surface border border-transparent hover:border-brand-border transition-colors cursor-pointer"
+              title="Quay lại danh sách phiên"
+              aria-label="Quay lại danh sách phiên"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+          )}
+          <div>
+            <h1 className="text-xl font-bold tracking-tight text-brand-text-primary">
+              Khởi tạo phiên phân tích mới
+            </h1>
+            <p className="text-xs text-brand-text-muted mt-0.5">
+              Tải video lên hoặc chọn từ danh mục máy chủ để quét mật độ đám đông
+            </p>
+          </div>
         </div>
         <button
           type="button"
@@ -594,6 +614,48 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                 </p>
               </div>
 
+              {/* Image Resolution Option */}
+              <div className="space-y-2 pt-3 border-t border-brand-border/60">
+                <label className="font-medium text-brand-text-primary flex items-center justify-between">
+                  <span>Độ phân giải xử lý (Image Size): <strong className="text-brand-gold font-mono">{imageSize}px</strong></span>
+                  <span className="text-[11px] text-brand-text-muted">
+                    {imageSize === 640 ? '⚡ Tốc độ tối đa (nhanh 3-4x)' : '🎯 Độ nét & phát hiện tối đa'}
+                  </span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setImageSize(1280)}
+                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                      imageSize === 1280
+                        ? 'bg-brand-gold/15 border-brand-gold text-brand-gold'
+                        : 'bg-brand-abyssal border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                    }`}
+                  >
+                    <div className="font-semibold text-xs flex items-center justify-between">
+                      <span>1280px (Mặc định)</span>
+                      {imageSize === 1280 && <span className="text-[10px] bg-brand-gold/20 px-1.5 py-0.5 rounded">Đang chọn</span>}
+                    </div>
+                    <p className="text-[11px] opacity-80 mt-1">Độ chính xác cao nhất cho người ở xa, góc nhìn flycam rộng.</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setImageSize(640)}
+                    className={`p-2.5 rounded-lg border text-left transition-all ${
+                      imageSize === 640
+                        ? 'bg-amber-400/15 border-amber-400 text-amber-300'
+                        : 'bg-brand-abyssal border-brand-border text-brand-text-muted hover:text-brand-text-primary'
+                    }`}
+                  >
+                    <div className="font-semibold text-xs flex items-center justify-between">
+                      <span>640px (Siêu tốc)</span>
+                      {imageSize === 640 && <span className="text-[10px] bg-amber-400/20 px-1.5 py-0.5 rounded">Đang chọn</span>}
+                    </div>
+                    <p className="text-[11px] opacity-80 mt-1">Nhanh gấp 3 - 4 lần, tối ưu khi muốn phân tích lấy số liệu tức thì.</p>
+                  </button>
+                </div>
+              </div>
+
               {/* Synthetic Mode Toggle */}
               <div className="pt-3 border-t border-brand-border/60">
                 <label className="flex items-start gap-3 cursor-pointer">
@@ -625,6 +687,7 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
                   <div>Video: <span className="text-brand-text-primary font-medium">{selectedMedia?.name}</span></div>
                   <div>Tập vùng: <span className="text-brand-text-primary font-medium">{selectedZoneSet?.name}</span></div>
                   <div>Thời lượng: <span className="text-brand-text-primary font-mono">{formatMediaTime(selectedMedia?.duration ?? 0)}</span></div>
+                  <div>Độ phân giải: <span className="text-brand-text-primary font-mono">{imageSize}px</span></div>
                   <div>Chế độ: <span className="text-brand-text-primary">{useSynthetic ? 'Mô phỏng' : 'Mô hình chuẩn'}</span></div>
                 </div>
               </div>
@@ -638,11 +701,11 @@ export const NewSessionWizard: React.FC<NewSessionWizardProps> = ({
         <button
           type="button"
           onClick={handleBack}
-          disabled={currentStep === 1 || isSubmitting}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary disabled:opacity-40 transition-colors"
+          disabled={isSubmitting}
+          className="flex items-center gap-1.5 px-4 py-2 bg-brand-abyssal hover:bg-brand-border border border-brand-border rounded-lg text-xs font-medium text-brand-text-primary disabled:opacity-40 transition-colors cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại</span>
+          <span>{currentStep === 1 ? 'Quay lại danh sách' : 'Quay lại'}</span>
         </button>
 
         {currentStep < 4 ? (

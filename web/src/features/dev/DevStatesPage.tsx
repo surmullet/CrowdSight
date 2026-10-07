@@ -4,7 +4,7 @@ import { Banner } from '@/shared/ui/Banner';
 import { QualityBadge } from '@/shared/ui/QualityBadge';
 import { ZoneCard } from '@/shared/ui/ZoneCard';
 import { SemanticsModal } from '@/shared/ui/SemanticsModal';
-import { Languages } from 'lucide-react';
+import { Languages, ArrowLeft } from 'lucide-react';
 import { useLanguage, LanguageWrapper } from '@/shared/i18n/LanguageContext';
 
 interface FixtureScenario {
@@ -18,7 +18,7 @@ interface FixtureScenario {
   isSynthetic?: boolean;
 }
 
-const DevStatesPageContent: React.FC = () => {
+const DevStatesPageContent: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const { locale, toggleLocale } = useLanguage();
   const [showSemantics, setShowSemantics] = useState<boolean>(false);
 
@@ -136,6 +136,17 @@ const DevStatesPageContent: React.FC = () => {
       <header className="border-b border-contour bg-deck px-6 py-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
+            {onBack && (
+              <button
+                type="button"
+                onClick={onBack}
+                className="p-1.5 rounded-lg text-text-muted hover:text-text-primary hover:bg-surface border border-transparent hover:border-contour transition-colors cursor-pointer"
+                title="Quay lại"
+                aria-label="Quay lại"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+            )}
             <h1 className="text-xl font-bold tracking-tight">
               CrowdSight /dev/states
             </h1>
@@ -213,10 +224,10 @@ const DevStatesPageContent: React.FC = () => {
   );
 };
 
-export const DevStatesPage: React.FC = () => {
+export const DevStatesPage: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   return (
     <LanguageWrapper>
-      <DevStatesPageContent />
+      <DevStatesPageContent onBack={onBack} />
     </LanguageWrapper>
   );
 };

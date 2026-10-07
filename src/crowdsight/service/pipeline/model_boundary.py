@@ -211,6 +211,7 @@ class ModelBoundaryService:
         tracker_config_override: Path | None = None,
         seed: int = 42,
         confidence_override: float | None = None,
+        image_size_override: int | None = None,
     ) -> tuple[PersonDetector, dict[str, Any]]:
         """Instantiate detector with integrity checks or fallback to deterministic synthetic."""
         target_config = config_path or self.default_config_path
@@ -253,6 +254,11 @@ class ModelBoundaryService:
             if confidence_override is not None
             else float(config.get("inference", {}).get("confidence", 0.18))
         )
+        target_imgsz = (
+            int(image_size_override)
+            if image_size_override is not None and int(image_size_override) > 0
+            else int(config.get("preprocessing", {}).get("image_size", 1280))
+        )
 
         detector_profile = PersonDetectorProfile(
             profile_id=profile_id,
@@ -261,7 +267,7 @@ class ModelBoundaryService:
             profile_sha256=profile_sha256,
             person_class_id=int(config.get("class_mapping", {}).get("person", 0)),
             confidence=target_conf,
-            image_size=int(config.get("preprocessing", {}).get("image_size", 1280)),
+            image_size=target_imgsz,
             device=str(config.get("inference", {}).get("device", "auto")),
         )
 
