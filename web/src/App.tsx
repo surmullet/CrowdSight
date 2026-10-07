@@ -379,6 +379,7 @@ const AppContent: React.FC = () => {
     zoneSetVersion: number;
     frameStride: number;
     confidence?: number;
+    imageSize?: number;
     modelProfile?: string;
     useSynthetic: boolean;
   }) => {
@@ -395,6 +396,7 @@ const AppContent: React.FC = () => {
             enable_tracker: true,
             frame_stride: params.frameStride || 1,
             confidence: params.confidence !== undefined ? params.confidence : 0.18,
+            image_size: params.imageSize || 1280,
             model_profile: params.modelProfile || 'yolo11n_local',
           },
           use_synthetic: params.useSynthetic,

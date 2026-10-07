@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -47,6 +48,7 @@ class SessionPipeline:
         max_consecutive_unknown: int = 30,
         max_unknown_rate: float = 0.5,
         frame_stride: int = 1,
+        db_batch_size: int = 30,
     ) -> None:
         self.session_id = session_id
         self.video_path = video_path
@@ -61,6 +63,7 @@ class SessionPipeline:
         self.max_consecutive_unknown = max_consecutive_unknown
         self.max_unknown_rate = max_unknown_rate
         self.frame_stride = max(1, frame_stride)
+        self.db_batch_size = max(1, db_batch_size)
 
     def run(self, cancellation_check: Callable[[], bool] | None = None) -> str:
         """Run the pipeline to completion, cancellation, or failure.
@@ -86,12 +89,35 @@ class SessionPipeline:
         frame_width = 1280
         frame_height = 720
 
+        # Buffer DB writes to eliminate per-frame remote round-trip latency
+        batch_obs: list[ObservationRecord] = []
+        batch_zr: list[ZoneResultRecord] = []
+        last_flush_time = time.time()
+
+        def _flush_db(final: bool = False) -> None:
+            nonlocal batch_obs, batch_zr, last_flush_time
+            if not batch_obs and not batch_zr and not final:
+                return
+            with self.db_manager.get_session() as session:
+                if batch_obs:
+                    session.add_all(batch_obs)
+                if batch_zr:
+                    session.add_all(batch_zr)
+                sess_record = session.get(SessionRecord, self.session_id)
+                if sess_record:
+                    sess_record.processed_frames = processed
+                    sess_record.progress = min(round(processed / max(total_frames, 1), 3), 1.0)
+            batch_obs.clear()
+            batch_zr.clear()
+            last_flush_time = time.time()
+
         for frame in decoder.iter_frames():
             frame_width = frame.width
             frame_height = frame.height
 
             # Check cooperative cancellation
             if cancellation_check and cancellation_check():
+                _flush_db(final=True)
                 with self.db_manager.get_session() as session:
                     sess_record = session.get(SessionRecord, self.session_id)
                     if sess_record:
@@ -109,34 +135,34 @@ class SessionPipeline:
             else:
                 consecutive_unknown = 0
 
-            # Write batch/single frame result
-            with self.db_manager.get_session() as session:
-                obs_rec = ObservationRecord(
+            # Buffer frame result
+            obs_rec = ObservationRecord(
+                session_id=self.session_id,
+                frame_index=observation.frame_index,
+                media_time_s=observation.media_time_s,
+                quality=observation.quality.value,
+                reason_code=frame.reason_code,
+                payload_v1=observation.model_dump(mode="json"),
+            )
+            batch_obs.append(obs_rec)
+
+            for z_res in agg_result.zones:
+                zr_rec = ZoneResultRecord(
                     session_id=self.session_id,
                     frame_index=observation.frame_index,
                     media_time_s=observation.media_time_s,
-                    quality=observation.quality.value,
-                    reason_code=frame.reason_code,
-                    payload_v1=observation.model_dump(mode="json"),
+                    zone_id=z_res.zone_id,
+                    availability=z_res.availability.value,
+                    visible_count=z_res.visible_count,
                 )
-                session.add(obs_rec)
+                batch_zr.append(zr_rec)
 
-                for z_res in agg_result.zones:
-                    zr_rec = ZoneResultRecord(
-                        session_id=self.session_id,
-                        frame_index=observation.frame_index,
-                        media_time_s=observation.media_time_s,
-                        zone_id=z_res.zone_id,
-                        availability=z_res.availability.value,
-                        visible_count=z_res.visible_count,
-                    )
-                    session.add(zr_rec)
+            processed += 1
 
-                processed += 1
-                sess_record = session.get(SessionRecord, self.session_id)
-                if sess_record:
-                    sess_record.processed_frames = processed
-                    sess_record.progress = min(round(processed / max(total_frames, 1), 3), 1.0)
+            # Flush periodically (every batch_size frames or >= 1.0s) to keep SSE progress lively
+            now = time.time()
+            if len(batch_obs) >= self.db_batch_size or (now - last_flush_time >= 1.0):
+                _flush_db()
 
             # Accumulate frame data for export artifact
             frame_export = {
@@ -168,6 +194,7 @@ class SessionPipeline:
 
             # Failure rate threshold check
             if consecutive_unknown >= self.max_consecutive_unknown:
+                _flush_db(final=True)
                 with self.db_manager.get_session() as session:
                     sess_record = session.get(SessionRecord, self.session_id)
                     if sess_record:
@@ -175,6 +202,9 @@ class SessionPipeline:
                         sess_record.error_code = "INFERENCE_FAILURE_RATE_EXCEEDED"
                         sess_record.user_action_hint = "Too many consecutive unreadable or failed frames"
                 raise PipelineInferenceError("Exceeded maximum consecutive UNKNOWN frames")
+
+        # Ensure all buffered frames are committed to database
+        _flush_db(final=True)
 
         # Generate artifacts and finalize session
         palette = ["#0072B2", "#009E73", "#D55E00", "#CC79A7", "#F0E442"]
