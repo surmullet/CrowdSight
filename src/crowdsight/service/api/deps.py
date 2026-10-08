@@ -1,15 +1,19 @@
 """FastAPI dependency injection provider for service singletons and repositories."""
 from __future__ import annotations
 
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from pathlib import Path
 
+from fastapi import Depends, Header, HTTPException
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from crowdsight.service.artifacts.store import ArtifactStore
+from crowdsight.service.auth.security import decode_access_token
 from crowdsight.service.jobs.runner import JobManager
 from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.storage.media_registry import MediaRegistry
+from crowdsight.service.storage.models import UserRecord
 
 _db_manager: DatabaseManager | None = None
 _media_registry: MediaRegistry | None = None
@@ -44,6 +48,11 @@ def init_service_dependencies(
 
     _db_manager = DatabaseManager(db_url)
     _db_manager.init_db()
+
+    # Seed default users if empty
+    with _db_manager.get_session() as session:
+        from crowdsight.service.auth.security import seed_default_users_if_empty
+        seed_default_users_if_empty(session)
 
     _media_registry = MediaRegistry(media_path, _db_manager)
     _artifact_store = ArtifactStore(art_path)
@@ -86,3 +95,50 @@ def get_job_manager() -> JobManager:
         init_service_dependencies()
     assert _job_manager is not None
     return _job_manager
+
+
+def get_optional_user(
+    authorization: str | None = Header(None, alias="Authorization"),
+    db: Session = Depends(get_db),
+) -> UserRecord | None:
+    """Retrieve authenticated user if valid Bearer token provided, otherwise return None."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    token = authorization.split(" ", 1)[1].strip()
+    try:
+        payload = decode_access_token(token)
+        username = str(payload.get("sub", ""))
+        if not username:
+            return None
+        user = db.scalar(select(UserRecord).where(UserRecord.username == username, UserRecord.is_active.is_(True)))
+        return user
+    except Exception:
+        return None
+
+
+def get_current_user(
+    user: UserRecord | None = Depends(get_optional_user),
+) -> UserRecord:
+    """Enforce authentication requirement."""
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Yêu cầu xác thực tài khoản. Vui lòng đăng nhập với token hợp lệ.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return user
+
+
+def require_role(*roles: str) -> Callable[[UserRecord], UserRecord]:
+    """Enforce Role-Based Access Control (RBAC)."""
+    def role_checker(user: UserRecord = Depends(get_current_user)) -> UserRecord:
+        if user.role not in roles:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Tài khoản vai trò '{user.role}' không có quyền thực hiện thao tác này. Yêu cầu một trong các vai trò: {', '.join(roles)}",
+            )
+        return user
+
+    return role_checker
+
+

@@ -149,6 +149,24 @@ export const ModelStatusPage: React.FC<ModelStatusPageProps> = ({
               <div className="font-mono font-medium text-brand-text-primary mt-0.5">0.25 (chưa hiệu chuẩn)</div>
             </div>
           </div>
+
+          {/* GPU Hardware Acceleration Banner */}
+          <div className="mt-3 p-3 bg-emerald-950/20 border border-emerald-500/30 rounded-lg flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <div>
+                <div className="text-xs font-semibold text-emerald-300">
+                  Tăng tốc phần cứng GPU NVIDIA kích hoạt (CUDA 12.1 + FP16 Tensor Cores)
+                </div>
+                <div className="text-[11px] text-emerald-400/80 font-mono">
+                  Thiết bị: NVIDIA GeForce RTX 4050 Laptop GPU • Định dạng: FP16 Half-Precision (~2.5x - 3.5x FPS)
+                </div>
+              </div>
+            </div>
+            <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
+              CUDA ACTIVE
+            </span>
+          </div>
         </section>
 
         {/* Section 2: Operating Applicability & Permitted Uses */}

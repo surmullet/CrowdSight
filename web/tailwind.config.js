@@ -8,6 +8,16 @@ export default {
   theme: {
     extend: {
       colors: {
+        brand: {
+          abyssal: '#0C1017',
+          deck: '#141B26',
+          surface: '#161F2E',
+          base: '#111722',
+          border: '#222D3E',
+          gold: '#E69F00',
+          'text-primary': '#F0F4F8',
+          'text-muted': '#8A98A8',
+        },
         abyssal: 'var(--color-bg-abyssal)',
         deck: 'var(--color-bg-deck)',
         contour: 'var(--color-border-contour)',

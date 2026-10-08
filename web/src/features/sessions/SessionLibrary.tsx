@@ -12,10 +12,12 @@ import {
   LayoutGrid,
   List as ListIcon,
   RotateCcw,
+  X,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
 import { formatMediaTime } from '@/features/player/PlayerControls';
 import { useLanguage } from '@/shared/i18n/LanguageContext';
+import { useAuthStore } from '@/shared/state/authStore';
 
 export interface SessionSummaryItem {
   id: string;
@@ -58,6 +60,9 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
   className = '',
 }) => {
   const { locale, t } = useLanguage();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+  const isViewer = user?.role === 'VIEWER';
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -128,7 +133,13 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
         <button
           type="button"
           onClick={onNewSession}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal font-semibold text-xs rounded-lg transition-colors shadow"
+          disabled={isViewer}
+          title={isViewer ? (locale === 'vi' ? 'Khách xem không có quyền tạo phiên mới' : 'Viewers cannot create new sessions') : undefined}
+          className={`flex items-center gap-2 px-4 py-2 font-semibold text-xs rounded-lg transition-colors shadow ${
+            isViewer
+              ? 'bg-brand-surface text-brand-text-muted/40 cursor-not-allowed border border-brand-border/60'
+              : 'bg-brand-gold hover:bg-brand-gold/90 text-brand-abyssal cursor-pointer'
+          }`}
         >
           <Plus className="w-4 h-4" />
           <span>{t.sessions.newSession}</span>
@@ -139,18 +150,32 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
       <div className="px-8 py-4 border-b border-brand-border/60 bg-brand-abyssal flex flex-wrap items-center justify-between gap-3 text-xs">
         {/* Search */}
         <div className="relative flex-1 min-w-[240px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text-muted/70" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={t.sessions.searchPlaceholder}
-            className="w-full pl-9 pr-4 py-1.5 bg-brand-surface border border-brand-border rounded-lg text-brand-text-primary placeholder:text-brand-text-muted/60 focus:border-brand-gold outline-none"
+            style={{ backgroundColor: '#111722' }}
+            className="w-full pl-9 pr-8 py-2 rounded-xl border border-[#253347] focus:border-brand-gold focus:ring-1 focus:ring-brand-gold/40 text-brand-text-primary placeholder:text-brand-text-muted/50 text-xs outline-none transition-all shadow-inner"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-brand-text-muted hover:text-brand-text-primary hover:bg-[#1C2638] transition-colors cursor-pointer"
+              title="Xóa tìm kiếm"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Status Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-brand-surface p-1 rounded-lg border border-brand-border">
+        <div
+          style={{ backgroundColor: '#111722' }}
+          className="flex items-center gap-1.5 p-1 rounded-xl border border-[#253347]"
+        >
           {[
             { key: 'ALL', label: t.sessions.filters.all },
             { key: 'COMPLETED', label: t.sessions.filters.completed },
@@ -162,10 +187,10 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
               key={pill.key}
               type="button"
               onClick={() => setStatusFilter(pill.key)}
-              className={`px-3 py-1 rounded text-xs transition-colors ${
+              className={`px-3 py-1 rounded-lg text-xs transition-colors cursor-pointer ${
                 statusFilter === pill.key
-                  ? 'bg-brand-abyssal text-brand-gold font-medium border border-brand-gold/40'
-                  : 'text-brand-text-muted hover:text-brand-text-primary'
+                  ? 'bg-[#182335] text-brand-gold font-semibold border border-brand-gold/40 shadow-sm'
+                  : 'text-brand-text-muted hover:text-brand-text-primary hover:bg-[#141B26]'
               }`}
             >
               {pill.label}
@@ -174,7 +199,10 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
         </div>
 
         {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 border border-brand-border rounded-lg p-1 bg-brand-surface">
+        <div
+          style={{ backgroundColor: '#111722' }}
+          className="flex items-center gap-1 border border-[#253347] rounded-xl p-1"
+        >
           <button
             type="button"
             onClick={() => setViewMode('grid')}
@@ -212,7 +240,12 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
             <button
               type="button"
               onClick={onNewSession}
-              className="px-4 py-2 bg-brand-gold text-brand-abyssal font-medium text-xs rounded-lg hover:bg-brand-gold/90 transition-colors"
+              disabled={isViewer}
+              className={`px-4 py-2 font-medium text-xs rounded-lg transition-colors ${
+                isViewer
+                  ? 'bg-brand-surface text-brand-text-muted/40 cursor-not-allowed border border-brand-border/60'
+                  : 'bg-brand-gold text-brand-abyssal hover:bg-brand-gold/90 cursor-pointer'
+              }`}
             >
               Tạo phiên đầu tiên
             </button>
@@ -304,9 +337,20 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                 <div className="flex items-center justify-between pt-4 mt-4 border-t border-brand-border/60">
                   <button
                     type="button"
-                    onClick={() => setSessionToDelete(session)}
-                    className="p-1.5 rounded text-brand-text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors"
-                    title="Xóa phiên phân tích"
+                    onClick={() => {
+                      if (isAdmin) setSessionToDelete(session);
+                    }}
+                    disabled={!isAdmin}
+                    className={`p-1.5 rounded transition-colors ${
+                      isAdmin
+                        ? 'text-brand-text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer'
+                        : 'text-brand-text-muted/30 cursor-not-allowed'
+                    }`}
+                    title={
+                      isAdmin
+                        ? (locale === 'vi' ? 'Xóa phiên phân tích' : 'Delete session')
+                        : (locale === 'vi' ? 'Chỉ Quản trị viên (ADMIN) mới có quyền xóa' : 'Only Admins can delete')
+                    }
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -315,9 +359,18 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                     {onReanalyzeSession && (
                       <button
                         type="button"
-                        onClick={() => onReanalyzeSession(session)}
-                        className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-surface hover:bg-brand-gold/10 hover:border-brand-gold/40 border border-brand-border rounded-lg text-xs font-medium text-brand-text-muted hover:text-brand-gold transition-all"
-                        title="Phân tích lại video này bằng mô hình AI"
+                        disabled={isViewer}
+                        onClick={() => !isViewer && onReanalyzeSession(session)}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 border rounded-lg text-xs font-medium transition-all ${
+                          isViewer
+                            ? 'bg-brand-surface/40 border-brand-border/40 text-brand-text-muted/30 cursor-not-allowed'
+                            : 'bg-brand-surface hover:bg-brand-gold/10 hover:border-brand-gold/40 border-brand-border text-brand-text-muted hover:text-brand-gold cursor-pointer'
+                        }`}
+                        title={
+                          isViewer
+                            ? (locale === 'vi' ? 'Khách xem không có quyền chạy lại phân tích' : 'Viewers cannot re-analyze')
+                            : (locale === 'vi' ? 'Phân tích lại video này bằng mô hình AI' : 'Re-analyze session')
+                        }
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         <span>Phân tích lại</span>
@@ -388,18 +441,38 @@ export const SessionLibrary: React.FC<SessionLibraryProps> = ({
                       <div className="flex items-center justify-end gap-2">
                         <button
                           type="button"
-                          onClick={() => setSessionToDelete(s)}
-                          className="p-1 rounded text-brand-text-muted hover:text-red-400"
-                          title="Xóa phiên"
+                          disabled={!isAdmin}
+                          onClick={() => {
+                            if (isAdmin) setSessionToDelete(s);
+                          }}
+                          className={`p-1 rounded transition-colors ${
+                            isAdmin
+                              ? 'text-brand-text-muted hover:text-red-400 cursor-pointer'
+                              : 'text-brand-text-muted/30 cursor-not-allowed'
+                          }`}
+                          title={
+                            isAdmin
+                              ? (locale === 'vi' ? 'Xóa phiên' : 'Delete')
+                              : (locale === 'vi' ? 'Chỉ Quản trị viên (ADMIN) mới có quyền xóa' : 'Only Admins can delete')
+                          }
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                         {onReanalyzeSession && (
                           <button
                             type="button"
-                            onClick={() => onReanalyzeSession(s)}
-                            className="p-1 rounded text-brand-text-muted hover:text-brand-gold"
-                            title="Phân tích lại video này"
+                            disabled={isViewer}
+                            onClick={() => !isViewer && onReanalyzeSession(s)}
+                            className={`p-1 rounded transition-colors ${
+                              isViewer
+                                ? 'text-brand-text-muted/30 cursor-not-allowed'
+                                : 'text-brand-text-muted hover:text-brand-gold cursor-pointer'
+                            }`}
+                            title={
+                              isViewer
+                                ? (locale === 'vi' ? 'Khách xem không có quyền chạy lại phân tích' : 'Viewers cannot re-analyze')
+                                : (locale === 'vi' ? 'Phân tích lại video này' : 'Re-analyze')
+                            }
                           >
                             <RotateCcw className="w-4 h-4" />
                           </button>

@@ -38,6 +38,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/login": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Đăng nhập tài khoản và nhận JWT token */
+        post: operations["login_api_v1_auth_login_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lấy thông tin tài khoản hiện tại */
+        get: operations["get_me_api_v1_auth_me_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Danh sách tài khoản (Chỉ dành cho Admin) */
+        get: operations["list_users_api_v1_auth_users_get"];
+        put?: never;
+        /** Tạo tài khoản mới (Chỉ dành cho Admin) */
+        post: operations["create_user_api_v1_auth_users_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/auth/users/{user_id}/role": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Thay đổi vai trò tài khoản (Chỉ dành cho Admin) */
+        put: operations["update_user_role_api_v1_auth_users__user_id__role_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/media": {
         parameters: {
             query?: never;
@@ -49,6 +118,23 @@ export interface paths {
         get: operations["list_media_api_v1_media_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/media/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload a video file to the server catalog */
+        post: operations["upload_media_api_v1_media_upload_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -176,6 +262,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/sessions/{session_id}/dataset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download complete session observation dataset JSON for smooth frontend playback */
+        get: operations["get_session_dataset_api_v1_sessions__session_id__dataset_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/sessions/{session_id}/events": {
         parameters: {
             query?: never;
@@ -236,6 +339,23 @@ export interface paths {
         };
         /** Get nearest frame observation at time t with freshness policy applied */
         get: operations["get_frame_at_time_api_v1_sessions__session_id__frames_at_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/sessions/{session_id}/heatmap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Download session heatmap PNG image */
+        get: operations["get_session_heatmap_api_v1_sessions__session_id__heatmap_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -480,6 +600,26 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** CreateUserRequest */
+        CreateUserRequest: {
+            /** Email */
+            email: string;
+            /**
+             * Full Name
+             * @default
+             */
+            full_name: string;
+            /** Password */
+            password: string;
+            /**
+             * Role
+             * @description ADMIN, OPERATOR, hoặc VIEWER
+             * @default OPERATOR
+             */
+            role: string;
+            /** Username */
+            username: string;
+        };
         /** FrameDataResponse */
         FrameDataResponse: {
             /** Frame Index */
@@ -546,6 +686,30 @@ export interface components {
             window_from_t: number | null;
             /** Window To T */
             window_to_t: number | null;
+        };
+        /** LoginRequest */
+        LoginRequest: {
+            /**
+             * Password
+             * @description Mật khẩu
+             */
+            password: string;
+            /**
+             * Username
+             * @description Tên đăng nhập
+             */
+            username: string;
+        };
+        /** LoginResponse */
+        LoginResponse: {
+            /** Access Token */
+            access_token: string;
+            /**
+             * Token Type
+             * @default bearer
+             */
+            token_type: string;
+            user: components["schemas"]["UserProfileResponse"];
         };
         /** MediaAssetResponse */
         MediaAssetResponse: {
@@ -680,9 +844,11 @@ export interface components {
             options?: {
                 [key: string]: unknown;
             };
+            /** Synthetic */
+            synthetic?: boolean | null;
             /**
              * Use Synthetic
-             * @default true
+             * @default false
              */
             use_synthetic: boolean;
             /** Zone Set Version Id */
@@ -694,19 +860,23 @@ export interface components {
             checkpoint_sha256: string;
             /** Completeness */
             completeness: string;
-            /** Display Code */
-            display_code?: string | null;
             /**
              * Created At
              * Format: date-time
              */
             created_at: string;
+            /** Display Code */
+            display_code?: string | null;
+            /** Duration S */
+            duration_s?: number | null;
             /** Error Code */
             error_code: string | null;
             /** Id */
             id: string;
             /** Media Asset Id */
             media_asset_id: string;
+            /** Media Name */
+            media_name?: string | null;
             /** Model Profile Id */
             model_profile_id: string;
             /** Model Profile Sha256 */
@@ -734,6 +904,10 @@ export interface components {
             updated_at: string;
             /** User Action Hint */
             user_action_hint: string | null;
+            /** Video Src */
+            video_src?: string | null;
+            /** Zone Set Name */
+            zone_set_name?: string | null;
             /** Zone Set Version Id */
             zone_set_version_id: string;
         };
@@ -791,6 +965,34 @@ export interface components {
             smoothed_points?: components["schemas"]["SmoothedPointModel"][] | null;
             /** Zone Id */
             zone_id: string;
+        };
+        /** UpdateRoleRequest */
+        UpdateRoleRequest: {
+            /**
+             * Role
+             * @description ADMIN, OPERATOR, hoặc VIEWER
+             */
+            role: string;
+        };
+        /** UserProfileResponse */
+        UserProfileResponse: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Email */
+            email: string;
+            /** Full Name */
+            full_name: string;
+            /** Id */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Role */
+            role: string;
+            /** Username */
+            username: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -951,6 +1153,173 @@ export interface operations {
             };
         };
     };
+    login_api_v1_auth_login_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LoginRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LoginResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_me_api_v1_auth_me_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_users_api_v1_auth_users_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_user_api_v1_auth_users_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_user_role_api_v1_auth_users__user_id__role_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                Authorization?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateRoleRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserProfileResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_media_api_v1_media_get: {
         parameters: {
             query?: never;
@@ -967,6 +1336,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MediaAssetResponse"][];
+                };
+            };
+        };
+    };
+    upload_media_api_v1_media_upload_post: {
+        parameters: {
+            query: {
+                /** @description Tên tệp video tải lên */
+                filename: string;
+                /** @description Tên hiển thị trong danh mục */
+                display_name?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MediaAssetResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -1252,6 +1655,37 @@ export interface operations {
             };
         };
     };
+    get_session_dataset_api_v1_sessions__session_id__dataset_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     stream_session_events_api_v1_sessions__session_id__events_get: {
         parameters: {
             query?: never;
@@ -1376,6 +1810,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FrameDataResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_session_heatmap_api_v1_sessions__session_id__heatmap_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                session_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Validation Error */

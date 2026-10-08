@@ -14,6 +14,7 @@ from crowdsight.service.api.errors import APIProblemException, problem_response
 from crowdsight.service.api.routers import (
     analytics_router,
     artifacts_router,
+    auth_router,
     frames_router,
     health_router,
     media_router,
@@ -121,6 +122,7 @@ def create_app() -> FastAPI:
 
     # Mount Routers
     app.include_router(health_router)
+    app.include_router(auth_router)
     app.include_router(model_router)
     app.include_router(media_router)
     app.include_router(zone_sets_router)

@@ -103,6 +103,7 @@ class UltralyticsPersonDetector:
         cuda_index = 0
         if self._device.startswith("cuda:"):
             cuda_index = int(self._device.split(":", 1)[1])
+        self._use_half = bool(self._device.startswith("cuda") and torch.cuda.is_available())
         self.runtime_metadata = {
             "ultralytics_version": getattr(ultralytics, "__version__", "unknown"),
             "model_profile_sha256": self.profile_sha256,
@@ -114,6 +115,7 @@ class UltralyticsPersonDetector:
             "numpy_version": np.__version__,
             "device": self._device,
             "cuda_available": bool(torch.cuda.is_available()),
+            "fp16_enabled": self._use_half,
             "device_name": (
                 torch.cuda.get_device_name(cuda_index)
                 if self._device.startswith("cuda") and torch.cuda.is_available()
@@ -146,6 +148,7 @@ class UltralyticsPersonDetector:
             conf=self._profile.confidence,
             imgsz=self._profile.image_size,
             device=self._device,
+            half=self._use_half,
             classes=[self._profile.person_class_id],
             verbose=False,
         )
@@ -261,6 +264,7 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
             conf=self._profile.confidence,
             imgsz=self._profile.image_size,
             device=self._device,
+            half=self._use_half,
             classes=[self._profile.person_class_id],
             verbose=False,
         )

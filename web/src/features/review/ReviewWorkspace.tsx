@@ -28,6 +28,7 @@ import {
   type NoteMarker,
 } from '@/features/timeline/UnifiedTimeline';
 import { usePlaybackStore } from '@/shared/state/playbackStore';
+import { useAuthStore } from '@/shared/state/authStore';
 
 export interface SessionMetadata {
   sessionId: string;
@@ -91,6 +92,8 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   className = '',
 }) => {
   const { currentTime, setCurrentTime } = usePlaybackStore();
+  const { user } = useAuthStore();
+  const isViewer = user?.role === 'VIEWER';
   const [activeTab, setActiveTab] = useState<'zones' | 'peaks' | 'notes' | 'provenance'>('zones');
   const [notes, setNotes] = useState<NoteMarker[]>(initialNotes);
   const [newNoteText, setNewNoteText] = useState('');
@@ -192,11 +195,16 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
           {onEditZones && (
             <button
               type="button"
-              onClick={onEditZones}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-abyssal hover:bg-brand-border border border-brand-border text-brand-text-primary transition-colors cursor-pointer"
-              title="Chỉnh sửa hoặc vẽ lại các khu vực quan sát (Zone Editor)"
+              disabled={isViewer}
+              onClick={() => !isViewer && onEditZones()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors ${
+                isViewer
+                  ? 'bg-brand-surface/40 border-brand-border/40 text-brand-text-muted/40 cursor-not-allowed'
+                  : 'bg-brand-abyssal hover:bg-brand-border border-brand-border text-brand-text-primary cursor-pointer'
+              }`}
+              title={isViewer ? 'Khách xem không có quyền chỉnh sửa khu vực' : 'Chỉnh sửa hoặc vẽ lại các khu vực quan sát (Zone Editor)'}
             >
-              <Layers className="w-3.5 h-3.5 text-brand-gold" />
+              <Layers className={`w-3.5 h-3.5 ${isViewer ? 'text-brand-text-muted/40' : 'text-brand-gold'}`} />
               <span>Chỉnh sửa khu vực</span>
             </button>
           )}
@@ -204,9 +212,14 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
           {onReanalyze && (
             <button
               type="button"
-              onClick={onReanalyze}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-gold/15 hover:bg-brand-gold/25 border border-brand-gold/40 text-brand-gold transition-colors cursor-pointer font-medium"
-              title="Chạy lại phân tích toàn bộ video này với mô hình AI"
+              disabled={isViewer}
+              onClick={() => !isViewer && onReanalyze()}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border font-medium transition-colors ${
+                isViewer
+                  ? 'bg-brand-surface/40 border-brand-border/40 text-brand-text-muted/40 cursor-not-allowed'
+                  : 'bg-brand-gold/15 hover:bg-brand-gold/25 border-brand-gold/40 text-brand-gold cursor-pointer'
+              }`}
+              title={isViewer ? 'Khách xem không có quyền chạy lại phân tích' : 'Chạy lại phân tích toàn bộ video này với mô hình AI'}
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Phân tích lại</span>
@@ -430,31 +443,37 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             {/* TAB 3: Notes list & Add note form */}
             {activeTab === 'notes' && (
               <div className="space-y-3">
-                <form onSubmit={handleAddNote} className="space-y-2">
-                  <div className="flex items-center justify-between text-xs text-brand-text-muted">
-                    <span>Thêm ghi chú tại thời điểm:</span>
-                    <span className="font-mono text-brand-gold tabular-nums">
-                      {formatMediaTime(currentTime)}
-                    </span>
+                {isViewer ? (
+                  <div className="p-2.5 rounded bg-brand-surface/60 border border-brand-border/60 text-[11px] text-brand-text-muted">
+                    Chế độ Khách xem: Bạn có thể đọc các ghi chú giám sát nhưng không có quyền tạo hoặc xóa ghi chú.
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newNoteText}
-                      onChange={(e) => setNewNoteText(e.target.value)}
-                      placeholder="Nội dung ghi chú của người vận hành..."
-                      className="flex-1 px-3 py-1.5 bg-brand-abyssal border border-brand-border rounded text-xs text-brand-text-primary focus:border-brand-gold outline-none"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!newNoteText.trim()}
-                      className="px-3 py-1.5 bg-brand-gold hover:bg-brand-gold/90 disabled:opacity-40 text-brand-abyssal font-medium rounded text-xs flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      Lưu
-                    </button>
-                  </div>
-                </form>
+                ) : (
+                  <form onSubmit={handleAddNote} className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-brand-text-muted">
+                      <span>Thêm ghi chú tại thời điểm:</span>
+                      <span className="font-mono text-brand-gold tabular-nums">
+                        {formatMediaTime(currentTime)}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={newNoteText}
+                        onChange={(e) => setNewNoteText(e.target.value)}
+                        placeholder="Nội dung ghi chú của người vận hành..."
+                        className="flex-1 px-3 py-1.5 bg-brand-abyssal border border-brand-border rounded text-xs text-brand-text-primary focus:border-brand-gold outline-none"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!newNoteText.trim()}
+                        className="px-3 py-1.5 bg-brand-gold hover:bg-brand-gold/90 disabled:opacity-40 text-brand-abyssal font-medium rounded text-xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        Lưu
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 <div className="space-y-2 pt-2 border-t border-brand-border/60">
                   {notes.map((note) => (
@@ -474,18 +493,20 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
                         <button
                           type="button"
                           onClick={() => handleSeek(note.time)}
-                          className="text-[10px] text-brand-text-muted hover:text-brand-gold underline shrink-0"
+                          className="text-[10px] text-brand-text-muted hover:text-brand-gold underline shrink-0 cursor-pointer"
                         >
                           Tua tới
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteNote(note.id)}
-                          className="p-1 text-brand-text-muted hover:text-red-400 rounded transition-colors"
-                          title="Xóa ghi chú"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+                        {!isViewer && (
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteNote(note.id)}
+                            className="p-1 text-brand-text-muted hover:text-red-400 rounded transition-colors cursor-pointer"
+                            title="Xóa ghi chú"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
