@@ -12,7 +12,10 @@ import {
   Info,
   Layers,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
+import { ExecutiveReportModal } from '@/features/reports/ExecutiveReportModal';
+import { computeSessionReportData, exportSessionToExcel } from '@/features/reports/reportUtils';
 import type { CrowdFrameObservation, ZoneReading } from '@/shared/types/domain';
 import { Banner } from '@/shared/ui/Banner';
 import { QualityBadge } from '@/shared/ui/QualityBadge';
@@ -99,6 +102,17 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   const [newNoteText, setNewNoteText] = useState('');
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [isSemanticsOpen, setIsSemanticsOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const reportData = React.useMemo(() => {
+    return computeSessionReportData(
+      session,
+      zones,
+      zoneTrends,
+      qualityIntervals,
+      notes
+    );
+  }, [session, zones, zoneTrends, qualityIntervals, notes]);
 
   useEffect(() => {
     setNotes(initialNotes);
@@ -228,6 +242,26 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
 
           <button
             type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-brand-gold/15 hover:bg-brand-gold/25 border border-brand-gold/40 text-brand-gold font-bold transition-all cursor-pointer shadow-sm"
+            title="Mở Báo cáo phân tích chuyên sâu & In/Xuất PDF"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span>Báo cáo & Phân tích (PDF)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => exportSessionToExcel(reportData)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-medium transition-colors cursor-pointer"
+            title="Xuất tệp Microsoft Excel đa bảng tính (.xlsx)"
+          >
+            <FileSpreadsheet className="w-3.5 h-3.5" />
+            <span>Xuất Excel (.xlsx)</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setIsSemanticsOpen(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-abyssal hover:bg-brand-border border border-brand-border text-brand-text-primary transition-colors"
           >
@@ -242,7 +276,7 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             className="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs bg-brand-abyssal hover:bg-brand-border border border-brand-border text-brand-text-primary transition-colors"
             title="Xuất bảng số đếm theo zone (CSV)"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-400" />
+            <FileSpreadsheet className="w-3.5 h-3.5 text-slate-400" />
             <span>Xuất CSV</span>
           </button>
 
@@ -569,6 +603,13 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
           </div>
         </section>
       </main>
+      {/* Executive Report & Multi-Zone Analytics Modal */}
+      <ExecutiveReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        reportData={reportData}
+        onSeek={handleSeek}
+      />
     </div>
   );
 };
