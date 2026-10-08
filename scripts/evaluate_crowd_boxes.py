@@ -129,7 +129,7 @@ def _match_count(predicted: list[list[float]], truth: list[list[float]], thresho
 def _inside(point: tuple[float, float], polygon: list[list[float]]) -> bool:
     x, y = point
     inside = False
-    for (ax, ay), (bx, by) in zip(polygon, polygon[1:] + polygon[:1]):
+    for (ax, ay), (bx, by) in zip(polygon, polygon[1:] + polygon[:1], strict=True):
         cross = (x - ax) * (by - ay) - (y - ay) * (bx - ax)
         if (
             abs(cross) < 1e-9

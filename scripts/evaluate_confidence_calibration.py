@@ -32,11 +32,11 @@ def _metric_rows(scores: list[float], outcomes: list[int], bins: int) -> dict[st
     if not count:
         return {"n": 0, "status": "UNAVAILABLE_NO_SCORABLE_DETECTIONS"}
     eps = 1e-15
-    brier = sum((score - outcome) ** 2 for score, outcome in zip(scores, outcomes)) / count
+    brier = sum((score - outcome) ** 2 for score, outcome in zip(scores, outcomes, strict=True)) / count
     nll = -sum(
         outcome * math.log(max(eps, score))
         + (1 - outcome) * math.log(max(eps, 1 - score))
-        for score, outcome in zip(scores, outcomes)
+        for score, outcome in zip(scores, outcomes, strict=True)
     ) / count
     bin_rows = []
     ece = 0.0
@@ -146,7 +146,7 @@ def _reliability_svg(report: dict[str, Any]) -> str:
              bottom - float(row["observed_accuracy"]) * plot_size)
             for row in points
         ]
-        for (x, y), row in zip(coords, points):
+        for (x, y), row in zip(coords, points, strict=True):
             parts.extend([
                 f'<circle cx="{x:.2f}" cy="{y:.2f}" r="5" fill="{color}" '
                 f'stroke="white" stroke-width="1.5"><title>n={row["n"]}, '

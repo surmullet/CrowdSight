@@ -6,12 +6,13 @@ Optimized Migration Script: Standardize IDs to UUIDs and Add Sequential display_
 - Adds `display_code` (MED-0001, SES-0001) to `media_assets` and `sessions`.
 - Uses bulk VALUES queries for ultra-fast network execution.
 """
-import sys
 import os
 import re
-import uuid
 import sqlite3
+import sys
+import uuid
 from pathlib import Path
+
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 

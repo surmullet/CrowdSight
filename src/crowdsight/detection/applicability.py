@@ -7,7 +7,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 
 class CrowdUseStatus(str, Enum):
@@ -66,7 +65,7 @@ def assess_crowd_operating_use(
     model_profile_id: str,
     model_profile_sha256: str,
     checkpoint_sha256: str,
-    approval: Optional[CrowdViewApproval] = None,
+    approval: CrowdViewApproval | None = None,
 ) -> CrowdUseDecision:
     """Return an alert decision for one exact model and versioned camera view.
 

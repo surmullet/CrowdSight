@@ -364,7 +364,9 @@ class SessionPipeline:
         for d in raw_detections:
             track_id = int(d.track_id) if getattr(d, "track_id", None) is not None else None
             bbox_raw = getattr(d, "bbox_xyxy_px", None) or getattr(d, "bbox_xyxy", None)
-            bbox = tuple(float(c) for c in bbox_raw) if bbox_raw is not None else None
+            bbox: tuple[float, float, float, float] | None = None
+            if bbox_raw is not None and len(bbox_raw) == 4:
+                bbox = (float(bbox_raw[0]), float(bbox_raw[1]), float(bbox_raw[2]), float(bbox_raw[3]))
             detection_models.append(
                 DetectionV1(
                     track_id=track_id,

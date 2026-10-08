@@ -1,12 +1,13 @@
 """Model-independent person detector interface and integrity-checked YOLO adapter."""
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import math
 import platform
+from collections.abc import Sequence
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Protocol, Sequence
+from typing import Protocol
 
 import numpy as np
 
@@ -86,9 +87,9 @@ class UltralyticsPersonDetector:
             )
         self.checkpoint_sha256 = digest.lower()
         try:
+            import torch
             import ultralytics
             from ultralytics import YOLO
-            import torch
         except ImportError as exc:
             raise RuntimeError(
                 "Ultralytics and PyTorch are required for this detector profile"
@@ -157,7 +158,7 @@ class UltralyticsPersonDetector:
         result: object,
         width: int,
         height: int,
-        track_ids: Optional[np.ndarray] = None,
+        track_ids: np.ndarray | None = None,
     ) -> tuple[PersonDetection, ...]:
         """Convert one Ultralytics result to normalized person anchors."""
         if result is None or result.boxes is None:

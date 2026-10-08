@@ -11,10 +11,8 @@ Replaces ugly random UUIDs with clear, sequential, human-readable IDs:
   - audit_log:          audit-0001
 """
 import os
-import re
-import json
-import sqlite3
 import shutil
+import sqlite3
 
 MEDIA_MAP = {
     "5cc6461b-1cb0-4700-8305-b01c78780785": "media-01-crowd6",
@@ -345,8 +343,8 @@ def generate_clean_sql_seeds():
             f"-- ========================================================\n\n"
             f"BEGIN;\n\n"
             f"{obs_header}\n" + ",\n".join(chunk) + "\n"
-            f"ON CONFLICT (id) DO NOTHING;\n\n"
-            f"COMMIT;\n"
+            "ON CONFLICT (id) DO NOTHING;\n\n"
+            "COMMIT;\n"
         )
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(chunk_sql)

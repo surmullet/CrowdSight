@@ -11,8 +11,9 @@ Configuration:
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import time
+from pathlib import Path
+
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -217,7 +218,7 @@ def main():
     f0 = frames_list[0]
     f1 = frames_list[1]
     f2 = frames_list[2]
-    print(f"\nVerification:")
+    print("\nVerification:")
     print(f"  Frame 0 detections: {len(f0['detections'])} (Zone A: {f0['zone_readings'][0]['count']}, Zone B: {f0['zone_readings'][1]['count']})")
     print(f"  Frame 1 detections: {len(f1['detections'])} (Zone A: {f1['zone_readings'][0]['count']}, Zone B: {f1['zone_readings'][1]['count']})")
     print(f"  Frame 2 detections: {len(f2['detections'])} (Zone A: {f2['zone_readings'][0]['count']}, Zone B: {f2['zone_readings'][1]['count']})")

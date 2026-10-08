@@ -5,7 +5,7 @@ Every generated file is strictly <= 600 KB so it never triggers 'Query is too la
 and pastes smoothly without browser lag.
 """
 import os
-import re
+
 
 def split_seed_data(max_chunk_bytes=580 * 1024):
     seed_file = "supabase_seed.sql"
@@ -13,7 +13,7 @@ def split_seed_data(max_chunk_bytes=580 * 1024):
     obs_dir = os.path.join(output_dir, "observations")
     os.makedirs(obs_dir, exist_ok=True)
 
-    with open(seed_file, "r", encoding="utf-8") as f:
+    with open(seed_file, encoding="utf-8") as f:
         text = f.read()
 
     zr_marker = "-- 8. Table: zone_results"
@@ -53,9 +53,9 @@ def split_seed_data(max_chunk_bytes=580 * 1024):
     # -------------------------------------------------------------
     # Reformat zone_results cleanly into 1 atomic transaction
     # Find all rows in zr_text
-    zr_lines = [l.strip().rstrip(",").rstrip(";") for l in zr_text.split("\n") if l.strip().startswith("('")]
+    zr_lines = [line.strip().rstrip(",").rstrip(";") for line in zr_text.split("\n") if line.strip().startswith("('")]
     print(f"Total zone_results rows found: {len(zr_lines)}")
-    
+
     zr_header = "INSERT INTO zone_results (id, session_id, frame_index, media_time_s, zone_id, availability, visible_count)\nVALUES"
     zr_body = ",\n  ".join(zr_lines)
     zr_sql = (
@@ -78,14 +78,14 @@ def split_seed_data(max_chunk_bytes=580 * 1024):
     # -------------------------------------------------------------
     # Part 3: Observations (2,234 rows)
     # -------------------------------------------------------------
-    obs_lines = [l.strip().rstrip(",").rstrip(";") for l in obs_text.split("\n") if l.strip().startswith("('")]
+    obs_lines = [line.strip().rstrip(",").rstrip(";") for line in obs_text.split("\n") if line.strip().startswith("('")]
     print(f"Total observation rows found: {len(obs_lines)}")
 
     obs_header = "INSERT INTO observations (id, session_id, frame_index, media_time_s, quality, reason_code, payload_v1, created_at)\nVALUES"
 
     # Also create a quick sample file: First 15 frames of crowd6.mp4 (Session a914bc97-61a1-4840-ab7d-6c20c78afa0f)
     crowd6_sess = "a914bc97-61a1-4840-ab7d-6c20c78afa0f"
-    crowd6_lines = [l for l in obs_lines if crowd6_sess in l]
+    crowd6_lines = [line for line in obs_lines if crowd6_sess in line]
     print(f"crowd6 observation rows found: {len(crowd6_lines)}")
 
     sample_lines = crowd6_lines[:10]

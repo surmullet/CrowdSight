@@ -1,6 +1,7 @@
 """Generate sample_real_heatmap.png using ImageSpaceHeatmapGenerator from sample_real_observations.json."""
 import json
 from pathlib import Path
+
 from crowdsight.service.analytics.heatmaps import ImageSpaceHeatmapGenerator
 
 json_path = Path("web/public/sample_real_observations.json")

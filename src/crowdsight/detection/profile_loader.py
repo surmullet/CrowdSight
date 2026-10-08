@@ -1,10 +1,9 @@
 """Load a versioned person-detector YAML profile and verify required fields."""
 from __future__ import annotations
 
-import os
 import hashlib
+import os
 from pathlib import Path
-from typing import Optional
 
 from crowdsight.detection.adapter import PersonDetectorProfile, PersonTracker
 
@@ -12,8 +11,8 @@ from crowdsight.detection.adapter import PersonDetectorProfile, PersonTracker
 def load_person_detector_profile(
     profile_path: Path,
     *,
-    checkpoint_path: Optional[Path] = None,
-    device_override: Optional[str] = None,
+    checkpoint_path: Path | None = None,
+    device_override: str | None = None,
 ) -> PersonDetectorProfile:
     """Create a runtime profile from the product YAML and external weight path.
 
@@ -85,9 +84,9 @@ def load_person_detector_profile(
 def load_person_tracker(
     profile_path: Path,
     *,
-    checkpoint_path: Optional[Path] = None,
-    tracker_config_path: Optional[Path] = None,
-    device_override: Optional[str] = None,
+    checkpoint_path: Path | None = None,
+    tracker_config_path: Path | None = None,
+    device_override: str | None = None,
 ) -> PersonTracker:
     """Load the profile-paired tracker after verifying both artifact hashes.
 

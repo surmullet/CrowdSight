@@ -9,14 +9,17 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from crowdsight.detection import UltralyticsPersonDetector, load_person_detector_profile
+from crowdsight.detection import (  # noqa: E402
+    UltralyticsPersonDetector,
+    load_person_detector_profile,
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -162,7 +165,7 @@ def run_inference(
 
     # Validate all present files before loading the checkpoint so a stale or
     # edited manifest cannot cause partial inference before the mismatch appears.
-    for sample, image_path, expected_sha in resolved_samples:
+    for _sample, image_path, expected_sha in resolved_samples:
         if image_path.is_file() and sha256_file(image_path).lower() != expected_sha:
             raise ValueError(f"Image SHA-256 does not match manifest: {image_path}")
 

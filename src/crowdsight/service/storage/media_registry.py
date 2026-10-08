@@ -120,6 +120,8 @@ class MediaRegistry:
             existing_codes = session.scalars(stmt_max).all()
             max_num = 0
             for code in existing_codes:
+                if not code:
+                    continue
                 try:
                     num = int(code.split("-")[1])
                     if num > max_num:

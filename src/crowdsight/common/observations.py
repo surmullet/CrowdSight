@@ -1,11 +1,10 @@
 """Validated observation data and quality-state semantics."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-import math
-from typing import Optional
 
 
 class QualityState(str, Enum):
@@ -29,8 +28,8 @@ class PersonDetection:
     x: float
     y: float
     confidence: float
-    track_id: Optional[int] = None
-    bbox_xyxy_px: Optional[tuple[float, float, float, float]] = None
+    track_id: int | None = None
+    bbox_xyxy_px: tuple[float, float, float, float] | None = None
 
     def __post_init__(self) -> None:
         for name in ("x", "y", "confidence"):
@@ -78,7 +77,7 @@ class FrameObservation:
     model_profile_id: str
     model_profile_sha256: str
     checkpoint_sha256: str
-    tracker_config_sha256: Optional[str]
+    tracker_config_sha256: str | None
     frame_index: int
     media_time_s: float
     image_width: int
@@ -86,7 +85,7 @@ class FrameObservation:
     detections: tuple[PersonDetection, ...]
     fully_observed_zones: tuple[str, ...]
     quality: QualityState = QualityState.VALID
-    captured_at: Optional[datetime] = None
+    captured_at: datetime | None = None
     registration_valid: bool = False
 
     def __post_init__(self) -> None:

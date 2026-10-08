@@ -4,8 +4,9 @@ Outputs:
 1. web/public/sample_real_observations.json for frontend client-side instant playback
 2. Database records in crowdsight.db for backend API endpoints
 """
-from pathlib import Path
 import json
+from pathlib import Path
+
 import cv2
 import numpy as np
 from ultralytics import YOLO

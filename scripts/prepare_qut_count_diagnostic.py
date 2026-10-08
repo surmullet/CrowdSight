@@ -6,15 +6,14 @@ count error, not box matching. Source images and generated records stay private.
 from __future__ import annotations
 
 import argparse
-from datetime import datetime, timezone
 import hashlib
 import io
 import json
-from pathlib import Path
 import re
 import tarfile
 import xml.etree.ElementTree as ET
-
+from datetime import datetime, timezone
+from pathlib import Path
 
 ARCHIVE_SHA256 = "0ae3bad144917191445a1c390e5f2ec9a06884318e751661baa57c8091582d37"
 ARCHIVE_BYTES = 977_933_533

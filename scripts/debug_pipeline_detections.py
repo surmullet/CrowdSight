@@ -3,16 +3,11 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+
 import cv2
 import numpy as np
-import torch
 from ultralytics import YOLO
 
-from crowdsight.detection.adapter import (
-    PersonDetectorProfile,
-    UltralyticsPersonDetector,
-    UltralyticsPersonTracker,
-)
 from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
 
 
@@ -103,7 +98,7 @@ def main():
     # Save 01_raw_model.jpg
     img_raw = frame_bgr.copy()
     raw_coords = boxes_default.xyxy.detach().cpu().numpy()
-    for box, c in zip(raw_coords, confs_default):
+    for box, _c in zip(raw_coords, confs_default, strict=False):
         x1, y1, x2, y2 = [int(v) for v in box]
         cv2.rectangle(img_raw, (x1, y1), (x2, y2), (0, 140, 255), 1)
         # small anchor
@@ -113,7 +108,7 @@ def main():
     cv2.rectangle(img_raw, (10, 10), (520, 70), (0, 0, 0), -1)
     cv2.putText(
         img_raw,
-        f"Stage 1: Raw YOLO best.pt (conf>=0.25, default max_det=300)",
+        "Stage 1: Raw YOLO best.pt (conf>=0.25, default max_det=300)",
         (20, 35),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.55,
@@ -161,7 +156,7 @@ def main():
     cv2.rectangle(img_adapter, (10, 10), (520, 70), (0, 0, 0), -1)
     cv2.putText(
         img_adapter,
-        f"Stage 2: After adapter.py (UltralyticsPersonDetector)",
+        "Stage 2: After adapter.py (UltralyticsPersonDetector)",
         (20, 35),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.55,
@@ -185,7 +180,7 @@ def main():
     # Find botsort config
     botsort_yaml = Path(".venv/Lib/site-packages/ultralytics/cfg/trackers/botsort.yaml").resolve()
     print(f"  - Testing with BoT-SORT config: {botsort_yaml}")
-    
+
     # Run track on frame 0
     track_res = model.track(
         source=frame_bgr,
@@ -196,7 +191,7 @@ def main():
         classes=[0],
         verbose=False,
     )[0]
-    
+
     track_boxes = track_res.boxes
     count_before_tracker = count_default
     track_ids = track_boxes.id.detach().cpu().numpy() if track_boxes.id is not None else None
@@ -230,7 +225,7 @@ def main():
     cv2.rectangle(img_tracker, (10, 10), (520, 70), (0, 0, 0), -1)
     cv2.putText(
         img_tracker,
-        f"Stage 3: After BoT-SORT Tracker (first frame)",
+        "Stage 3: After BoT-SORT Tracker (first frame)",
         (20, 35),
         cv2.FONT_HERSHEY_SIMPLEX,
         0.55,
@@ -307,8 +302,8 @@ def main():
     print("\n" + "=" * 70)
     print("STAGE COMPARISON SUMMARY")
     print("=" * 70)
-    print(f"| Stage                               | Count |")
-    print(f"|-------------------------------------|-------|")
+    print("| Stage                               | Count |")
+    print("|-------------------------------------|-------|")
     print(f"| YOLO raw (conf>=0.01, max_det=3000) | {count_lowconf:<5} |")
     print(f"| YOLO raw (conf>=0.25, max_det=3000) | {count_3000:<5} |")
     print(f"| YOLO raw (conf>=0.25, max_det=1000) | {count_1000:<5} |")

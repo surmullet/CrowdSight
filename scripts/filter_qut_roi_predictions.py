@@ -39,8 +39,8 @@ def filter_predictions(manifest_path: Path, predictions_path: Path, output_path:
         raise ValueError("Unexpected QUT frame dimensions")
 
     filtered_frames = []
-    kept_by_camera = {camera: 0 for camera in roi_map}
-    raw_by_camera = {camera: 0 for camera in roi_map}
+    kept_by_camera = dict.fromkeys(roi_map, 0)
+    raw_by_camera = dict.fromkeys(roi_map, 0)
     for sample, frame in zip(samples, frames, strict=True):
         sequence, frame_id = sample.get("sequence_id"), sample.get("frame_id")
         if (frame.get("sequence_id"), frame.get("frame_id"), frame.get("image_sha256")) != (
