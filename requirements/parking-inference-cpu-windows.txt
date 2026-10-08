@@ -1,0 +1,9 @@
+# Observed Windows/Python 3.10.11 direct dependencies, 2026-10-08.
+# Not a wheel-hash lock or a clean-install verification.
+# Existing portable runtime used; other platforms need compatible wheels.
+torch==2.14.1+cpu
+torchvision==0.29.1+cpu
+numpy==2.2.6
+PyYAML==6.0.3
+Pillow==12.3.0
+opencv-python-headless==5.0.0.93
