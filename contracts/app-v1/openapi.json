@@ -25,6 +25,45 @@
         "title": "AlertStatusResponse",
         "type": "object"
       },
+      "CreateUserRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "email": {
+            "pattern": "^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$",
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "default": "",
+            "title": "Full Name",
+            "type": "string"
+          },
+          "password": {
+            "minLength": 6,
+            "title": "Password",
+            "type": "string"
+          },
+          "role": {
+            "default": "OPERATOR",
+            "description": "ADMIN, OPERATOR, ho\u1eb7c VIEWER",
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 64,
+            "minLength": 3,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "CreateUserRequest",
+        "type": "object"
+      },
       "FrameDataResponse": {
         "additionalProperties": false,
         "properties": {
@@ -205,6 +244,49 @@
           "disclaimer"
         ],
         "title": "HeatmapMetadataModel",
+        "type": "object"
+      },
+      "LoginRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "password": {
+            "description": "M\u1eadt kh\u1ea9u",
+            "title": "Password",
+            "type": "string"
+          },
+          "username": {
+            "description": "T\u00ean \u0111\u0103ng nh\u1eadp",
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest",
+        "type": "object"
+      },
+      "LoginResponse": {
+        "properties": {
+          "access_token": {
+            "title": "Access Token",
+            "type": "string"
+          },
+          "token_type": {
+            "default": "bearer",
+            "title": "Token Type",
+            "type": "string"
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserProfileResponse"
+          }
+        },
+        "required": [
+          "access_token",
+          "user"
+        ],
+        "title": "LoginResponse",
         "type": "object"
       },
       "MediaAssetResponse": {
@@ -963,6 +1045,65 @@
         "title": "TrendsResponse",
         "type": "object"
       },
+      "UpdateRoleRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "description": "ADMIN, OPERATOR, ho\u1eb7c VIEWER",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "UpdateRoleRequest",
+        "type": "object"
+      },
+      "UserProfileResponse": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "email": {
+            "title": "Email",
+            "type": "string"
+          },
+          "full_name": {
+            "title": "Full Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "email",
+          "role",
+          "full_name",
+          "is_active",
+          "created_at"
+        ],
+        "title": "UserProfileResponse",
+        "type": "object"
+      },
       "ValidationError": {
         "properties": {
           "ctx": {
@@ -1338,6 +1479,274 @@
         "summary": "Download a generated artifact by ID",
         "tags": [
           "Artifact Storage"
+        ]
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "operationId": "login_api_v1_auth_login_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "\u0110\u0103ng nh\u1eadp t\u00e0i kho\u1ea3n v\u00e0 nh\u1eadn JWT token",
+        "tags": [
+          "Authentication & Access Control"
+        ]
+      }
+    },
+    "/api/v1/auth/me": {
+      "get": {
+        "operationId": "get_me_api_v1_auth_me_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "L\u1ea5y th\u00f4ng tin t\u00e0i kho\u1ea3n hi\u1ec7n t\u1ea1i",
+        "tags": [
+          "Authentication & Access Control"
+        ]
+      }
+    },
+    "/api/v1/auth/users": {
+      "get": {
+        "operationId": "list_users_api_v1_auth_users_get",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserProfileResponse"
+                  },
+                  "title": "Response List Users Api V1 Auth Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Danh s\u00e1ch t\u00e0i kho\u1ea3n (Ch\u1ec9 d\u00e0nh cho Admin)",
+        "tags": [
+          "Authentication & Access Control"
+        ]
+      },
+      "post": {
+        "operationId": "create_user_api_v1_auth_users_post",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "T\u1ea1o t\u00e0i kho\u1ea3n m\u1edbi (Ch\u1ec9 d\u00e0nh cho Admin)",
+        "tags": [
+          "Authentication & Access Control"
+        ]
+      }
+    },
+    "/api/v1/auth/users/{user_id}/role": {
+      "put": {
+        "operationId": "update_user_role_api_v1_auth_users__user_id__role_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Authorization",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Authorization"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserProfileResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Thay \u0111\u1ed5i vai tr\u00f2 t\u00e0i kho\u1ea3n (Ch\u1ec9 d\u00e0nh cho Admin)",
+        "tags": [
+          "Authentication & Access Control"
         ]
       }
     },

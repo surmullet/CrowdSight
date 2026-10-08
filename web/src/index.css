@@ -5,6 +5,7 @@
 :root {
   --color-bg-abyssal: #0C1017;
   --color-bg-deck: #141B26;
+  --color-bg-surface: #161F2E;
   --color-border-contour: #222D3E;
   --color-accent-gold: #E69F00;
   --color-text-primary: #F0F4F8;
@@ -19,6 +20,13 @@ body {
   font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Force all form inputs to adhere to the dark theme palette */
+input, textarea, select {
+  background-color: #141B26;
+  color: #F0F4F8;
+  border-color: #222D3E;
 }
 
 .tabular-nums {

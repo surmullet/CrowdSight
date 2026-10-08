@@ -1,6 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SessionLibrary, type SessionSummaryItem } from './SessionLibrary';
+import { useAuthStore } from '@/shared/state/authStore';
 
 const mockSessions: SessionSummaryItem[] = [
   {
@@ -27,6 +28,10 @@ const mockSessions: SessionSummaryItem[] = [
 ];
 
 describe('SessionLibrary', () => {
+  beforeEach(() => {
+    useAuthStore.getState().quickSwitchRole('OPERATOR');
+  });
+
   it('renders session cards with titles and status badges', () => {
     render(
       <SessionLibrary
@@ -59,7 +64,23 @@ describe('SessionLibrary', () => {
     expect(screen.queryByText('another_camera.mp4')).not.toBeInTheDocument();
   });
 
-  it('opens delete confirmation modal with artifact warning', () => {
+  it('restricts delete button for OPERATOR role', () => {
+    render(
+      <SessionLibrary
+        sessions={mockSessions}
+        onSelectSession={vi.fn()}
+        onNewSession={vi.fn()}
+        onDeleteSession={vi.fn()}
+      />
+    );
+
+    const deleteBtns = screen.getAllByTitle(/Chỉ Quản trị viên/i);
+    expect(deleteBtns.length).toBeGreaterThan(0);
+    expect(deleteBtns[0]).toBeDisabled();
+  });
+
+  it('allows ADMIN to open delete confirmation modal with artifact warning', () => {
+    useAuthStore.getState().quickSwitchRole('ADMIN');
     render(
       <SessionLibrary
         sessions={mockSessions}
@@ -70,9 +91,25 @@ describe('SessionLibrary', () => {
     );
 
     const deleteBtns = screen.getAllByTitle('Xóa phiên phân tích');
+    expect(deleteBtns[0]).not.toBeDisabled();
     fireEvent.click(deleteBtns[0]!);
 
     expect(screen.getByText('Xác nhận xóa phiên phân tích')).toBeInTheDocument();
     expect(screen.getByText(/toàn bộ tệp kết quả/i)).toBeInTheDocument();
+  });
+
+  it('disables new session button for VIEWER role', () => {
+    useAuthStore.getState().quickSwitchRole('VIEWER');
+    render(
+      <SessionLibrary
+        sessions={mockSessions}
+        onSelectSession={vi.fn()}
+        onNewSession={vi.fn()}
+        onDeleteSession={vi.fn()}
+      />
+    );
+
+    const newBtn = screen.getByRole('button', { name: /Bắt đầu phân tích mới/i });
+    expect(newBtn).toBeDisabled();
   });
 });

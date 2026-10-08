@@ -12,6 +12,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import { Banner } from '@/shared/ui/Banner';
+import { useAuthStore } from '@/shared/state/authStore';
 
 export interface EditableZone {
   zoneId: string;
@@ -58,6 +59,8 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
   onCancel,
   className = '',
 }) => {
+  const { user } = useAuthStore();
+  const isViewer = user?.role === 'VIEWER';
   const [zoneSetName, setZoneSetName] = useState(initialZoneSetName);
   const [versionNote, setVersionNote] = useState('Khởi tạo cấu hình ban đầu');
   const [imgError, setImgError] = useState(false);
@@ -347,7 +350,9 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
               Trình soạn thảo tập vùng quan sát
             </h1>
             <p className="text-xs text-brand-text-muted">
-              Kéo đỉnh để đổi vị trí • Kéo cạnh để thêm đỉnh mới • Chuột phải để xóa đỉnh
+              {isViewer
+                ? 'Chế độ Khách xem: Đang ở trạng thái chỉ đọc (Read-only)'
+                : 'Kéo đỉnh để đổi vị trí • Kéo cạnh để thêm đỉnh mới • Chuột phải để xóa đỉnh'}
             </p>
           </div>
         </div>
@@ -389,11 +394,16 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!validation.isValid || isSaving}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-brand-gold hover:bg-brand-gold/90 disabled:opacity-40 text-brand-abyssal font-semibold text-xs rounded-lg transition-colors shadow"
+            disabled={isViewer || !validation.isValid || isSaving}
+            className={`flex items-center gap-1.5 px-4 py-1.5 font-semibold text-xs rounded-lg transition-colors shadow ${
+              isViewer
+                ? 'bg-brand-surface text-brand-text-muted/40 cursor-not-allowed border border-brand-border/60'
+                : 'bg-brand-gold hover:bg-brand-gold/90 disabled:opacity-40 text-brand-abyssal cursor-pointer'
+            }`}
+            title={isViewer ? 'Khách xem không có quyền lưu chỉnh sửa vùng' : undefined}
           >
             <Save className="w-3.5 h-3.5" />
-            <span>{isSaving ? 'Đang lưu...' : 'Lưu phiên bản mới'}</span>
+            <span>{isSaving ? 'Đang lưu...' : isViewer ? 'Chỉ xem (Không được lưu)' : 'Lưu phiên bản mới'}</span>
           </button>
         </div>
       </header>
@@ -606,14 +616,16 @@ export const ZoneEditor: React.FC<ZoneEditorProps> = ({
               <span className="font-semibold text-brand-text-primary">
                 Danh sách vùng ({zones.length})
               </span>
-              <button
-                type="button"
-                onClick={handleAddZone}
-                className="flex items-center gap-1 text-xs text-brand-gold hover:underline"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Thêm zone</span>
-              </button>
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={handleAddZone}
+                  className="flex items-center gap-1 text-xs text-brand-gold hover:underline cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Thêm zone</span>
+                </button>
+              )}
             </div>
 
             <div className="space-y-2 overflow-y-auto max-h-[280px] flex-1 pr-1">

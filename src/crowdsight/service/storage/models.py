@@ -215,3 +215,21 @@ class AuditLogRecord(Base):
         Index("ix_audit_log_timestamp", "timestamp"),
         Index("ix_audit_log_entity", "entity_type", "entity_id"),
     )
+
+
+class UserRecord(Base):
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_gen_uuid)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False)
+    hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
+    role: Mapped[str] = mapped_column(String(32), default="OPERATOR", nullable=False)
+    full_name: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utc_now, nullable=False)
+
+    __table_args__ = (
+        CheckConstraint("role IN ('ADMIN', 'OPERATOR', 'VIEWER')", name="ck_users_valid_role"),
+        Index("ix_users_username_active", "username", "is_active"),
+    )

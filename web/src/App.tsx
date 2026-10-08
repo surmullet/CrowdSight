@@ -16,7 +16,9 @@ import { ReviewWorkspace, type SessionMetadata } from '@/features/review/ReviewW
 import { ZoneEditor } from '@/features/zones/ZoneEditor';
 import { ModelStatusPage } from '@/features/model/ModelStatusPage';
 import { DevStatesPage } from '@/features/dev/DevStatesPage';
+import { UserNavBadge } from '@/features/auth/UserNavBadge';
 import { usePlaybackStore } from '@/shared/state/playbackStore';
+import { useAuthStore } from '@/shared/state/authStore';
 import type { CrowdFrameObservation, ZoneReading, FrameQuality } from '@/shared/types/domain';
 import { LanguageProvider, useLanguage } from '@/shared/i18n/LanguageContext';
 
@@ -128,6 +130,8 @@ const AppContent: React.FC = () => {
   const [datasetSample, setDatasetSample] = useState<any>(null);
   const [datasetCrowd6, setDatasetCrowd6] = useState<any>(null);
   const { locale, toggleLocale, t } = useLanguage();
+  const { user } = useAuthStore();
+  const isViewer = user?.role === 'VIEWER';
   const [sessions, setSessions] = useState<SessionSummaryItem[]>(INITIAL_SESSIONS);
   const [mediaCatalog, setMediaCatalog] = useState<MediaCatalogItem[]>(INITIAL_MEDIA_CATALOG);
   const [zoneSets, setZoneSets] = useState<ZoneSetSummary[]>(INITIAL_ZONE_SETS);
@@ -1053,18 +1057,20 @@ const AppContent: React.FC = () => {
                 <span>{t.nav.sessions}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => navigateTo('wizard')}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
-                  currentView === 'wizard'
-                    ? 'bg-brand-surface text-brand-gold font-medium'
-                    : 'text-brand-text-muted hover:text-brand-text-primary'
-                }`}
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>{t.nav.wizard}</span>
-              </button>
+              {!isViewer && (
+                <button
+                  type="button"
+                  onClick={() => navigateTo('wizard')}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded transition-colors ${
+                    currentView === 'wizard'
+                      ? 'bg-brand-surface text-brand-gold font-medium'
+                      : 'text-brand-text-muted hover:text-brand-text-primary'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>{t.nav.wizard}</span>
+                </button>
+              )}
 
               <button
                 type="button"
@@ -1110,6 +1116,7 @@ const AppContent: React.FC = () => {
 
           {/* Right utility items */}
           <div className="flex items-center gap-3">
+            <UserNavBadge />
             <button
               type="button"
               onClick={toggleLocale}
