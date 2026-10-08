@@ -43,6 +43,9 @@ ignore_errors = true
 [[tool.mypy.overrides]]
 module = [
     "shapely.*",
+    "yaml",
+    "yaml.*",
+    "jsonschema.validators",
     "ultralytics.*",
     "torch.*",
     "torchvision.*",
@@ -72,4 +75,3 @@ ignore = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
-
