@@ -1,10 +1,9 @@
 """Validity gate for converting visible counts into metric density."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from enum import Enum
-import math
-from typing import Optional
 
 from crowdsight.common.observations import QualityState
 
@@ -26,7 +25,7 @@ class DensityStatus(str, Enum):
 @dataclass(frozen=True, slots=True)
 class DensityValidity:
     status: DensityStatus
-    people_per_m2: Optional[float]
+    people_per_m2: float | None
 
 
 def assess_density_validity(
@@ -35,18 +34,18 @@ def assess_density_validity(
     quality: QualityState,
     fully_observed: bool,
     registration_valid: bool,
-    calibration_id: Optional[str],
-    usable_area_m2: Optional[float],
-    heldout_residual_m: Optional[float],
-    site_approved_max_residual_m: Optional[float],
-    calibration_evidence_ref: Optional[str] = None,
-    calibration_evidence_sha256: Optional[str] = None,
+    calibration_id: str | None,
+    usable_area_m2: float | None,
+    heldout_residual_m: float | None,
+    site_approved_max_residual_m: float | None,
+    calibration_evidence_ref: str | None = None,
+    calibration_evidence_sha256: str | None = None,
     independence_verified: bool = False,
-    independence_review_ref: Optional[str] = None,
-    independence_review_sha256: Optional[str] = None,
+    independence_review_ref: str | None = None,
+    independence_review_sha256: str | None = None,
     site_policy_approved: bool = False,
-    site_policy_approval_ref: Optional[str] = None,
-    site_policy_approval_sha256: Optional[str] = None,
+    site_policy_approval_ref: str | None = None,
+    site_policy_approval_sha256: str | None = None,
 ) -> DensityValidity:
     """Return density only when evidence and site policy support it.
 

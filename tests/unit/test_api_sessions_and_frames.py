@@ -126,7 +126,11 @@ def test_artifact_download(api_context: tuple[TestClient, str, str]) -> None:
 def test_session_dataset_and_heatmap_endpoints(api_context: tuple[TestClient, str, str]) -> None:
     client, asset_id, zsv_id = api_context
     from crowdsight.service.api.deps import get_artifact_store, get_db_manager
-    from crowdsight.service.storage.models import ArtifactRecord, ObservationRecord, SessionRecord, ZoneResultRecord
+    from crowdsight.service.storage.models import (
+        ArtifactRecord,
+        ObservationRecord,
+        ZoneResultRecord,
+    )
 
     # Create session
     create_payload = {

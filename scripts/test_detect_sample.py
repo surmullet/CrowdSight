@@ -1,5 +1,6 @@
 """Run YOLO person detection on web/public/sample.mp4 and print results."""
 from pathlib import Path
+
 import cv2
 from ultralytics import YOLO
 

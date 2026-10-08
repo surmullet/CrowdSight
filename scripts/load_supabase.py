@@ -9,11 +9,11 @@ Usage:
 Or simply run without arguments to be prompted for the connection URL:
     python scripts/load_supabase.py
 """
+import argparse
+import glob
 import os
 import sys
-import glob
 import time
-import argparse
 
 try:
     import psycopg2
@@ -23,7 +23,7 @@ except ImportError:
 
 
 def load_file(cursor, filepath):
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         sql = f.read()
     cursor.execute(sql)
 
@@ -54,7 +54,7 @@ def main():
         print("Error: No database URL provided.")
         sys.exit(1)
 
-    print(f"\n[1/3] Connecting to Supabase...")
+    print("\n[1/3] Connecting to Supabase...")
     try:
         conn = psycopg2.connect(db_url)
         conn.autocommit = True
@@ -76,13 +76,13 @@ def main():
     obs_dir = os.path.join(seed_dir, "observations")
 
     if args.clean and os.path.exists(p0):
-        print(f"\n[CLEANUP] Truncating existing tables...")
+        print("\n[CLEANUP] Truncating existing tables...")
         load_file(cur, p0)
         print("  -> Existing tables truncated successfully.")
 
     print("\n[2/3] Seeding Core Data (Clean Sequential IDs)...")
     t0 = time.time()
-    
+
     print(f"  Executing {os.path.basename(p1)}...")
     load_file(cur, p1)
     print("  -> Core metadata loaded (media_assets, zone_sets, sessions, artifacts, audit_log).")

@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import create_engine, event
 from sqlalchemy.engine import Engine
@@ -46,7 +47,7 @@ class DatabaseManager:
                 db_file = Path(raw_path).resolve()
                 db_file.parent.mkdir(parents=True, exist_ok=True)
 
-        engine_kwargs: dict = {
+        engine_kwargs: dict[str, Any] = {
             "echo": False,
             "future": True,
         }

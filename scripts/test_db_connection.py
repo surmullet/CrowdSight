@@ -7,9 +7,10 @@ Usage:
     python scripts/test_db_connection.py
     python scripts/test_db_connection.py --db-url "postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres"
 """
+import argparse
 import os
 import sys
-import argparse
+
 from sqlalchemy import text
 
 try:

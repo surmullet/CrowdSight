@@ -120,7 +120,7 @@ def run_semantic_lint(root_dir: Path) -> int:
                     )
 
     # Print Report
-    print(f"=== CrowdSight Semantic Linter ===")
+    print("=== CrowdSight Semantic Linter ===")
     print(f"Files scanned: {scanned_files_count}")
 
     if not violations:

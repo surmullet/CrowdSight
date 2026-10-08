@@ -8,17 +8,19 @@ Validates:
 6. Zone containment and counting.
 7. Heatmap accumulation and RGBA PNG generation.
 """
-from pathlib import Path
 import sys
+from pathlib import Path
+
 import cv2
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
 from crowdsight.service.domain.aggregation import aggregate_frame
 from crowdsight.service.domain.models import CrowdFrameObservationV1, QualityState
 from crowdsight.service.domain.zones import Point2D, ZoneDefinition, ZonePolygon, ZoneSet
+from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
+
 
 def run_smoke_test():
     print("=" * 60)
@@ -27,7 +29,8 @@ def run_smoke_test():
 
     # 1. Model Boundary Service Verification
     print("\n[Step 1] Initializing ModelBoundaryService...")
-    boundary = ModelBoundaryService()
+    best_cfg = Path(__file__).resolve().parents[1] / "configs" / "models" / "crowd_best_local.yaml"
+    boundary = ModelBoundaryService(best_cfg)
     print(f"  Default config path: {boundary.default_config_path}")
     assert boundary.default_config_path.name == "crowd_best_local.yaml", "Default config must be crowd_best_local.yaml"
 
@@ -39,7 +42,7 @@ def run_smoke_test():
     print(f"  Is checkpoint valid: {res.is_checkpoint_valid}")
     print(f"  SHA-256 expected: {res.expected_checkpoint_sha256}")
     print(f"  SHA-256 actual:   {res.actual_checkpoint_sha256}")
-    
+
     assert res.checkpoint_available, "Checkpoint must be available on disk"
     assert res.is_checkpoint_valid, "Checkpoint SHA-256 must match expected hash"
     assert res.actual_checkpoint_sha256 == "12824a97e19a747c3f852ca335ca3b4e2bfb60e05770c059154265f7761a4ccc"
@@ -73,7 +76,7 @@ def run_smoke_test():
     # Analyze confidence distribution
     confs = [d.confidence for d in detections]
     print(f"  Confidence range: min={min(confs):.3f}, max={max(confs):.3f}, avg={sum(confs)/len(confs):.3f}")
-    
+
     # Check bounding box validity
     for idx, d in enumerate(detections[:5]):
         x1, y1, x2, y2 = d.bbox_xyxy_px
@@ -88,9 +91,10 @@ def run_smoke_test():
     print("\n[Step 4] Testing tracking across consecutive frames...")
     cap = cv2.VideoCapture(str(video_path))
     frame_track_counts = []
-    for f_idx in range(5):
+    for _f_idx in range(5):
         ret, f = cap.read()
-        if not ret: break
+        if not ret:
+            break
         dets = detector.predict(f)
         frame_track_counts.append(len(dets))
     cap.release()

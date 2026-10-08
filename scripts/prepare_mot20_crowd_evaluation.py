@@ -10,13 +10,13 @@ from __future__ import annotations
 import argparse
 import configparser
 import csv
-from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import zipfile
+from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
-import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 MOT20_TRAIN_SEQUENCES = {"MOT20-01", "MOT20-02", "MOT20-03", "MOT20-05"}

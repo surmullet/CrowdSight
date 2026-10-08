@@ -1,6 +1,7 @@
 """Process 150.mp4 with real YOLO11 detection and generate observations JSON and heatmap."""
-from pathlib import Path
 import json
+from pathlib import Path
+
 import cv2
 import numpy as np
 from ultralytics import YOLO
@@ -110,7 +111,7 @@ while True:
         "image_width": width,
         "image_height": height,
         "observation_valid": True,
-        "registration_valid": false if False else False,
+        "registration_valid": False,
         "fully_observed_zones": ["zone-a", "zone-b"],
         "confidence_semantics": "RAW_MODEL_SCORE",
         "quality": "VALID",

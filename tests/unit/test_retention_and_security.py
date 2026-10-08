@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+from collections.abc import Generator
 from pathlib import Path
 
 import pytest
@@ -28,7 +29,7 @@ def temp_store(tmp_path: Path) -> ArtifactStore:
 
 
 @pytest.fixture
-def memory_db():
+def memory_db() -> Generator[Session, None, None]:
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(engine)
     with Session(engine) as session:

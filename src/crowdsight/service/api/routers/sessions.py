@@ -7,7 +7,16 @@ from collections.abc import AsyncGenerator
 from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, Header, HTTPException, Query, Request, Response
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, text
@@ -21,12 +30,12 @@ from crowdsight.service.api.deps import (
 )
 from crowdsight.service.artifacts.store import ArtifactStore
 from crowdsight.service.jobs.runner import JobManager
-from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.pipeline.synthetic import (
     SYNTHETIC_CHECKPOINT_SHA256,
     SYNTHETIC_PROFILE_ID,
     SYNTHETIC_PROFILE_SHA256,
 )
+from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.storage.models import (
     ArtifactRecord,
     AuditLogRecord,
@@ -168,6 +177,7 @@ def create_session(
         tracker_sha256 = None
     else:
         from pathlib import Path
+
         from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
         boundary = ModelBoundaryService()
         target_cfg = None
@@ -192,13 +202,15 @@ def create_session(
         except HTTPException:
             raise
         except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Model boundary verification failed: {e}")
+            raise HTTPException(status_code=400, detail=f"Model boundary verification failed: {e}") from e
 
     # Compute next sequential display_code (SES-XXXX)
     stmt_max = select(SessionRecord.display_code).where(SessionRecord.display_code.like("SES-%"))
     existing_codes = db.scalars(stmt_max).all()
     max_num = 0
     for code in existing_codes:
+        if not code:
+            continue
         try:
             num = int(code.split("-")[1])
             if num > max_num:
