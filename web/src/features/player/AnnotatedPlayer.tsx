@@ -49,6 +49,7 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     showZones,
     showHeatmap,
     heatmapOpacity,
+    minConfidence,
     setCurrentTime,
     setDuration,
     setIsPlaying,
@@ -216,6 +217,8 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
       const naturalHeight = (video && video.videoHeight > 0) ? video.videoHeight : (observation.image_height || imageHeight || 1080);
 
       for (const det of observation.detections) {
+        if (det.confidence !== undefined && det.confidence < minConfidence) continue;
+
         const box = sourceBoxToCanvasCoords(det.bbox_xyxy, naturalWidth, naturalHeight, letterbox, dpr);
 
         ctx.save();
@@ -263,6 +266,7 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
     imageHeight,
     showBoxes,
     observation,
+    minConfidence,
   ]);
 
   // Frame synchronization loop
@@ -313,6 +317,16 @@ export const AnnotatedPlayer: React.FC<AnnotatedPlayerProps> = ({
         ref={canvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
       />
+
+      {/* Floating Confidence Filter Stats Badge */}
+      {showBoxes && observation && observation.detections && observation.detections.length > 0 && (
+        <div className="absolute bottom-3 left-3 px-2 py-1 rounded bg-black/60 backdrop-blur-sm border border-white/10 text-[11px] font-mono text-brand-text-muted flex items-center gap-1.5 pointer-events-none z-10">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse" />
+          <span>
+            {observation.detections.filter((d) => (d.confidence ?? 1) >= minConfidence).length} / {observation.detections.length} boxes (Conf ≥ {Math.round(minConfidence * 100)}%)
+          </span>
+        </div>
+      )}
     </div>
   );
 };

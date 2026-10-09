@@ -61,4 +61,17 @@ describe('PlayerControls', () => {
     fireEvent.click(heatmapBtn);
     expect(usePlaybackStore.getState().showHeatmap).toBe(true);
   });
+
+  it('adjusts minConfidence when slider is changed', () => {
+    usePlaybackStore.setState({ minConfidence: 0.20 });
+    render(<PlayerControls />);
+
+    const slider = screen.getByLabelText('Ngưỡng tin cậy phát hiện AI');
+    expect(slider).toBeInTheDocument();
+    expect(slider).toHaveValue('0.2');
+
+    fireEvent.change(slider, { target: { value: '0.45' } });
+    expect(usePlaybackStore.getState().minConfidence).toBe(0.45);
+    expect(screen.getByText('45%')).toBeInTheDocument();
+  });
 });

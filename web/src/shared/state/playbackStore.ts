@@ -10,6 +10,7 @@ interface PlaybackState {
   showZones: boolean;
   showHeatmap: boolean;
   heatmapOpacity: number;
+  minConfidence: number;
   selectedZoneId: string | null;
   activeObservation: CrowdFrameObservation | null;
   activeReadings: ZoneReading[];
@@ -23,6 +24,7 @@ interface PlaybackState {
   toggleZones: () => void;
   toggleHeatmap: () => void;
   setHeatmapOpacity: (opacity: number) => void;
+  setMinConfidence: (confidence: number) => void;
   setSelectedZoneId: (zoneId: string | null) => void;
   setActiveObservation: (obs: CrowdFrameObservation | null) => void;
   setActiveReadings: (readings: ZoneReading[]) => void;
@@ -37,6 +39,7 @@ export const usePlaybackStore = create<PlaybackState>((set) => ({
   showZones: true,
   showHeatmap: false,
   heatmapOpacity: 0.6,
+  minConfidence: 0.20,
   selectedZoneId: null,
   activeObservation: null,
   activeReadings: [],
@@ -49,6 +52,7 @@ export const usePlaybackStore = create<PlaybackState>((set) => ({
   toggleZones: () => set((state) => ({ showZones: !state.showZones })),
   toggleHeatmap: () => set((state) => ({ showHeatmap: !state.showHeatmap })),
   setHeatmapOpacity: (heatmapOpacity) => set({ heatmapOpacity: Math.min(1, Math.max(0, heatmapOpacity)) }),
+  setMinConfidence: (minConfidence) => set({ minConfidence: Math.min(0.95, Math.max(0.01, minConfidence)) }),
   setSelectedZoneId: (selectedZoneId) => set({ selectedZoneId }),
   setActiveObservation: (activeObservation) => set({ activeObservation }),
   setActiveReadings: (activeReadings) => set({ activeReadings }),

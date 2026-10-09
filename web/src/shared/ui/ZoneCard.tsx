@@ -1,10 +1,12 @@
 import type { ZoneReading } from '@/shared/types/domain';
-import { AlertTriangle, EyeOff, Clock, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, EyeOff, Clock, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '@/shared/i18n/LanguageContext';
+import type { ZoneThresholdRule } from '@/features/alerts/alertUtils';
 
 interface ZoneCardProps {
   reading: ZoneReading;
   colorHex?: string;
+  thresholdRule?: ZoneThresholdRule;
   locale?: 'vi' | 'en';
   className?: string;
 }
@@ -12,14 +14,33 @@ interface ZoneCardProps {
 export const ZoneCard: React.FC<ZoneCardProps> = ({
   reading,
   colorHex = '#56B4E9',
+  thresholdRule,
   locale: propLocale,
   className = '',
 }) => {
   const { locale: contextLocale } = useLanguage();
   const locale = propLocale ?? contextLocale;
+
+  const isCritical =
+    reading.status === 'COUNTED' &&
+    thresholdRule !== undefined &&
+    reading.count >= thresholdRule.criticalThreshold;
+
+  const isWarning =
+    reading.status === 'COUNTED' &&
+    thresholdRule !== undefined &&
+    !isCritical &&
+    reading.count >= thresholdRule.warningThreshold;
+
   return (
     <div
-      className={`relative p-4 rounded-md border border-contour bg-deck overflow-hidden flex flex-col justify-between ${className}`}
+      className={`relative p-4 rounded-md border bg-deck overflow-hidden flex flex-col justify-between transition-colors ${
+        isCritical
+          ? 'border-red-500/80 bg-red-950/20 shadow-md shadow-red-950/30'
+          : isWarning
+            ? 'border-amber-500/80 bg-amber-950/20 shadow-md shadow-amber-950/30'
+            : 'border-contour'
+      } ${className}`}
       style={{ borderLeftColor: colorHex, borderLeftWidth: '4px' }}
     >
       {/* Zone Header */}
@@ -33,13 +54,29 @@ export const ZoneCard: React.FC<ZoneCardProps> = ({
             {reading.zoneName}
           </span>
         </div>
+
+        {/* Real-time Overcrowding Badge */}
+        {isCritical && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/20 text-red-300 border border-red-500/40 font-mono animate-pulse">
+            <ShieldAlert className="w-3 h-3" />
+            <span>QUÁ TẢI (≥{thresholdRule?.criticalThreshold})</span>
+          </span>
+        )}
+        {isWarning && (
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-mono">
+            <AlertTriangle className="w-3 h-3" />
+            <span>CẢNH BÁO (≥{thresholdRule?.warningThreshold})</span>
+          </span>
+        )}
       </div>
 
       {/* Main Zone State Body */}
       {reading.status === 'COUNTED' && reading.count > 0 && (
         <div className="mt-1">
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold tabular-nums text-text-primary tracking-tight">
+            <span className={`text-3xl font-bold tabular-nums tracking-tight ${
+              isCritical ? 'text-red-400' : isWarning ? 'text-amber-400' : 'text-text-primary'
+            }`}>
               {reading.count}
             </span>
             <span className="text-xs text-text-muted">

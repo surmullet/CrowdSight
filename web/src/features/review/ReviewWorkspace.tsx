@@ -16,6 +16,14 @@ import {
 } from 'lucide-react';
 import { ExecutiveReportModal } from '@/features/reports/ExecutiveReportModal';
 import { computeSessionReportData, exportSessionToExcel } from '@/features/reports/reportUtils';
+import {
+  computeDefaultThresholds,
+  detectCongestionAlerts,
+  checkActiveCongestionAlerts,
+  type ZoneThresholdRule,
+} from '@/features/alerts/alertUtils';
+import { CongestionAlertBanner } from '@/features/alerts/CongestionAlertBanner';
+import { CongestionAlertsTab } from '@/features/alerts/CongestionAlertsTab';
 import type { CrowdFrameObservation, ZoneReading } from '@/shared/types/domain';
 import { Banner } from '@/shared/ui/Banner';
 import { QualityBadge } from '@/shared/ui/QualityBadge';
@@ -97,12 +105,82 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
   const { currentTime, setCurrentTime } = usePlaybackStore();
   const { user } = useAuthStore();
   const isViewer = user?.role === 'VIEWER';
-  const [activeTab, setActiveTab] = useState<'zones' | 'peaks' | 'notes' | 'provenance'>('zones');
+  const [activeTab, setActiveTab] = useState<'zones' | 'peaks' | 'notes' | 'alerts' | 'provenance'>('zones');
   const [notes, setNotes] = useState<NoteMarker[]>(initialNotes);
   const [newNoteText, setNewNoteText] = useState('');
   const [copiedHash, setCopiedHash] = useState<string | null>(null);
   const [isSemanticsOpen, setIsSemanticsOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  // Congestion Thresholds & Alert Monitoring State
+  const [thresholdRules, setThresholdRules] = useState<Record<string, ZoneThresholdRule>>(() =>
+    computeDefaultThresholds(zoneTrends)
+  );
+
+  useEffect(() => {
+    setThresholdRules((prev) => {
+      if (Object.keys(prev).length > 0) return prev;
+      return computeDefaultThresholds(zoneTrends);
+    });
+  }, [zoneTrends]);
+
+  const handleUpdateRule = (zoneId: string, updatedRule: Partial<ZoneThresholdRule>) => {
+    setThresholdRules((prev) => ({
+      ...prev,
+      [zoneId]: {
+        ...(prev[zoneId] || {
+          zoneId,
+          warningThreshold: 50,
+          criticalThreshold: 80,
+          minDurationSeconds: 1.0,
+        }),
+        ...updatedRule,
+      },
+    }));
+  };
+
+  const handleResetRules = () => {
+    setThresholdRules(computeDefaultThresholds(zoneTrends));
+  };
+
+  const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(new Set());
+
+  const handleDismissAlert = (alertId?: string) => {
+    if (!alertId) {
+      setDismissedAlertIds((prev) => {
+        const next = new Set(prev);
+        activeAlerts.forEach((a) => next.add(a.id));
+        return next;
+      });
+      return;
+    }
+    setDismissedAlertIds((prev) => new Set(prev).add(alertId));
+  };
+
+  const congestionAlerts = React.useMemo(() => {
+    return detectCongestionAlerts(zoneTrends, thresholdRules);
+  }, [zoneTrends, thresholdRules]);
+
+  // Active alerts: check if currentTime is within any confirmed sustained congestion interval,
+  // excluding any alerts explicitly dismissed by the operator for this session.
+  // Uses debounced sustained intervals to eliminate single-frame flickering and prevent layout shifts.
+  const activeAlerts = React.useMemo(() => {
+    const matchedSustained = congestionAlerts.filter((alert) => {
+      if (dismissedAlertIds.has(alert.id)) return false;
+      return currentTime >= alert.startTime && currentTime <= alert.endTime + 0.3;
+    });
+
+    if (matchedSustained.length > 0) {
+      return matchedSustained;
+    }
+
+    if (zoneTrends.length === 0 && activeReadings.length > 0) {
+      const liveAlerts = checkActiveCongestionAlerts(currentTime, activeReadings, thresholdRules, zones);
+      return liveAlerts.filter((a) => !dismissedAlertIds.has(a.id));
+    }
+
+    return [];
+  }, [congestionAlerts, currentTime, dismissedAlertIds, zoneTrends.length, activeReadings, thresholdRules, zones]);
 
   const reportData = React.useMemo(() => {
     return computeSessionReportData(
@@ -296,8 +374,8 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden">
         {/* Left Column: Player & Timeline (8 of 12 cols) */}
         <section className="lg:col-span-8 flex flex-col gap-4">
-          {/* Annotated Video Player */}
-          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border border-brand-border shadow-lg">
+          {/* Annotated Video Player with Zero-Layout-Shift In-HUD Alert Overlay */}
+          <div className="relative w-full aspect-video bg-black rounded-lg overflow-hidden border border-brand-border shadow-lg group">
             <AnnotatedPlayer
               videoSrc={session.videoSrc}
               imageWidth={session.imageWidth}
@@ -307,6 +385,18 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
               heatmapUrl={session.heatmapUrl}
               onTimeUpdate={handleSeek}
             />
+
+            {/* In-HUD Congestion Alarm (Zero-Layout-Shift Floating Overlay) */}
+            {activeAlerts.length > 0 && (
+              <div className="absolute top-3 inset-x-3 z-30 pointer-events-auto transition-all duration-300">
+                <CongestionAlertBanner
+                  alerts={activeAlerts}
+                  onSeek={handleSeek}
+                  onOpenAlertsTab={() => setActiveTab('alerts')}
+                  onDismiss={() => handleDismissAlert()}
+                />
+              </div>
+            )}
           </div>
 
           {/* Transport Controls */}
@@ -320,6 +410,8 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
             zoneTrends={zoneTrends}
             peaks={peaks}
             notes={notes}
+            thresholdRules={thresholdRules}
+            alerts={congestionAlerts}
             missingFramesCount={missingFramesCount}
             onSeek={handleSeek}
           />
@@ -368,6 +460,28 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
               }`}
             >
               Vùng quan sát ({zones.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('alerts')}
+              className={`px-3 py-2 border-b-2 font-medium transition-colors flex items-center gap-1.5 ${
+                activeTab === 'alerts'
+                  ? 'border-red-500 text-red-400 font-bold'
+                  : 'border-transparent text-brand-text-muted hover:text-brand-text-primary'
+              }`}
+            >
+              <span>Cảnh báo</span>
+              {congestionAlerts.length > 0 && (
+                <span
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-mono ${
+                    activeAlerts.length > 0
+                      ? 'bg-red-500 text-black font-bold animate-pulse'
+                      : 'bg-brand-border text-brand-text-muted'
+                  }`}
+                >
+                  {congestionAlerts.length}
+                </span>
+              )}
             </button>
             <button
               type="button"
@@ -429,7 +543,11 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
                   </div>
                 ) : (
                   activeReadings.map((reading) => (
-                    <ZoneCard key={reading.zoneId} reading={reading} />
+                    <ZoneCard
+                      key={reading.zoneId}
+                      reading={reading}
+                      thresholdRule={thresholdRules[reading.zoneId]}
+                    />
                   ))
                 )}
               </div>
@@ -548,7 +666,20 @@ export const ReviewWorkspace: React.FC<ReviewWorkspaceProps> = ({
               </div>
             )}
 
-            {/* TAB 4: Provenance Information */}
+            {/* TAB: Congestion Alerts & Threshold Configuration */}
+            {activeTab === 'alerts' && (
+              <CongestionAlertsTab
+                alerts={congestionAlerts}
+                thresholdRules={thresholdRules}
+                zones={zones}
+                onUpdateRule={handleUpdateRule}
+                onResetRules={handleResetRules}
+                onSeek={handleSeek}
+                currentTime={currentTime}
+              />
+            )}
+
+            {/* TAB: Provenance Information */}
             {activeTab === 'provenance' && (
               <div className="p-3 bg-brand-surface border border-brand-border rounded-lg space-y-3 text-xs">
                 <div className="space-y-1">

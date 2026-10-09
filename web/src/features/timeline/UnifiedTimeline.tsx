@@ -36,6 +36,8 @@ export interface NoteMarker {
   zoneId?: string;
 }
 
+import type { ZoneThresholdRule, CongestionAlertEvent } from '@/features/alerts/alertUtils';
+
 interface UnifiedTimelineProps {
   duration: number;
   currentTime: number;
@@ -43,6 +45,8 @@ interface UnifiedTimelineProps {
   zoneTrends: ZoneTrendLine[];
   peaks?: PeakMarker[];
   notes?: NoteMarker[];
+  thresholdRules?: Record<string, ZoneThresholdRule>;
+  alerts?: CongestionAlertEvent[];
   missingFramesCount?: number;
   onSeek: (time: number) => void;
   className?: string;
@@ -55,6 +59,8 @@ export const UnifiedTimeline: React.FC<UnifiedTimelineProps> = ({
   zoneTrends,
   peaks = [],
   notes = [],
+  thresholdRules = {},
+  alerts = [],
   missingFramesCount = 0,
   onSeek,
   className = '',
@@ -245,6 +251,40 @@ export const UnifiedTimeline: React.FC<UnifiedTimelineProps> = ({
             {/* Grid line at 50% max */}
             <line x1="0" y1="32" x2="1000" y2="32" stroke="#222D3E" strokeDasharray="3,3" strokeWidth="0.5" />
 
+            {/* Threshold Warning & Critical Lines */}
+            {Object.values(thresholdRules).map((rule) => {
+              const critY = Math.max(0, Math.min(64, 64 - (rule.criticalThreshold / maxCount) * 64));
+              const warnY = Math.max(0, Math.min(64, 64 - (rule.warningThreshold / maxCount) * 64));
+              return (
+                <React.Fragment key={`thresh-${rule.zoneId}`}>
+                  {rule.criticalThreshold <= maxCount && (
+                    <line
+                      x1="0"
+                      y1={critY}
+                      x2="1000"
+                      y2={critY}
+                      stroke="#EF4444"
+                      strokeDasharray="4,4"
+                      strokeWidth="0.8"
+                      strokeOpacity="0.75"
+                    />
+                  )}
+                  {rule.warningThreshold <= maxCount && (
+                    <line
+                      x1="0"
+                      y1={warnY}
+                      x2="1000"
+                      y2={warnY}
+                      stroke="#F59E0B"
+                      strokeDasharray="3,3"
+                      strokeWidth="0.6"
+                      strokeOpacity="0.65"
+                    />
+                  )}
+                </React.Fragment>
+              );
+            })}
+
             {/* Render each zone trend line */}
             {zoneTrends.map((trend) => {
               const pathData = generatePathSegments(trend.points, 1000, 64);
@@ -264,6 +304,29 @@ export const UnifiedTimeline: React.FC<UnifiedTimelineProps> = ({
             })}
           </svg>
         </div>
+
+        {/* Congestion Alert Highlight Bands on Timeline Track */}
+        {alerts.map((alert) => {
+          const startPct = (alert.startTime / safeDuration) * 100;
+          const endPct = (alert.endTime / safeDuration) * 100;
+          const widthPct = Math.max(0.4, endPct - startPct);
+          return (
+            <div
+              key={`alert-band-${alert.id}`}
+              style={{ left: `${startPct}%`, width: `${widthPct}%` }}
+              className={`absolute top-0 bottom-0 pointer-events-auto cursor-pointer transition-opacity ${
+                alert.severity === 'CRITICAL'
+                  ? 'bg-red-500/20 border-x border-red-500/60 hover:bg-red-500/30'
+                  : 'bg-amber-500/15 border-x border-amber-500/50 hover:bg-amber-500/25'
+              }`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSeek(alert.startTime);
+              }}
+              title={`🚨 [Quá tải ${alert.severity === 'CRITICAL' ? 'Nguy hiểm' : 'Cảnh báo'}] ${alert.zoneName}: ${alert.peakCount} người tại ${formatMediaTime(alert.startTime)} - ${formatMediaTime(alert.endTime)}`}
+            />
+          );
+        })}
 
         {/* Tier 3: Peak and Note Markers (Bottom 18px) */}
         <div className="absolute bottom-0 left-0 right-0 h-4 bg-brand-surface/40 border-t border-brand-border/40 pointer-events-none">
@@ -292,6 +355,27 @@ export const UnifiedTimeline: React.FC<UnifiedTimelineProps> = ({
                 className="absolute top-0.5 -ml-1 w-2 h-2 rounded-full bg-cyan-400 ring-1 ring-cyan-200"
                 title={`Ghi chú [${formatMediaTime(note.time)}]: ${note.text}`}
               />
+            );
+          })}
+
+          {/* Alert Flag Markers */}
+          {alerts.map((alert) => {
+            const leftPct = (alert.startTime / safeDuration) * 100;
+            return (
+              <div
+                key={`alert-flag-${alert.id}`}
+                style={{ left: `${leftPct}%` }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSeek(alert.startTime);
+                }}
+                className="absolute -top-2 -ml-2 w-4 h-4 flex items-center justify-center cursor-pointer pointer-events-auto"
+                title={`🚨 [Quá tải ${alert.severity === 'CRITICAL' ? 'Nguy hiểm' : 'Cảnh báo'}] ${alert.zoneName}: ${alert.peakCount} người tại ${formatMediaTime(alert.startTime)}`}
+              >
+                <span className="text-[10px] leading-none select-none">
+                  {alert.severity === 'CRITICAL' ? '🚨' : '⚠️'}
+                </span>
+              </div>
             );
           })}
         </div>

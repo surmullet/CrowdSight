@@ -8,6 +8,7 @@ import {
   Layers,
   Flame,
   HelpCircle,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { usePlaybackStore } from '@/shared/state/playbackStore';
 
@@ -39,6 +40,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     showZones,
     showHeatmap,
     heatmapOpacity,
+    minConfidence,
     setIsPlaying,
     setCurrentTime,
     setPlaybackRate,
@@ -46,6 +48,7 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
     toggleZones,
     toggleHeatmap,
     setHeatmapOpacity,
+    setMinConfidence,
   } = usePlaybackStore();
 
   const [showHelp, setShowHelp] = React.useState(false);
@@ -197,6 +200,33 @@ export const PlayerControls: React.FC<PlayerControlsProps> = ({
               </span>
             </div>
           )}
+        </div>
+
+        {/* AI Confidence Threshold Filter Slider */}
+        <div className="flex items-center gap-1.5 pl-1 border-l border-brand-border/60">
+          <div
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-brand-abyssal/60 border border-brand-border text-xs"
+            title={`Lọc các phát hiện người có độ tin cậy AI ≥ ${Math.round(minConfidence * 100)}%`}
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5 text-brand-gold shrink-0" />
+            <span className="text-[11px] text-brand-text-muted hidden sm:inline">Conf:</span>
+            <input
+              type="range"
+              min="0.05"
+              max="0.85"
+              step="0.05"
+              value={minConfidence}
+              onChange={(e) => setMinConfidence(parseFloat(e.target.value))}
+              className="w-16 h-1 accent-amber-500 bg-brand-border rounded cursor-pointer"
+              aria-label="Ngưỡng tin cậy phát hiện AI"
+            />
+            <span
+              className="font-mono tabular-nums text-[11px] font-bold text-brand-gold w-8"
+              title="Độ tin cậy tối thiểu hiện tại"
+            >
+              {Math.round(minConfidence * 100)}%
+            </span>
+          </div>
         </div>
 
         {/* Keyboard shortcut help button */}
