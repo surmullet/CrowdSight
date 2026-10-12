@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Generator, Sequence
 from pathlib import Path
 from typing import Any
 
@@ -49,6 +49,7 @@ class SessionPipeline:
         max_unknown_rate: float = 0.5,
         frame_stride: int = 1,
         db_batch_size: int = 30,
+        batch_size: int = 8,
     ) -> None:
         self.session_id = session_id
         self.video_path = video_path
@@ -64,6 +65,7 @@ class SessionPipeline:
         self.max_unknown_rate = max_unknown_rate
         self.frame_stride = max(1, frame_stride)
         self.db_batch_size = max(1, db_batch_size)
+        self.batch_size = max(1, batch_size)
 
     def run(self, cancellation_check: Callable[[], bool] | None = None) -> str:
         """Run the pipeline to completion, cancellation, or failure.
@@ -111,10 +113,17 @@ class SessionPipeline:
             batch_zr.clear()
             last_flush_time = time.time()
 
-        for frame in decoder.iter_frames():
-            frame_width = frame.width
-            frame_height = frame.height
+        def _iter_chunks() -> Generator[list[DecodedFrame], None, None]:
+            chunk: list[DecodedFrame] = []
+            for f in decoder.iter_frames():
+                chunk.append(f)
+                if len(chunk) >= self.batch_size:
+                    yield chunk
+                    chunk = []
+            if chunk:
+                yield chunk
 
+        for chunk_frames in _iter_chunks():
             # Check cooperative cancellation
             if cancellation_check and cancellation_check():
                 _flush_db(final=True)
@@ -125,83 +134,86 @@ class SessionPipeline:
                         sess_record.completeness = "PARTIAL"
                 return "PARTIAL_CANCELLED"
 
-            # Process frame
-            observation = self._process_frame(frame)
-            agg_result = aggregate_frame(observation, self.zone_set)
+            observations = self._process_batch(chunk_frames)
+            for frame, observation in zip(chunk_frames, observations, strict=True):
+                frame_width = frame.width
+                frame_height = frame.height
 
-            if observation.quality == QualityState.UNKNOWN:
-                unknown_count += 1
-                consecutive_unknown += 1
-            else:
-                consecutive_unknown = 0
+                agg_result = aggregate_frame(observation, self.zone_set)
 
-            # Buffer frame result
-            obs_rec = ObservationRecord(
-                session_id=self.session_id,
-                frame_index=observation.frame_index,
-                media_time_s=observation.media_time_s,
-                quality=observation.quality.value,
-                reason_code=frame.reason_code,
-                payload_v1=observation.model_dump(mode="json"),
-            )
-            batch_obs.append(obs_rec)
+                if observation.quality == QualityState.UNKNOWN:
+                    unknown_count += 1
+                    consecutive_unknown += 1
+                else:
+                    consecutive_unknown = 0
 
-            for z_res in agg_result.zones:
-                zr_rec = ZoneResultRecord(
+                # Buffer frame result
+                obs_rec = ObservationRecord(
                     session_id=self.session_id,
                     frame_index=observation.frame_index,
                     media_time_s=observation.media_time_s,
-                    zone_id=z_res.zone_id,
-                    availability=z_res.availability.value,
-                    visible_count=z_res.visible_count,
+                    quality=observation.quality.value,
+                    reason_code=frame.reason_code,
+                    payload_v1=observation.model_dump(mode="json"),
                 )
-                batch_zr.append(zr_rec)
+                batch_obs.append(obs_rec)
 
-            processed += 1
+                for z_res in agg_result.zones:
+                    zr_rec = ZoneResultRecord(
+                        session_id=self.session_id,
+                        frame_index=observation.frame_index,
+                        media_time_s=observation.media_time_s,
+                        zone_id=z_res.zone_id,
+                        availability=z_res.availability.value,
+                        visible_count=z_res.visible_count,
+                    )
+                    batch_zr.append(zr_rec)
 
-            # Flush periodically (every batch_size frames or >= 1.0s) to keep SSE progress lively
-            now = time.time()
-            if len(batch_obs) >= self.db_batch_size or (now - last_flush_time >= 1.0):
-                _flush_db()
+                processed += 1
 
-            # Accumulate frame data for export artifact
-            frame_export = {
-                "frame_index": observation.frame_index,
-                "media_time_s": round(observation.media_time_s, 3),
-                "quality": observation.quality.value,
-                "fully_observed_zones": list(self.zone_set.zone_ids),
-                "detections": [
-                    {
-                        "track_id": d.track_id,
-                        "x": round(d.x, 4),
-                        "y": round(d.y, 4),
-                        "confidence": round(d.confidence, 3),
-                        "bbox_xyxy": [round(c, 1) for c in d.bbox_xyxy] if d.bbox_xyxy else None,
-                    }
-                    for d in observation.detections
-                ],
-                "zone_readings": [
-                    {
-                        "status": z_res.availability.value,
-                        "count": z_res.visible_count if z_res.availability.value == "COUNTED" else 0,
-                        "zoneId": z_res.zone_id,
-                        "zoneName": zone_names.get(z_res.zone_id, z_res.zone_id),
-                    }
-                    for z_res in agg_result.zones
-                ],
-            }
-            exported_frames.append(frame_export)
+                # Flush periodically (every db_batch_size frames or >= 1.0s) to keep SSE progress lively
+                now = time.time()
+                if len(batch_obs) >= self.db_batch_size or (now - last_flush_time >= 1.0):
+                    _flush_db()
 
-            # Failure rate threshold check
-            if consecutive_unknown >= self.max_consecutive_unknown:
-                _flush_db(final=True)
-                with self.db_manager.get_session() as session:
-                    sess_record = session.get(SessionRecord, self.session_id)
-                    if sess_record:
-                        sess_record.status = "FAILED"
-                        sess_record.error_code = "INFERENCE_FAILURE_RATE_EXCEEDED"
-                        sess_record.user_action_hint = "Too many consecutive unreadable or failed frames"
-                raise PipelineInferenceError("Exceeded maximum consecutive UNKNOWN frames")
+                # Accumulate frame data for export artifact
+                frame_export = {
+                    "frame_index": observation.frame_index,
+                    "media_time_s": round(observation.media_time_s, 3),
+                    "quality": observation.quality.value,
+                    "fully_observed_zones": list(self.zone_set.zone_ids),
+                    "detections": [
+                        {
+                            "track_id": d.track_id,
+                            "x": round(d.x, 4),
+                            "y": round(d.y, 4),
+                            "confidence": round(d.confidence, 3),
+                            "bbox_xyxy": [round(c, 1) for c in d.bbox_xyxy] if d.bbox_xyxy else None,
+                        }
+                        for d in observation.detections
+                    ],
+                    "zone_readings": [
+                        {
+                            "status": z_res.availability.value,
+                            "count": z_res.visible_count if z_res.availability.value == "COUNTED" else 0,
+                            "zoneId": z_res.zone_id,
+                            "zoneName": zone_names.get(z_res.zone_id, z_res.zone_id),
+                        }
+                        for z_res in agg_result.zones
+                    ],
+                }
+                exported_frames.append(frame_export)
+
+                # Failure rate threshold check
+                if consecutive_unknown >= self.max_consecutive_unknown:
+                    _flush_db(final=True)
+                    with self.db_manager.get_session() as session:
+                        sess_record = session.get(SessionRecord, self.session_id)
+                        if sess_record:
+                            sess_record.status = "FAILED"
+                            sess_record.error_code = "INFERENCE_FAILURE_RATE_EXCEEDED"
+                            sess_record.user_action_hint = "Too many consecutive unreadable or failed frames"
+                    raise PipelineInferenceError("Exceeded maximum consecutive UNKNOWN frames")
 
         # Ensure all buffered frames are committed to database
         _flush_db(final=True)
@@ -301,65 +313,38 @@ class SessionPipeline:
 
         return "COMPLETED"
 
-    def _process_frame(self, frame: DecodedFrame) -> CrowdFrameObservationV1:
+    def _build_unknown_observation(self, frame: DecodedFrame) -> CrowdFrameObservationV1:
         profile_id = getattr(self.detector, "profile_id", "crowd_best_local_v2")
         profile_sha256 = getattr(self.detector, "profile_sha256", "a" * 64)
         checkpoint_sha256 = getattr(self.detector, "checkpoint_sha256", "b" * 64)
         tracker_sha256 = getattr(self.detector, "tracker_config_sha256", None)
 
-        if not frame.is_usable or frame.image_bgr is None:
-            return CrowdFrameObservationV1(
-                source_id="camera-stream",
-                session_id=self.session_id,
-                model_profile_id=profile_id,
-                model_profile_sha256=profile_sha256,
-                checkpoint_sha256=checkpoint_sha256,
-                tracker_config_sha256=tracker_sha256,
-                frame_index=frame.frame_index,
-                media_time_s=frame.media_time_s,
-                captured_at=None,
-                image_width=frame.width,
-                image_height=frame.height,
-                observation_valid=False,
-                registration_valid=False,
-                fully_observed_zones=(),
-                confidence_semantics="RAW_MODEL_SCORE",
-                quality=QualityState.UNKNOWN,
-                detections=(),
-            )
+        return CrowdFrameObservationV1(
+            source_id="camera-stream",
+            session_id=self.session_id,
+            model_profile_id=profile_id,
+            model_profile_sha256=profile_sha256,
+            checkpoint_sha256=checkpoint_sha256,
+            tracker_config_sha256=tracker_sha256,
+            frame_index=frame.frame_index,
+            media_time_s=frame.media_time_s,
+            captured_at=None,
+            image_width=frame.width,
+            image_height=frame.height,
+            observation_valid=False,
+            registration_valid=False,
+            fully_observed_zones=(),
+            confidence_semantics="RAW_MODEL_SCORE",
+            quality=QualityState.UNKNOWN,
+            detections=(),
+        )
 
-        # Run tracker or detector
-        infer_fn = getattr(self.detector, "track", None) or self.detector.predict
-        try:
-            import inspect
-            sig = inspect.signature(infer_fn)
-            if "frame_index" in sig.parameters:
-                raw_detections = infer_fn(frame.image_bgr, frame_index=frame.frame_index)
-            else:
-                raw_detections = infer_fn(frame.image_bgr)
-        except Exception as exc:
-            logger.warning("Inference error on frame %d: %s", frame.frame_index, exc)
-            return CrowdFrameObservationV1(
-                source_id="camera-stream",
-                session_id=self.session_id,
-                model_profile_id=profile_id,
-                model_profile_sha256=profile_sha256,
-                checkpoint_sha256=checkpoint_sha256,
-                tracker_config_sha256=tracker_sha256,
-                frame_index=frame.frame_index,
-                media_time_s=frame.media_time_s,
-                captured_at=None,
-                image_width=frame.width,
-                image_height=frame.height,
-                observation_valid=False,
-                registration_valid=False,
-                fully_observed_zones=(),
-                confidence_semantics="RAW_MODEL_SCORE",
-                quality=QualityState.UNKNOWN,
-                detections=(),
-            )
+    def _build_observation(self, frame: DecodedFrame, raw_detections: Sequence[Any]) -> CrowdFrameObservationV1:
+        profile_id = getattr(self.detector, "profile_id", "crowd_best_local_v2")
+        profile_sha256 = getattr(self.detector, "profile_sha256", "a" * 64)
+        checkpoint_sha256 = getattr(self.detector, "checkpoint_sha256", "b" * 64)
+        tracker_sha256 = getattr(self.detector, "tracker_config_sha256", None)
 
-        # Map to DetectionV1
         detection_models: list[DetectionV1] = []
         for d in raw_detections:
             track_id = int(d.track_id) if getattr(d, "track_id", None) is not None else None
@@ -396,3 +381,53 @@ class SessionPipeline:
             quality=QualityState.VALID,
             detections=tuple(detection_models),
         )
+
+    def _process_frame(self, frame: DecodedFrame) -> CrowdFrameObservationV1:
+        if not frame.is_usable or frame.image_bgr is None:
+            return self._build_unknown_observation(frame)
+
+        infer_fn = getattr(self.detector, "track", None) or self.detector.predict
+        try:
+            import inspect
+            sig = inspect.signature(infer_fn)
+            if "frame_index" in sig.parameters:
+                raw_detections = infer_fn(frame.image_bgr, frame_index=frame.frame_index)
+            else:
+                raw_detections = infer_fn(frame.image_bgr)
+            return self._build_observation(frame, raw_detections)
+        except Exception as exc:
+            logger.warning("Inference error on frame %d: %s", frame.frame_index, exc)
+            return self._build_unknown_observation(frame)
+
+    def _process_batch(self, frames: Sequence[DecodedFrame]) -> list[CrowdFrameObservationV1]:
+        if not frames:
+            return []
+        if len(frames) == 1:
+            return [self._process_frame(frames[0])]
+
+        has_batch = hasattr(self.detector, "track_batch") or hasattr(self.detector, "predict_batch")
+        all_usable = all(f.is_usable and f.image_bgr is not None for f in frames)
+        if not has_batch or not all_usable:
+            return [self._process_frame(f) for f in frames]
+
+        usable_images = [f.image_bgr for f in frames if f.image_bgr is not None]
+        try:
+            if hasattr(self.detector, "track_batch"):
+                batch_detections = self.detector.track_batch(usable_images)
+            else:
+                import inspect
+                sig = inspect.signature(self.detector.predict_batch)
+                if "start_frame_index" in sig.parameters:
+                    batch_detections = self.detector.predict_batch(
+                        usable_images, start_frame_index=frames[0].frame_index
+                    )
+                else:
+                    batch_detections = self.detector.predict_batch(usable_images)
+
+            return [
+                self._build_observation(f, dets)
+                for f, dets in zip(frames, batch_detections, strict=True)
+            ]
+        except Exception as exc:
+            logger.warning("Batch inference error, falling back to sequential: %s", exc)
+            return [self._process_frame(f) for f in frames]

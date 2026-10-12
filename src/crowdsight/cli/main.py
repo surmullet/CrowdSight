@@ -212,6 +212,32 @@ def cmd_model_verify(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_worker_run(args: argparse.Namespace) -> int:
+    from crowdsight.service.jobs.worker import run_standalone_worker
+    run_standalone_worker(
+        db_url=args.db_url,
+        concurrency=args.concurrency,
+        queue_backend=args.queue_backend,
+    )
+    return 0
+
+
+def cmd_model_optimize(args: argparse.Namespace) -> int:
+    from crowdsight.service.pipeline.model_boundary import ModelBoundaryService
+    weights_path = Path(args.weights).resolve()
+    if not weights_path.is_file():
+        print(f"Error: Weights file not found: {weights_path}", file=sys.stderr)
+        return 1
+    print(f"Exporting model {weights_path.name} to {args.format.upper()} (half={args.half})...")
+    exported = ModelBoundaryService.export_optimized_checkpoint(
+        weights_path=weights_path,
+        export_format=args.format,
+        half=args.half,
+    )
+    print(f"Successfully exported optimized model to: {exported}")
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="crowdsight",
@@ -244,6 +270,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     p_mod = subparsers.add_parser("model-verify", help="Verify model profile and checkpoint SHA-256 digests")
     p_mod.add_argument("--config", help="Custom model config YAML path", default=None)
     p_mod.set_defaults(func=cmd_model_verify)
+
+    # worker run
+    p_wrk = subparsers.add_parser("worker-run", help="Run standalone background queue worker process")
+    p_wrk.add_argument("--concurrency", type=int, default=2, help="Number of concurrent worker threads")
+    p_wrk.add_argument("--queue-backend", choices=["memory", "redis"], default=None, help="Queue backend to use")
+    p_wrk.add_argument("--db-url", default=None, help="Database connection URL")
+    p_wrk.set_defaults(func=cmd_worker_run)
+
+    # model optimize
+    p_opt = subparsers.add_parser("model-optimize", help="Export model to ONNX or TensorRT (.engine) format")
+    p_opt.add_argument("--weights", required=True, help="Path to PyTorch weights (.pt)")
+    p_opt.add_argument("--format", choices=["onnx", "engine"], default="onnx", help="Export format")
+    p_opt.add_argument("--half", action="store_true", default=True, help="Enable FP16 precision")
+    p_opt.set_defaults(func=cmd_model_optimize)
 
     args = parser.parse_args(argv)
     func = getattr(args, "func", None)

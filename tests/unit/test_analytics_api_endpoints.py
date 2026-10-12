@@ -79,11 +79,19 @@ def _setup_session_with_data(client: TestClient, tmp_path: Path) -> tuple[str, s
     assert sess_res.status_code == 201
     session_id = sess_res.json()["id"]
 
-    # Verify session completed processing
-    status_res = client.get(f"/api/v1/sessions/{session_id}")
-    assert status_res.status_code == 200
-    assert status_res.json()["status"] == "COMPLETED"
+    # Wait for asynchronous task queue worker to complete processing
+    import time
 
+    final_status = None
+    for _ in range(50):
+        status_res = client.get(f"/api/v1/sessions/{session_id}")
+        assert status_res.status_code == 200
+        final_status = status_res.json()["status"]
+        if final_status == "COMPLETED":
+            break
+        time.sleep(0.05)
+
+    assert final_status == "COMPLETED", f"Session {session_id} status is {final_status}, expected COMPLETED"
     return session_id, "zone_lobby"
 
 

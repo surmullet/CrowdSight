@@ -2129,6 +2129,29 @@
         ]
       }
     },
+    "/api/v1/sessions/queue/stats": {
+      "get": {
+        "operationId": "get_queue_stats_api_v1_sessions_queue_stats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Queue Stats Api V1 Sessions Queue Stats Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get task queue metrics and active worker concurrency",
+        "tags": [
+          "Analysis Sessions"
+        ]
+      }
+    },
     "/api/v1/sessions/{session_id}": {
       "delete": {
         "operationId": "delete_session_api_v1_sessions__session_id__delete",

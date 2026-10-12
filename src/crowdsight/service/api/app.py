@@ -29,12 +29,16 @@ logger = logging.getLogger("crowdsight.api")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Startup and shutdown lifecycle."""
+    import os
     init_service_dependencies()
     job_mgr = get_job_manager()
     recovered = job_mgr.recover_orphaned_jobs()
     if recovered > 0:
         logger.warning("Recovered %d orphaned jobs on service startup", recovered)
+    if os.environ.get("CROWDSIGHT_STANDALONE_WORKER") != "1":
+        job_mgr.start_worker()
     yield
+    job_mgr.stop_worker()
 
 
 def create_app() -> FastAPI:

@@ -88,3 +88,14 @@ class SyntheticDetector:
             )
 
         return tuple(detections)
+
+    def predict_batch(
+        self,
+        frames_bgr: Sequence[np.ndarray[Any, Any]],
+        start_frame_index: int = 0,
+    ) -> tuple[tuple[PersonDetection, ...], ...]:
+        """Generate deterministic person detections for a batch of frames."""
+        return tuple(
+            tuple(self.predict(f, frame_index=start_frame_index + i))
+            for i, f in enumerate(frames_bgr)
+        )

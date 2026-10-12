@@ -9,7 +9,6 @@ from typing import Any
 
 from fastapi import (
     APIRouter,
-    BackgroundTasks,
     Depends,
     Header,
     HTTPException,
@@ -146,7 +145,6 @@ def list_sessions(
 @router.post("", response_model=SessionResponse, status_code=201, summary="Create and start a new analysis session")
 def create_session(
     payload: SessionCreateRequest,
-    background_tasks: BackgroundTasks,
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
     db: Session = Depends(get_db),
     job_mgr: JobManager = Depends(get_job_manager),
@@ -238,10 +236,17 @@ def create_session(
     db.refresh(sess_record)
     session_id = sess_record.id
 
-    # Enqueue pipeline run in background
-    background_tasks.add_task(job_mgr.run_session_job, session_id)
+    # Enqueue pipeline run in task queue for asynchronous worker execution
+    job_mgr.enqueue_job(session_id)
 
     return _to_session_response(sess_record, db)
+
+
+@router.get("/queue/stats", summary="Get task queue metrics and active worker concurrency")
+def get_queue_stats(
+    job_mgr: JobManager = Depends(get_job_manager),
+) -> dict[str, Any]:
+    return job_mgr.job_queue.stats()
 
 
 @router.get("/{session_id}", response_model=SessionResponse, summary="Get session state and progress")

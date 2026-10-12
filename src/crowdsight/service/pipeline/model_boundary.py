@@ -212,6 +212,7 @@ class ModelBoundaryService:
         seed: int = 42,
         confidence_override: float | None = None,
         image_size_override: int | None = None,
+        model_format: str | None = None,
     ) -> tuple[PersonDetector, dict[str, Any]]:
         """Instantiate detector with integrity checks or fallback to deterministic synthetic."""
         target_config = config_path or self.default_config_path
@@ -249,6 +250,15 @@ class ModelBoundaryService:
                 verification.actual_checkpoint_sha256,
             )
 
+        # Detect or switch to optimized checkpoint (.engine / .onnx) if requested
+        active_checkpoint_path = verification.checkpoint_path
+        active_checkpoint_sha256 = verification.actual_checkpoint_sha256 or verification.expected_checkpoint_sha256
+        if model_format in ("engine", "onnx"):
+            candidate = verification.checkpoint_path.with_suffix(f".{model_format}")
+            if candidate.is_file():
+                active_checkpoint_path = candidate
+                active_checkpoint_sha256 = sha256_file(candidate)
+
         target_conf = (
             float(confidence_override)
             if confidence_override is not None
@@ -262,8 +272,8 @@ class ModelBoundaryService:
 
         detector_profile = PersonDetectorProfile(
             profile_id=profile_id,
-            checkpoint_path=verification.checkpoint_path,
-            expected_sha256=verification.expected_checkpoint_sha256,
+            checkpoint_path=active_checkpoint_path,
+            expected_sha256=active_checkpoint_sha256,
             profile_sha256=profile_sha256,
             person_class_id=int(config.get("class_mapping", {}).get("person", 0)),
             confidence=target_conf,
@@ -296,3 +306,24 @@ class ModelBoundaryService:
             "synthetic": False,
         }
         return live_detector, provenance
+
+    @staticmethod
+    def export_optimized_checkpoint(
+        weights_path: Path,
+        export_format: str = "onnx",
+        half: bool = True,
+        imgsz: int = 1280,
+    ) -> Path:
+        """Export YOLO PyTorch weights to TensorRT (.engine) or ONNX (.onnx) format."""
+        import torch
+        from ultralytics import YOLO  # type: ignore[attr-defined]
+
+        model = YOLO(str(weights_path))
+        device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        exported_str = model.export(
+            format=export_format,
+            imgsz=imgsz,
+            half=half,
+            device=device,
+        )
+        return Path(exported_str).resolve()

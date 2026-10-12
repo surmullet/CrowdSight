@@ -54,6 +54,9 @@ class PersonDetector(Protocol):
     def predict(self, frame_bgr: np.ndarray) -> Sequence[PersonDetection]:
         """Return person observations for one BGR frame."""
 
+    def predict_batch(self, frames_bgr: Sequence[np.ndarray]) -> Sequence[Sequence[PersonDetection]]:
+        """Return person observations for a batch of BGR frames."""
+
 
 class PersonTracker(Protocol):
     """Sequential anonymous tracker contract, one instance per video session."""
@@ -62,6 +65,9 @@ class PersonTracker(Protocol):
 
     def track(self, frame_bgr: np.ndarray) -> Sequence[PersonDetection]:
         """Return only current observations with confirmed run-local IDs."""
+
+    def track_batch(self, frames_bgr: Sequence[np.ndarray]) -> Sequence[Sequence[PersonDetection]]:
+        """Return observations with confirmed run-local IDs for a batch of frames."""
 
 
 class UltralyticsPersonDetector:
@@ -124,6 +130,7 @@ class UltralyticsPersonDetector:
             "confidence_threshold": profile.confidence,
             "image_size": profile.image_size,
             "person_class_id": profile.person_class_id,
+            "model_format": checkpoint.suffix.lstrip(".").lower() or "pt",
         }
         self._model = YOLO(str(checkpoint))
 
@@ -136,15 +143,20 @@ class UltralyticsPersonDetector:
                 digest.update(block)
         return digest.hexdigest()
 
-    def predict(self, frame_bgr: np.ndarray) -> tuple[PersonDetection, ...]:
-        """Run person-only inference on a single BGR image."""
-        if not isinstance(frame_bgr, np.ndarray) or frame_bgr.ndim != 3:
-            raise ValueError("frame_bgr must be a three-dimensional NumPy image")
-        height, width = frame_bgr.shape[:2]
-        if width <= 0 or height <= 0 or frame_bgr.shape[2] != 3:
-            raise ValueError("frame_bgr must have positive dimensions and 3 channels")
+    def predict_batch(self, frames_bgr: Sequence[np.ndarray]) -> tuple[tuple[PersonDetection, ...], ...]:
+        """Run person-only inference on a batch of BGR images (leveraging GPU Tensor Cores)."""
+        if not frames_bgr:
+            return ()
+        for frame in frames_bgr:
+            if not isinstance(frame, np.ndarray) or frame.ndim != 3:
+                raise ValueError("frame_bgr must be a three-dimensional NumPy image")
+            height, width = frame.shape[:2]
+            if width <= 0 or height <= 0 or frame.shape[2] != 3:
+                raise ValueError("frame_bgr must have positive dimensions and 3 channels")
+
         outputs = self._model.predict(
-            source=frame_bgr,
+            source=list(frames_bgr),
+            batch=len(frames_bgr),
             conf=self._profile.confidence,
             imgsz=self._profile.image_size,
             device=self._device,
@@ -152,9 +164,17 @@ class UltralyticsPersonDetector:
             classes=[self._profile.person_class_id],
             verbose=False,
         )
-        if outputs is None or len(outputs) != 1:
-            raise RuntimeError("Detector must return exactly one result for one frame")
-        return self._decode_result(outputs[0], width, height)
+        if outputs is None or len(outputs) != len(frames_bgr):
+            raise RuntimeError(f"Detector must return {len(frames_bgr)} results for batch")
+        return tuple(
+            self._decode_result(out, f.shape[1], f.shape[0])
+            for out, f in zip(outputs, frames_bgr, strict=True)
+        )
+
+    def predict(self, frame_bgr: np.ndarray) -> tuple[PersonDetection, ...]:
+        """Run person-only inference on a single BGR image."""
+        batch_res = self.predict_batch([frame_bgr])
+        return batch_res[0] if batch_res else ()
 
     def _decode_result(
         self,
@@ -277,3 +297,7 @@ class UltralyticsPersonTracker(UltralyticsPersonDetector):
         if len(ids) != len(result.boxes.xyxy):
             return self._decode_result(result, width, height, None)
         return self._decode_result(result, width, height, ids)
+
+    def track_batch(self, frames_bgr: Sequence[np.ndarray]) -> tuple[tuple[PersonDetection, ...], ...]:
+        """Run sequential tracking across a sequence of BGR frames."""
+        return tuple(self.track(f) for f in frames_bgr)

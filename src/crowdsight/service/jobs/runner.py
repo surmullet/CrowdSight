@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import logging
+import os
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy import select
 
 from crowdsight.service.artifacts.store import ArtifactStore
 from crowdsight.service.domain.zones import Point2D, ZoneDefinition, ZonePolygon, ZoneSet
+from crowdsight.service.jobs.queue import BaseJobQueue, create_job_queue
 from crowdsight.service.pipeline.runner import SessionPipeline
 from crowdsight.service.storage.database import DatabaseManager
 from crowdsight.service.storage.media_registry import MediaRegistry
@@ -28,11 +31,34 @@ class JobManager:
         db_manager: DatabaseManager,
         media_registry: MediaRegistry,
         artifact_store: ArtifactStore | None = None,
+        job_queue: BaseJobQueue | None = None,
     ) -> None:
         self.db_manager = db_manager
         self.media_registry = media_registry
         self.artifact_store = artifact_store
         self._cancellation_requests: set[str] = set()
+        self.job_queue: BaseJobQueue = job_queue if job_queue is not None else create_job_queue()
+        self._worker_instance: Any = None
+
+    def enqueue_job(self, session_id: str) -> None:
+        """Enqueue session for processing via the background worker queue."""
+        self.job_queue.enqueue(session_id)
+        if os.environ.get("CROWDSIGHT_STANDALONE_WORKER") != "1" and self._worker_instance is None:
+            concurrency = int(os.environ.get("CROWDSIGHT_MAX_CONCURRENCY", "2"))
+            self.start_worker(concurrency=concurrency)
+
+    def start_worker(self, concurrency: int = 2) -> None:
+        """Start worker thread pool for in-memory / unified mode."""
+        from crowdsight.service.jobs.worker import QueueWorker
+        if self._worker_instance is None:
+            self._worker_instance = QueueWorker(self, self.job_queue, concurrency=concurrency)
+            self._worker_instance.start()
+
+    def stop_worker(self) -> None:
+        """Stop worker thread pool."""
+        if self._worker_instance is not None:
+            self._worker_instance.stop()
+            self._worker_instance = None
 
     def recover_orphaned_jobs(self) -> int:
         """Find jobs left in RUNNING on startup and mark as FAILED."""
@@ -58,6 +84,7 @@ class JobManager:
     def request_cancellation(self, session_id: str) -> bool:
         """Cooperatively request cancellation of an active session."""
         self._cancellation_requests.add(session_id)
+        self.job_queue.request_cancellation(session_id)
         with self.db_manager.get_session() as session:
             job = session.get(SessionRecord, session_id)
             if job and job.status in ("QUEUED", "RUNNING"):
@@ -66,10 +93,11 @@ class JobManager:
         return False
 
     def is_cancelled(self, session_id: str) -> bool:
-        return session_id in self._cancellation_requests
+        return session_id in self._cancellation_requests or self.job_queue.is_cancelled(session_id)
 
     def clear_cancellation(self, session_id: str) -> None:
         self._cancellation_requests.discard(session_id)
+        self.job_queue.clear_cancellation(session_id)
 
     def run_session_job(
         self,
@@ -81,6 +109,8 @@ class JobManager:
             job = session.get(SessionRecord, session_id)
             if not job:
                 raise ValueError(f"Session not found: {session_id}")
+            if job.status in ("RUNNING", "COMPLETED", "FAILED", "PARTIAL_CANCELLED"):
+                return job.status
 
             job.status = "RUNNING"
             session.commit()
@@ -146,12 +176,15 @@ class JobManager:
                 elif model_opt in ("yolo11n", "yolo11n_local"):
                     target_cfg = Path("configs/models/yolo11n_local.yaml").resolve()
 
+                model_fmt = job.options.get("model_format") if job.options else None
+
                 detector, _ = boundary.create_detector(
                     config_path=target_cfg,
                     synthetic=job.synthetic,
                     enable_tracker=bool(job.options.get("enable_tracker", not job.synthetic)),
                     confidence_override=conf_override,
                     image_size_override=imgsz_override,
+                    model_format=model_fmt,
                 )
             except ModelBoundaryError as mbe:
                 with self.db_manager.get_session() as session:
@@ -174,6 +207,7 @@ class JobManager:
 
         stride = int(job.options.get("frame_stride", 1)) if job.options else 1
         db_batch = int(job.options.get("db_batch_size", 30)) if job.options else 30
+        batch_size = int(job.options.get("batch_size", 8)) if job.options else 8
         pipeline = SessionPipeline(
             session_id=session_id,
             video_path=video_path,
@@ -184,6 +218,7 @@ class JobManager:
             is_synthetic=job.synthetic,
             frame_stride=stride,
             db_batch_size=db_batch,
+            batch_size=batch_size,
         )
 
         try:
