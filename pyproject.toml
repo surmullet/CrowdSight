@@ -10,6 +10,7 @@ requires-python = ">=3.10"
 dependencies = [
   "numpy>=2.2.6,<3",
   "PyYAML>=6.0.3,<7",
+  "PyJWT>=2.10.1,<3",
 ]
 
 [project.scripts]
@@ -46,6 +47,9 @@ module = [
     "ultralytics.*",
     "torch.*",
     "torchvision.*",
+    "yaml",
+    "yaml.*",
+    "jsonschema.validators",
 ]
 ignore_missing_imports = true
 
@@ -72,4 +76,3 @@ ignore = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 asyncio_mode = "auto"
-
